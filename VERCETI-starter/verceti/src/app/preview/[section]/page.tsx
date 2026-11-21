@@ -2,10 +2,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createNews, deleteNews } from "./actions";
+import ChatRoom from "./ChatRoom";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: { title: "Учасники", text: "Список учасників, ролі та профілі.", items: ["Пошук за нікнеймом та ігровим ID", "Кольорові позначки ролей", "Історія зміни ролей"] },
-  chat: { title: "Чат", text: "Місце для загального та приватного спілкування.", items: ["Загальний чат", "Особисті повідомлення", "Скарги та модерація"] },
   voice: { title: "Голосові кімнати", text: "Макет майбутніх голосових кімнат.", items: ["Загальні та приватні кімнати", "Керування мікрофоном", "Демонстрація екрана"] },
   streams: { title: "Трансляції", text: "Сторінка майбутніх прямих ефірів.", items: ["Список активних ефірів", "Чат трансляції", "Скарги на порушення"] },
   music: { title: "Музика", text: "Особисті та спільні плейлисти.", items: ["Особисті добірки", "Спільна черга треків", "Синхронне прослуховування"] },
@@ -86,7 +86,15 @@ export default async function PreviewSection({
       <section className="login-card">
         <div className="eyebrow">VERCETI · ПОПЕРЕДНІЙ ПЕРЕГЛЯД</div>
 
-        {section === "news" ? (
+        {section === "chat" ? (
+          <>
+            <h1>Чат</h1>
+            <p className="muted">
+              Спілкування учасників спільноти VERCETI.
+            </p>
+            <ChatRoom />
+          </>
+        ) : section === "news" ? (
           <>
             <h1>Новини</h1>
             <p className="muted">Новини спільноти, оголошення та події.</p>
@@ -117,14 +125,25 @@ export default async function PreviewSection({
                   />
 
                   <label htmlFor="news-category">Категорія</label>
-                  <select id="news-category" name="category" required defaultValue="announcement">
+                  <select
+                    id="news-category"
+                    name="category"
+                    required
+                    defaultValue="announcement"
+                  >
                     <option value="announcement">Оголошення</option>
                     <option value="event">Подія</option>
                     <option value="important">Важливо</option>
                   </select>
 
-                  <label htmlFor="news-date">Дата події (необов&apos;язково)</label>
-                  <input id="news-date" name="event_date" type="date" />
+                  <label htmlFor="news-date">
+                    Дата події (необов&apos;язково)
+                  </label>
+                  <input
+                    id="news-date"
+                    name="event_date"
+                    type="date"
+                  />
 
                   <button className="btn" type="submit">
                     Опублікувати новину
@@ -171,17 +190,25 @@ export default async function PreviewSection({
 
             {newsError ? (
               <div className="panel" style={{ marginTop: 24 }}>
-                <p className="muted">Не вдалося завантажити новини. Перевір підключення до бази даних.</p>
+                <p className="muted">
+                  Не вдалося завантажити новини. Перевір підключення до бази даних.
+                </p>
               </div>
             ) : newsItems.length === 0 ? (
               <div className="panel" style={{ marginTop: 24 }}>
                 <h2>Поки що новин немає</h2>
-                <p className="muted">Нові оголошення спільноти з&apos;являтимуться тут.</p>
+                <p className="muted">
+                  Нові оголошення спільноти з&apos;являтимуться тут.
+                </p>
               </div>
             ) : (
               <div className="member-list" style={{ margin: "24px 0" }}>
                 {newsItems.map((item) => (
-                  <div className="panel" key={item.id} style={{ marginBottom: 14 }}>
+                  <div
+                    className="panel"
+                    key={item.id}
+                    style={{ marginBottom: 14 }}
+                  >
                     <div className="eyebrow">
                       {categoryLabels[item.category] ?? item.category.toUpperCase()}
                     </div>
@@ -200,11 +227,18 @@ export default async function PreviewSection({
                         action={deleteNews}
                         style={{ marginTop: 14 }}
                       >
-                        <input type="hidden" name="id" value={item.id} />
+                        <input
+                          type="hidden"
+                          name="id"
+                          value={item.id}
+                        />
                         <button
                           className="btn"
                           type="submit"
-                          style={{ background: "#8f303f", borderColor: "#b94b5c" }}
+                          style={{
+                            background: "#8f303f",
+                            borderColor: "#b94b5c"
+                          }}
                         >
                           Видалити новину
                         </button>
@@ -222,44 +256,67 @@ export default async function PreviewSection({
         ) : section === "rules" ? (
           <>
             <h1>Правила VERCETI</h1>
-            <p className="muted">Правила поведінки та порядок у спільноті.</p>
+            <p className="muted">
+              Правила поведінки та порядок у спільноті.
+            </p>
+
             {ruleGroups.map((group) => (
-              <div className="panel" key={group.title} style={{ marginTop: 16 }}>
+              <div
+                className="panel"
+                key={group.title}
+                style={{ marginTop: 16 }}
+              >
                 <h2>{group.title}</h2>
                 <div className="member-list">
                   {group.items.map((item) => (
                     <div className="member-row" key={item}>
                       <span style={{ color: "#bb8aff" }}>✦</span>
-                      <span style={{ fontSize: 13, flex: 1 }}>{item}</span>
+                      <span style={{ fontSize: 13, flex: 1 }}>
+                        {item}
+                      </span>
                     </div>
                   ))}
                 </div>
               </div>
             ))}
+
             <div className="panel" style={{ marginTop: 16 }}>
               <h2>Історія оновлень правил</h2>
-              <p className="muted">Поки що змін не зафіксовано. Тут відображатимуться дата та опис кожного оновлення.</p>
+              <p className="muted">
+                Поки що змін не зафіксовано. Тут відображатимуться дата та опис кожного оновлення.
+              </p>
             </div>
-            <p className="page-note">Правила зможуть читати всі учасники. Створювати, редагувати й видаляти їх зможуть адміністратор та уповноважене керівництво. Це демонстраційний вміст.</p>
+
+            <p className="page-note">
+              Правила зможуть читати всі учасники. Створювати, редагувати й видаляти їх зможуть адміністратор та уповноважене керівництво. Це демонстраційний вміст.
+            </p>
           </>
         ) : (
           <>
             <h1>{data.title}</h1>
             <p className="muted">{data.text}</p>
+
             <div className="member-list" style={{ margin: "24px 0" }}>
               {data.items.map((item) => (
                 <div className="member-row" key={item}>
                   <span style={{ color: "#bb8aff" }}>✦</span>
-                  <span style={{ fontSize: 13, flex: 1 }}>{item}</span>
+                  <span style={{ fontSize: 13, flex: 1 }}>
+                    {item}
+                  </span>
                   <span className="tag">ПЛАН</span>
                 </div>
               ))}
             </div>
-            <p className="page-note">Це поки що схема розділу, а не підключена функція.</p>
+
+            <p className="page-note">
+              Це поки що схема розділу, а не підключена функція.
+            </p>
           </>
         )}
 
-        <Link className="btn" href="/">← Повернутися на головну</Link>
+        <Link className="btn" href="/">
+          ← Повернутися на головну
+        </Link>
       </section>
     </main>
   );
