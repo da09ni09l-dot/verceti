@@ -96,7 +96,7 @@ export default async function PreviewSection({
                 <h2>Створити новину</h2>
 
                 <form action={createNews} className="member-list">
-                  <label htmlFor="news-title">Заголовок</label>
+                  <label htmlFor="news-date">Дата події (необов&apos;язково)</label>
                   <input
                     id="news-title"
                     name="title"
