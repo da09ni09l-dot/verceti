@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type Source = "Audius" | "YouTube" | "SoundCloud";
@@ -99,8 +99,16 @@ function formatDuration(seconds?: number) {
   return `${minutes}:${String(rest).padStart(2, "0")}`;
 }
 
+const tabs: { value: Tab; label: string }[] = [
+  { value: "personal", label: "🎧 Особистий" },
+  { value: "shared", label: "🌐 Спільний" },
+  { value: "recommendations", label: "💡 Рекомендації" },
+  { value: "favorites", label: "⭐ Улюблене" }
+];
+
 export default function MusicRoom() {
   const supabase = useMemo(() => createClient(), []);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const [tab, setTab] = useState<Tab>("personal");
   const [userId, setUserId] = useState("");
@@ -117,18 +125,56 @@ export default function MusicRoom() {
   const [musicLoading, setMusicLoading] = useState(false);
 
   const [playing, setPlaying] = useState<PlayingTrack | null>(null);
-
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [audioError, setAudioError] = useState("");
 
   const isManagement = ["admin", "leader", "moderator"].includes(role);
 
-  const visibleTracks = tab === "favorites" ? favorites : tracks;
+  const loadAudius = useCallback(
+    async (action: "trending" | "latest" | "search", query = "") => {
+      setMusicLoading(true);
+      setMessage("");
 
+      try {
+        const params = new URLSearchParams({ action });
+
+        if (action === "search") {
+          params.set("q", query);
+        }
+
+        const response = await fetch(`/api/audius?${params.toString()}`);
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "Не вдалося завантажити музику.");
+        }
+
+        setAudiusTracks(Array.isArray(result.data) ? result.data : []);
+        setMusicMode(action);
+      } catch (error) {
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : "Помилка з'єднання з Audius."
+        );
+        setAudiusTracks([]);
+      } finally {
+        setMusicLoading(false);
+      }
+    },
+    []
+  );
+
+  // Завантаження користувача та його ролі
   useEffect(() => {
+    let cancelled = false;
+
     async function loadUser() {
       const { data, error } = await supabase.auth.getUser();
+
+      if (cancelled) return;
 
       if (error || !data.user) {
         setMessage("Увійди в акаунт, щоб користуватися музикою.");
@@ -138,57 +184,34 @@ export default function MusicRoom() {
 
       setUserId(data.user.id);
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", data.user.id)
         .single();
 
+      if (cancelled) return;
+
+      if (profileError) {
+        console.error("Помилка профілю:", profileError.message);
+      }
+
       setRole(profile?.role || "");
     }
 
     loadUser();
+
+    return () => {
+      cancelled = true;
+    };
   }, [supabase]);
 
-  async function loadAudius(
-    action: "trending" | "latest" | "search",
-    query = ""
-  ) {
-    setMusicLoading(true);
-    setMessage("");
-
-    try {
-      const params = new URLSearchParams({ action });
-
-      if (action === "search") {
-        params.set("q", query);
-      }
-
-      const response = await fetch(`/api/audius?${params.toString()}`);
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Не вдалося завантажити музику.");
-      }
-
-      setAudiusTracks(Array.isArray(result.data) ? result.data : []);
-      setMusicMode(action);
-    } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "Помилка з'єднання з Audius."
-      );
-      setAudiusTracks([]);
-    } finally {
-      setMusicLoading(false);
-    }
-  }
-
+  // Завантаження каталогу Audius
   useEffect(() => {
     loadAudius("trending");
-  }, []);
+  }, [loadAudius]);
 
+  // Завантаження музики відповідно до відкритої вкладки
   useEffect(() => {
     if (!userId) return;
 
@@ -198,66 +221,80 @@ export default function MusicRoom() {
       setLoading(true);
       setMessage("");
 
-      const { data: favoriteData } = await supabase
-        .from("music_favorites")
-        .select("track_id");
-
-      if (cancelled) return;
-
-      const ids = (favoriteData || []).map((item) => item.track_id);
-      setFavoriteIds(ids);
-
-      if (tab === "personal" || tab === "shared") {
-        const { data, error } = await supabase
-          .from("music_tracks")
-          .select("*")
-          .eq("playlist_type", tab)
-          .order("created_at", { ascending: false });
+      try {
+        const { data: favoriteData, error: favoriteError } = await supabase
+          .from("music_favorites")
+          .select("track_id");
 
         if (cancelled) return;
 
-        if (error) {
-          setMessage("Помилка завантаження: " + error.message);
-        } else {
-          setTracks((data || []) as Track[]);
+        if (favoriteError) {
+          throw new Error("Помилка улюбленого: " + favoriteError.message);
         }
-      }
 
-      if (tab === "recommendations") {
-        const { data, error } = await supabase
-          .from("music_recommendations")
-          .select("*")
-          .order("created_at", { ascending: false });
+        const ids = (favoriteData || []).map((item) => item.track_id);
+        setFavoriteIds(ids);
 
-        if (cancelled) return;
-
-        if (error) {
-          setMessage("Помилка рекомендацій: " + error.message);
-        } else {
-          setRecommendations((data || []) as Recommendation[]);
-        }
-      }
-
-      if (tab === "favorites") {
-        if (ids.length) {
+        if (tab === "personal" || tab === "shared") {
           const { data, error } = await supabase
             .from("music_tracks")
             .select("*")
-            .in("id", ids);
+            .eq("playlist_type", tab)
+            .order("created_at", { ascending: false });
 
           if (cancelled) return;
 
           if (error) {
-            setMessage("Помилка улюбленого: " + error.message);
-          } else {
-            setFavorites((data || []) as Track[]);
+            throw new Error("Помилка завантаження альбому: " + error.message);
           }
-        } else {
-          setFavorites([]);
-        }
-      }
 
-      if (!cancelled) setLoading(false);
+          setTracks((data || []) as Track[]);
+        }
+
+        if (tab === "recommendations") {
+          const { data, error } = await supabase
+            .from("music_recommendations")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+          if (cancelled) return;
+
+          if (error) {
+            throw new Error("Помилка рекомендацій: " + error.message);
+          }
+
+          setRecommendations((data || []) as Recommendation[]);
+        }
+
+        if (tab === "favorites") {
+          if (ids.length > 0) {
+            const { data, error } = await supabase
+              .from("music_tracks")
+              .select("*")
+              .in("id", ids);
+
+            if (cancelled) return;
+
+            if (error) {
+              throw new Error("Помилка улюбленого: " + error.message);
+            }
+
+            setFavorites((data || []) as Track[]);
+          } else {
+            setFavorites([]);
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setMessage(
+            error instanceof Error
+              ? error.message
+              : "Не вдалося завантажити список."
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
 
     loadData();
@@ -266,6 +303,13 @@ export default function MusicRoom() {
       cancelled = true;
     };
   }, [supabase, userId, tab]);
+
+  // Перемикання альбомів
+  function changeTab(nextTab: Tab) {
+    setTab(nextTab);
+    setMessage("");
+    setAudioError("");
+  }
 
   function makePlaying(track: Track): PlayingTrack {
     return {
@@ -278,6 +322,8 @@ export default function MusicRoom() {
   }
 
   function playAudius(track: AudiusTrack) {
+    setAudioError("");
+
     setPlaying({
       id: track.id,
       title: track.title,
@@ -291,7 +337,10 @@ export default function MusicRoom() {
     track: AudiusTrack,
     playlistType: PlaylistType
   ) {
-    if (!userId) return;
+    if (!userId) {
+      setMessage("Спочатку увійди в акаунт.");
+      return;
+    }
 
     if (playlistType === "shared" && !isManagement) {
       setMessage("Додавати спільну музику може лише керівництво.");
@@ -301,15 +350,13 @@ export default function MusicRoom() {
     setSaving(true);
     setMessage("");
 
-    const url = audiusTrackUrl(track);
-
     const { data, error } = await supabase
       .from("music_tracks")
       .insert({
         title: track.title,
         artist: track.user?.name || "Невідомий виконавець",
         source: "Audius",
-        url,
+        url: audiusTrackUrl(track),
         playlist_type: playlistType,
         user_id: playlistType === "personal" ? userId : null,
         created_by: userId
@@ -330,13 +377,16 @@ export default function MusicRoom() {
 
     setMessage(
       playlistType === "personal"
-        ? "Пісню додано до особистого плейлиста!"
-        : "Пісню додано до спільного плейлиста!"
+        ? "Пісню додано до особистого альбому!"
+        : "Пісню додано до спільного альбому!"
     );
   }
 
   async function recommendAudiusTrack(track: AudiusTrack) {
-    if (!userId) return;
+    if (!userId) {
+      setMessage("Спочатку увійди в акаунт.");
+      return;
+    }
 
     setSaving(true);
     setMessage("");
@@ -381,12 +431,16 @@ export default function MusicRoom() {
     setFavorites((previous) => previous.filter((item) => item.id !== track.id));
     setFavoriteIds((previous) => previous.filter((id) => id !== track.id));
 
-    if (playing?.id === track.id) setPlaying(null);
+    if (playing?.id === track.id) {
+      setPlaying(null);
+    }
 
     setMessage("Композицію видалено.");
   }
 
   async function toggleFavorite(track: Track) {
+    if (!userId) return;
+
     const exists = favoriteIds.includes(track.id);
 
     if (exists) {
@@ -471,44 +525,53 @@ export default function MusicRoom() {
 
     setMessage(
       approved
-        ? "Пісню додано до спільного плейлиста!"
+        ? "Пісню додано до спільного альбому!"
         : "Рекомендацію відхилено."
     );
   }
 
-  function changeTab(nextTab: Tab) {
-    setTab(nextTab);
-    setMessage("");
-  }
+  const visibleTracks = tab === "favorites" ? favorites : tracks;
+  const currentStream = playing ? streamUrl(playing) : "";
 
   return (
     <div style={{ display: "grid", gap: 18, marginTop: 24 }}>
       <section className="panel">
         <h2 style={{ marginTop: 0 }}>🎵 Музичний простір VERCETI</h2>
+
         <p className="muted">
           Шукай музику, слухай новинки та створюй власні плейлисти.
         </p>
 
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 18 }}>
-          {[
-            ["personal", "🎧 Особистий"],
-            ["shared", "🌐 Спільний"],
-            ["recommendations", "💡 Рекомендації"],
-            ["favorites", "⭐ Улюблене"]
-          ].map(([value, label]) => (
+        <div
+          role="tablist"
+          aria-label="Музичні альбоми"
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            marginTop: 18
+          }}
+        >
+          {tabs.map((item) => (
             <button
-              key={value}
-              className="btn"
+              key={item.value}
               type="button"
-              onClick={() => changeTab(value as Tab)}
+              role="tab"
+              aria-selected={tab === item.value}
+              className="btn"
+              onClick={() => changeTab(item.value)}
               style={{
                 background:
-                  tab === value
-                    ? "rgba(187,138,255,0.3)"
-                    : "rgba(255,255,255,0.05)"
+                  tab === item.value
+                    ? "rgba(187,138,255,0.35)"
+                    : "rgba(255,255,255,0.05)",
+                border: tab === item.value
+                  ? "1px solid rgba(187,138,255,0.8)"
+                  : "1px solid transparent",
+                cursor: "pointer"
               }}
             >
-              {label}
+              {item.label}
             </button>
           ))}
         </div>
@@ -516,6 +579,7 @@ export default function MusicRoom() {
 
       <section className="panel">
         <h2 style={{ marginTop: 0 }}>🔎 Знайти музику</h2>
+
         <p className="muted">
           Введи назву композиції або ім&apos;я виконавця.
         </p>
@@ -533,6 +597,7 @@ export default function MusicRoom() {
             placeholder="Наприклад, The Weeknd або Imagine Dragons"
             style={{ flex: 1, minWidth: 180 }}
           />
+
           <button
             className="btn"
             type="submit"
@@ -551,6 +616,7 @@ export default function MusicRoom() {
           >
             🔥 Популярне
           </button>
+
           <button
             className="btn"
             type="button"
@@ -620,6 +686,7 @@ export default function MusicRoom() {
 
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <strong style={{ display: "block" }}>{track.title}</strong>
+
                     <span className="muted" style={{ fontSize: 12 }}>
                       {track.user?.name || "Невідомий виконавець"}
                       {track.duration
@@ -637,26 +704,29 @@ export default function MusicRoom() {
                     >
                       ▶
                     </button>
+
                     <button
                       className="btn"
                       type="button"
                       disabled={saving}
                       onClick={() => saveAudiusTrack(track, "personal")}
-                      title="В особистий плейлист"
+                      title="В особистий альбом"
                     >
                       +🎧
                     </button>
+
                     {isManagement && (
                       <button
                         className="btn"
                         type="button"
                         disabled={saving}
                         onClick={() => saveAudiusTrack(track, "shared")}
-                        title="У спільний плейлист"
+                        title="У спільний альбом"
                       >
                         +🌐
                       </button>
                     )}
+
                     <button
                       className="btn"
                       type="button"
@@ -724,15 +794,16 @@ export default function MusicRoom() {
                   <button
                     className="btn"
                     type="button"
-                    onClick={() =>
+                    onClick={() => {
+                      setAudioError("");
                       setPlaying({
                         id: item.id,
                         title: item.title,
                         artist: item.artist,
                         source: item.source,
                         url: item.url
-                      })
-                    }
+                      });
+                    }}
                   >
                     ▶ Слухати
                   </button>
@@ -760,6 +831,7 @@ export default function MusicRoom() {
                     >
                       ✓ Додати до спільного
                     </button>
+
                     <button
                       className="btn"
                       type="button"
@@ -773,7 +845,9 @@ export default function MusicRoom() {
             ))
           )
         ) : visibleTracks.length === 0 ? (
-          <p className="muted">У цьому списку поки немає композицій.</p>
+          <p className="muted">
+            У цьому списку поки немає композицій.
+          </p>
         ) : (
           visibleTracks.map((track, index) => (
             <div
@@ -797,7 +871,10 @@ export default function MusicRoom() {
 
               <button
                 type="button"
-                onClick={() => setPlaying(makePlaying(track))}
+                onClick={() => {
+                  setAudioError("");
+                  setPlaying(makePlaying(track));
+                }}
                 style={{
                   flex: 1,
                   minWidth: 0,
@@ -809,6 +886,7 @@ export default function MusicRoom() {
                 }}
               >
                 <strong style={{ display: "block" }}>{track.title}</strong>
+
                 <span className="muted" style={{ fontSize: 12 }}>
                   {track.artist} · {track.source}
                 </span>
@@ -846,17 +924,32 @@ export default function MusicRoom() {
             <h3>{playing.title}</h3>
             <p className="muted">{playing.artist}</p>
 
-            {playing.source === "Audius" && streamUrl(playing) ? (
-              <audio
-                key={playing.id}
-                controls
-                autoPlay
-                preload="none"
-                src={streamUrl(playing)}
-                style={{ width: "100%", marginTop: 12 }}
-              >
-                Твій браузер не підтримує аудіоплеєр.
-              </audio>
+            {playing.source === "Audius" && currentStream ? (
+              <>
+                <audio
+                  ref={audioRef}
+                  key={playing.id}
+                  controls
+                  autoPlay
+                  preload="auto"
+                  src={currentStream}
+                  onError={() => {
+                    setAudioError(
+                      "Не вдалося відтворити цю композицію. Можливо, вона недоступна для прослуховування."
+                    );
+                  }}
+                  onCanPlay={() => setAudioError("")}
+                  style={{ width: "100%", marginTop: 12 }}
+                >
+                  Твій браузер не підтримує аудіоплеєр.
+                </audio>
+
+                {audioError && (
+                  <p className="page-note" role="alert">
+                    {audioError}
+                  </p>
+                )}
+              </>
             ) : playing.source === "SoundCloud" &&
               soundCloudEmbed(playing.url) ? (
               <iframe
@@ -870,20 +963,37 @@ export default function MusicRoom() {
               />
             ) : (
               <p className="muted">
-                Цей старий запис не підтримується новим плеєром Audius.
-                Знайди композицію через пошук вище.
+                Цей запис не підтримується новим плеєром. Знайди композицію
+                через пошук вище.
               </p>
             )}
 
             {playing.source === "Audius" && (
-              <a
-                href={playing.url.split("#")[0]}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Відкрити сторінку композиції в Audius
-              </a>
+              <p>
+                <a
+                  href={playing.url.split("#")[0]}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Відкрити сторінку композиції в Audius
+                </a>
+              </p>
             )}
+
+            <button
+              className="btn"
+              type="button"
+              onClick={() => {
+                if (audioRef.current) {
+                  audioRef.current.pause();
+                  audioRef.current.currentTime = 0;
+                }
+                setPlaying(null);
+                setAudioError("");
+              }}
+            >
+              ■ Зупинити
+            </button>
           </>
         ) : (
           <p className="muted">
