@@ -712,9 +712,10 @@ export default function MusicRoom() {
         display: "grid",
         gap: 18,
         marginTop: 24,
-        paddingBottom: 220,
+        paddingBottom: 260,
       }}
     >
+      {/* ВКЛАДКИ */}
       <section className="panel">
         <h2 style={{ marginTop: 0 }}>🎵 Музичний простір VERCETI</h2>
 
@@ -758,7 +759,186 @@ export default function MusicRoom() {
         </div>
       </section>
 
-      <section className="panel" style={{ order: 2 }}>
+      {/* ОСОБИСТИЙ / СПІЛЬНИЙ АЛЬБОМ — ТЕПЕР ОДРАЗУ ПІД ВКЛАДКАМИ */}
+      <section className="panel">
+        <h2 style={{ marginTop: 0 }}>
+          {tab === "personal" && "🎧 Особиста музика"}
+          {tab === "shared" && "🌐 Спільна музика"}
+          {tab === "recommendations" && "💡 Рекомендації"}
+          {tab === "favorites" && "⭐ Улюблені композиції"}
+        </h2>
+
+        <p className="muted">
+          {tab === "personal" && "Твій особистий плейлист"}
+          {tab === "shared" && "Музика всієї спільноти"}
+          {tab === "recommendations" &&
+            "Пропозиції учасників для спільного плейлиста"}
+          {tab === "favorites" && "Пісні, які ти зберіг"}
+        </p>
+
+        {message && (
+          <p className="page-note" role="status">
+            {message}
+          </p>
+        )}
+
+        {loading ? (
+          <p className="muted">Завантаження...</p>
+        ) : tab === "recommendations" ? (
+          recommendations.length === 0 ? (
+            <p className="muted">Рекомендацій поки немає.</p>
+          ) : (
+            recommendations.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  padding: 14,
+                  marginTop: 10,
+                  borderRadius: 10,
+                  background: "rgba(255,255,255,0.04)",
+                }}
+              >
+                <strong>{item.title}</strong>
+                <p className="muted">
+                  {item.artist} · {item.source}
+                </p>
+
+                {item.source === "Audius" || item.source === "Jamendo" ? (
+                  <button
+                    className="btn"
+                    type="button"
+                    onClick={() => {
+                      setAudioError("");
+                      setResolvedId("");
+                      setPlaying({
+                        id: item.id,
+                        title: item.title,
+                        artist: item.artist,
+                        source: item.source,
+                        url: item.url,
+                      });
+                    }}
+                  >
+                    ▶ Слухати
+                  </button>
+                ) : (
+                  <a href={item.url} target="_blank" rel="noreferrer">
+                    Відкрити посилання
+                  </a>
+                )}
+
+                <p className="page-note">
+                  Статус:{" "}
+                  {item.status === "pending"
+                    ? "Очікує розгляду"
+                    : item.status === "approved"
+                      ? "Схвалено"
+                      : "Відхилено"}
+                </p>
+
+                {isManagement && item.status === "pending" && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={() => reviewRecommendation(item, true)}
+                    >
+                      ✓ Додати до спільного
+                    </button>
+
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={() => reviewRecommendation(item, false)}
+                    >
+                      Відхилити
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )
+        ) : visibleTracks.length === 0 ? (
+          <p className="muted">
+            У цьому списку поки немає композицій.
+          </p>
+        ) : (
+          visibleTracks.map((track, index) => (
+            <div
+              key={track.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: 12,
+                marginTop: 8,
+                borderRadius: 10,
+                background:
+                  playing?.id === track.id
+                    ? "rgba(187,138,255,0.15)"
+                    : "rgba(255,255,255,0.04)",
+              }}
+            >
+              <span className="muted">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setAudioError("");
+                  setResolvedId("");
+                  setPlaying({
+                    id: track.id,
+                    title: track.title,
+                    artist: track.artist,
+                    source: track.source,
+                    url: track.url,
+                  });
+                }}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  textAlign: "left",
+                  background: "transparent",
+                  border: 0,
+                  color: "inherit",
+                  cursor: "pointer",
+                }}
+              >
+                <strong style={{ display: "block" }}>{track.title}</strong>
+
+                <span className="muted" style={{ fontSize: 12 }}>
+                  {track.artist} · {track.source}
+                </span>
+              </button>
+
+              <button
+                className="btn"
+                type="button"
+                onClick={() => toggleFavorite(track)}
+                title="Улюблене"
+              >
+                {favoriteIds.includes(track.id) ? "⭐" : "☆"}
+              </button>
+
+              {(track.playlist_type === "personal" || isManagement) && (
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={() => deleteTrack(track)}
+                  title="Видалити"
+                >
+                  🗑
+                </button>
+              )}
+            </div>
+          ))
+        )}
+      </section>
+
+      {/* ПОШУК МУЗИКИ — ПІСЛЯ АЛЬБОМІВ */}
+      <section className="panel">
         <h2 style={{ marginTop: 0 }}>🔎 Знайти музику</h2>
 
         <p className="muted">
@@ -976,191 +1156,15 @@ export default function MusicRoom() {
         </p>
       </section>
 
-      <section className="panel" style={{ order: 1 }}>
-        <h2 style={{ marginTop: 0 }}>
-          {tab === "personal" && "🎧 Особиста музика"}
-          {tab === "shared" && "🌐 Спільна музика"}
-          {tab === "recommendations" && "💡 Рекомендації"}
-          {tab === "favorites" && "⭐ Улюблені композиції"}
-        </h2>
-
-        <p className="muted">
-          {tab === "personal" && "Твій особистий плейлист"}
-          {tab === "shared" && "Музика всієї спільноти"}
-          {tab === "recommendations" &&
-            "Пропозиції учасників для спільного плейлиста"}
-          {tab === "favorites" && "Пісні, які ти зберіг"}
-        </p>
-
-        {message && (
-          <p className="page-note" role="status">
-            {message}
-          </p>
-        )}
-
-        {loading ? (
-          <p className="muted">Завантаження...</p>
-        ) : tab === "recommendations" ? (
-          recommendations.length === 0 ? (
-            <p className="muted">Рекомендацій поки немає.</p>
-          ) : (
-            recommendations.map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  padding: 14,
-                  marginTop: 10,
-                  borderRadius: 10,
-                  background: "rgba(255,255,255,0.04)",
-                }}
-              >
-                <strong>{item.title}</strong>
-                <p className="muted">
-                  {item.artist} · {item.source}
-                </p>
-
-                {item.source === "Audius" || item.source === "Jamendo" ? (
-                  <button
-                    className="btn"
-                    type="button"
-                    onClick={() => {
-                      setAudioError("");
-                      setResolvedId("");
-                      setPlaying({
-                        id: item.id,
-                        title: item.title,
-                        artist: item.artist,
-                        source: item.source,
-                        url: item.url,
-                      });
-                    }}
-                  >
-                    ▶ Слухати
-                  </button>
-                ) : (
-                  <a href={item.url} target="_blank" rel="noreferrer">
-                    Відкрити посилання
-                  </a>
-                )}
-
-                <p className="page-note">
-                  Статус:{" "}
-                  {item.status === "pending"
-                    ? "Очікує розгляду"
-                    : item.status === "approved"
-                      ? "Схвалено"
-                      : "Відхилено"}
-                </p>
-
-                {isManagement && item.status === "pending" && (
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button
-                      className="btn"
-                      type="button"
-                      onClick={() => reviewRecommendation(item, true)}
-                    >
-                      ✓ Додати до спільного
-                    </button>
-
-                    <button
-                      className="btn"
-                      type="button"
-                      onClick={() => reviewRecommendation(item, false)}
-                    >
-                      Відхилити
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))
-          )
-        ) : visibleTracks.length === 0 ? (
-          <p className="muted">
-            У цьому списку поки немає композицій.
-          </p>
-        ) : (
-          visibleTracks.map((track, index) => (
-            <div
-              key={track.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: 12,
-                marginTop: 8,
-                borderRadius: 10,
-                background:
-                  playing?.id === track.id
-                    ? "rgba(187,138,255,0.15)"
-                    : "rgba(255,255,255,0.04)",
-              }}
-            >
-              <span className="muted">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setAudioError("");
-                  setResolvedId("");
-                  setPlaying({
-                    id: track.id,
-                    title: track.title,
-                    artist: track.artist,
-                    source: track.source,
-                    url: track.url,
-                  });
-                }}
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  textAlign: "left",
-                  background: "transparent",
-                  border: 0,
-                  color: "inherit",
-                  cursor: "pointer",
-                }}
-              >
-                <strong style={{ display: "block" }}>{track.title}</strong>
-
-                <span className="muted" style={{ fontSize: 12 }}>
-                  {track.artist} · {track.source}
-                </span>
-              </button>
-
-              <button
-                className="btn"
-                type="button"
-                onClick={() => toggleFavorite(track)}
-                title="Улюблене"
-              >
-                {favoriteIds.includes(track.id) ? "⭐" : "☆"}
-              </button>
-
-              {(track.playlist_type === "personal" || isManagement) && (
-                <button
-                  className="btn"
-                  type="button"
-                  onClick={() => deleteTrack(track)}
-                  title="Видалити"
-                >
-                  🗑
-                </button>
-              )}
-            </div>
-          ))
-        )}
-      </section>
-
+      {/* ЗАКРІПЛЕНИЙ ПЛЕЄР */}
       <section
         className="panel"
         style={{
           position: "fixed",
-          bottom: 12,
+          bottom: "max(12px, env(safe-area-inset-bottom))",
           left: 12,
           right: 12,
-          zIndex: 1000,
+          zIndex: 10000,
           width: "auto",
           maxWidth: 900,
           margin: "0 auto",
@@ -1168,6 +1172,7 @@ export default function MusicRoom() {
           border: "1px solid rgba(187,138,255,0.5)",
           boxShadow: "0 0 25px rgba(0,0,0,0.4)",
           backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
           maxHeight: "45vh",
           overflowY: "auto",
         }}
