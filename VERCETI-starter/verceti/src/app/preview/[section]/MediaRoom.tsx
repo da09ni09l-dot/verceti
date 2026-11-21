@@ -137,7 +137,29 @@ export default function MediaRoom() {
       setMessage("");
     }
   }, [activeAlbum]);
+  async function deleteFile(fileName: string) {
+  if (!activeAlbum || !canManage) return;
 
+  const confirmed = window.confirm(
+    `Точно видалити файл "${fileName}"?`
+  );
+
+  if (!confirmed) return;
+
+  const filePath = `${activeAlbum}/${fileName}`;
+
+  const { error } = await supabase.storage
+    .from("verceti-media")
+    .remove([filePath]);
+
+  if (error) {
+    setMessage("Помилка видалення: " + error.message);
+    return;
+  }
+
+  setMessage("Файл успішно видалено.");
+  await loadFiles(activeAlbum);
+}
   async function uploadFiles(
     event: React.ChangeEvent<HTMLInputElement>
   ) {
