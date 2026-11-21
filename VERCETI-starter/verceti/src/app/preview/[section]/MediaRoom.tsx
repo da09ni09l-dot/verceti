@@ -241,9 +241,9 @@ export default function MediaRoom() {
                   <input
                     type="file"
                     accept={
-                      activeAlbum.includes("videos")
-                        ? "video/*"
-                        : "image/*"
+                    activeAlbum?.includes("videos")
+                    ? "video/*"
+                    : "image/*"
                     }
                     multiple
                     disabled={uploading}
