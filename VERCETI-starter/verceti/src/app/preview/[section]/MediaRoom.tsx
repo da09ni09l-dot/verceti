@@ -372,16 +372,44 @@ export default function MediaRoom() {
                         </a>
                       )}
 
-                      <p
-                        style={{
-                          padding: "8px 10px",
-                          margin: 0,
-                          fontSize: 12,
-                          overflowWrap: "anywhere"
-                        }}
-                      >
-                        {file.name}
-                      </p>
+                      <div
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+    padding: "8px 10px"
+  }}
+>
+  <p
+    style={{
+      margin: 0,
+      fontSize: 12,
+      overflowWrap: "anywhere"
+    }}
+  >
+    {file.name}
+  </p>
+
+  {canManage && (
+    <button
+      type="button"
+      onClick={() => deleteFile(file.name)}
+      title="Видалити файл"
+      style={{
+        background: "rgba(220,50,70,0.15)",
+        border: "1px solid rgba(220,50,70,0.4)",
+        borderRadius: 8,
+        padding: "7px 10px",
+        cursor: "pointer",
+        color: "#ff7777",
+        flexShrink: 0
+      }}
+    >
+      🗑️
+    </button>
+  )}
+</div>
                     </div>
                   ))}
                 </div>
