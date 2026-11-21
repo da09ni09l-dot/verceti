@@ -4,9 +4,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-type Source = "Audius" | "YouTube" | "SoundCloud";
+type Source = "Audius" | "Jamendo" | "YouTube" | "SoundCloud";
+type CatalogSource = "Audius" | "Jamendo";
 type Tab = "personal" | "shared" | "recommendations" | "favorites";
 type PlaylistType = "personal" | "shared";
+type MusicMode = "trending" | "latest" | "ukrainian" | "search";
 
 type Track = {
   id: string;
@@ -41,6 +43,26 @@ type AudiusTrack = {
   duration?: number;
 };
 
+type JamendoTrack = {
+  id: string;
+  title: string;
+  artist: string;
+  image?: string;
+  duration?: number;
+  audio?: string;
+  url?: string;
+};
+
+type CatalogTrack = {
+  id: string;
+  title: string;
+  artist: string;
+  artwork: string;
+  duration: number;
+  source: CatalogSource;
+  url: string;
+};
+
 type PlayingTrack = {
   id: string;
   title: string;
@@ -48,20 +70,6 @@ type PlayingTrack = {
   source: Source;
   url: string;
 };
-
-function audiusIdFromUrl(value: string) {
-  try {
-    const url = new URL(value);
-
-    const hashId = url.hash.match(/audius-track-id=([^&]+)/)?.[1];
-    if (hashId) return decodeURIComponent(hashId);
-
-    const path = url.pathname.replace(/\/+$/, "");
-    return path.split("/").filter(Boolean).pop() || "";
-  } catch {
-    return "";
-  }
-}
 
 function audiusTrackUrl(track: AudiusTrack) {
   const permalink = track.permalink || "https://audius.co/";
@@ -115,9 +123,11 @@ export default function MusicRoom() {
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
 
-  const [audiusTracks, setAudiusTracks] = useState<AudiusTrack[]>([]);
+  const [catalogSource, setCatalogSource] =
+    useState<CatalogSource>("Audius");
+  const [catalogTracks, setCatalogTracks] = useState<CatalogTrack[]>([]);
   const [search, setSearch] = useState("");
-  const [musicMode, setMusicMode] = useState<"trending" | "latest" | "search">("trending");
+  const [musicMode, setMusicMode] = useState<MusicMode>("trending");
   const [musicLoading, setMusicLoading] = useState(false);
 
   const [playing, setPlaying] = useState<PlayingTrack | null>(null);
@@ -133,6 +143,7 @@ export default function MusicRoom() {
 
   const loadAudius = useCallback(
     async (action: "trending" | "latest" | "search", query = "") => {
+      setCatalogSource("Audius");
       setMusicLoading(true);
       setMessage("");
 
@@ -147,10 +158,29 @@ export default function MusicRoom() {
         const result = await response.json();
 
         if (!response.ok) {
-          throw new Error(result.error || "Не вдалося завантажити музику.");
+          throw new Error(result.error || "Не вдалося завантажити Audius.");
         }
 
-        setAudiusTracks(Array.isArray(result.data) ? result.data : []);
+        const items: AudiusTrack[] = Array.isArray(result.data)
+          ? result.data
+          : [];
+
+        setCatalogTracks(
+          items.map((track) => ({
+            id: track.id,
+            title: track.title,
+            artist: track.user?.name || "Невідомий виконавець",
+            artwork:
+              track.artwork?.["480x480"] ||
+              track.artwork?.["150x150"] ||
+              track.artwork?.["1000x1000"] ||
+              "",
+            duration: track.duration || 0,
+            source: "Audius",
+            url: audiusTrackUrl(track),
+          }))
+        );
+
         setMusicMode(action);
       } catch (error) {
         setMessage(
@@ -158,7 +188,58 @@ export default function MusicRoom() {
             ? error.message
             : "Помилка з'єднання з Audius."
         );
-        setAudiusTracks([]);
+        setCatalogTracks([]);
+      } finally {
+        setMusicLoading(false);
+      }
+    },
+    []
+  );
+
+  const loadJamendo = useCallback(
+    async (action: "ukrainian" | "search", query = "") => {
+      setCatalogSource("Jamendo");
+      setMusicLoading(true);
+      setMessage("");
+
+      try {
+        const params = new URLSearchParams({ action });
+
+        if (action === "search") {
+          params.set("q", query);
+        }
+
+        const response = await fetch(`/api/jamendo?${params.toString()}`);
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "Не вдалося завантажити Jamendo.");
+        }
+
+        const items: JamendoTrack[] = Array.isArray(result.results)
+          ? result.results
+          : [];
+
+        setCatalogTracks(
+          items.map((track) => ({
+            id: track.id,
+            title: track.title,
+            artist: track.artist,
+            artwork: track.image || "",
+            duration: track.duration || 0,
+            source: "Jamendo",
+            url: track.audio || "",
+          }))
+        );
+
+        setMusicMode(action);
+      } catch (error) {
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : "Помилка з'єднання з Jamendo."
+        );
+        setCatalogTracks([]);
       } finally {
         setMusicLoading(false);
       }
@@ -306,31 +387,26 @@ export default function MusicRoom() {
     setAudioError("");
   }
 
-  function makePlaying(track: Track): PlayingTrack {
-    return {
+  function playCatalogTrack(track: CatalogTrack) {
+    setAudioError("");
+    setResolvedId("");
+
+    if (!track.url) {
+      setAudioError("Для цієї композиції немає доступного аудіопотоку.");
+      return;
+    }
+
+    setPlaying({
       id: track.id,
       title: track.title,
       artist: track.artist,
       source: track.source,
       url: track.url,
-    };
-  }
-
-  function playAudius(track: AudiusTrack) {
-    setAudioError("");
-    setResolvedId("");
-
-    setPlaying({
-      id: track.id,
-      title: track.title,
-      artist: track.user?.name || "Невідомий виконавець",
-      source: "Audius",
-      url: audiusTrackUrl(track),
     });
   }
 
-  async function saveAudiusTrack(
-    track: AudiusTrack,
+  async function saveCatalogTrack(
+    track: CatalogTrack,
     playlistType: PlaylistType
   ) {
     if (!userId) {
@@ -343,6 +419,11 @@ export default function MusicRoom() {
       return;
     }
 
+    if (!track.url) {
+      setMessage("У цієї композиції немає посилання для відтворення.");
+      return;
+    }
+
     setSaving(true);
     setMessage("");
 
@@ -350,9 +431,9 @@ export default function MusicRoom() {
       .from("music_tracks")
       .insert({
         title: track.title,
-        artist: track.user?.name || "Невідомий виконавець",
-        source: "Audius",
-        url: audiusTrackUrl(track),
+        artist: track.artist,
+        source: track.source,
+        url: track.url,
         playlist_type: playlistType,
         user_id: playlistType === "personal" ? userId : null,
         created_by: userId,
@@ -378,9 +459,14 @@ export default function MusicRoom() {
     );
   }
 
-  async function recommendAudiusTrack(track: AudiusTrack) {
+  async function recommendCatalogTrack(track: CatalogTrack) {
     if (!userId) {
       setMessage("Спочатку увійди в акаунт.");
+      return;
+    }
+
+    if (!track.url) {
+      setMessage("У цієї композиції немає посилання для відтворення.");
       return;
     }
 
@@ -391,9 +477,9 @@ export default function MusicRoom() {
       .from("music_recommendations")
       .insert({
         title: track.title,
-        artist: track.user?.name || "Невідомий виконавець",
-        source: "Audius",
-        url: audiusTrackUrl(track),
+        artist: track.artist,
+        source: track.source,
+        url: track.url,
         user_id: userId,
       });
 
@@ -608,6 +694,18 @@ export default function MusicRoom() {
       )}/stream?app_name=VERCETI`
     : "";
 
+  function submitSearch(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!search.trim()) return;
+
+    if (catalogSource === "Audius") {
+      loadAudius("search", search.trim());
+    } else {
+      loadJamendo("search", search.trim());
+    }
+  }
+
   return (
     <div style={{ display: "grid", gap: 18, marginTop: 24 }}>
       <section className="panel">
@@ -657,20 +755,54 @@ export default function MusicRoom() {
         <h2 style={{ marginTop: 0 }}>🔎 Знайти музику</h2>
 
         <p className="muted">
-          Введи назву композиції або ім&apos;я виконавця.
+          Обери музичний каталог або введи назву композиції чи виконавця.
         </p>
 
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            className="btn"
+            type="button"
+            onClick={() => loadAudius("trending")}
+            disabled={musicLoading}
+            style={{
+              background:
+                catalogSource === "Audius"
+                  ? "rgba(187,138,255,0.35)"
+                  : undefined,
+            }}
+          >
+            🎵 Audius
+          </button>
+
+          <button
+            className="btn"
+            type="button"
+            onClick={() => loadJamendo("ukrainian")}
+            disabled={musicLoading}
+            style={{
+              background:
+                catalogSource === "Jamendo"
+                  ? "rgba(187,138,255,0.35)"
+                  : undefined,
+            }}
+          >
+            🇺🇦 Jamendo
+          </button>
+        </div>
+
         <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (search.trim()) loadAudius("search", search.trim());
+          onSubmit={submitSearch}
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            marginTop: 14,
           }}
-          style={{ display: "flex", gap: 8, flexWrap: "wrap" }}
         >
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Наприклад, The Weeknd або Imagine Dragons"
+            placeholder="Наприклад, українська музика або назва пісні"
             style={{ flex: 1, minWidth: 180 }}
           />
 
@@ -684,144 +816,156 @@ export default function MusicRoom() {
         </form>
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
-          <button
-            className="btn"
-            type="button"
-            onClick={() => loadAudius("trending")}
-            disabled={musicLoading}
-          >
-            🔥 Популярне
-          </button>
+          {catalogSource === "Audius" ? (
+            <>
+              <button
+                className="btn"
+                type="button"
+                onClick={() => loadAudius("trending")}
+                disabled={musicLoading}
+              >
+                🔥 Популярне
+              </button>
 
-          <button
-            className="btn"
-            type="button"
-            onClick={() => loadAudius("latest")}
-            disabled={musicLoading}
-          >
-            ✨ Новинки
-          </button>
+              <button
+                className="btn"
+                type="button"
+                onClick={() => loadAudius("latest")}
+                disabled={musicLoading}
+              >
+                ✨ Новинки
+              </button>
+            </>
+          ) : (
+            <button
+              className="btn"
+              type="button"
+              onClick={() => loadJamendo("ukrainian")}
+              disabled={musicLoading}
+            >
+              🇺🇦 Український чарт
+            </button>
+          )}
         </div>
 
         <h3 style={{ marginTop: 22 }}>
           {musicMode === "trending"
-            ? "🔥 Популярні композиції"
+            ? "🔥 Популярні композиції Audius"
             : musicMode === "latest"
-              ? "✨ Нові композиції"
-              : "🔎 Результати пошуку"}
+              ? "✨ Нові композиції Audius"
+              : musicMode === "ukrainian"
+                ? "🇺🇦 Український чарт Jamendo"
+                : `🔎 Результати пошуку — ${catalogSource}`}
         </h3>
 
         {musicLoading ? (
           <p className="muted">Шукаємо музику...</p>
-        ) : audiusTracks.length === 0 ? (
+        ) : catalogTracks.length === 0 ? (
           <p className="muted">
-            Композицій не знайдено. Спробуй інший запит.
+            Композицій не знайдено. Спробуй інший запит або каталог.
           </p>
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
-            {audiusTracks.map((track) => {
-              const artwork =
-                track.artwork?.["150x150"] ||
-                track.artwork?.["480x480"] ||
-                track.artwork?.["1000x1000"];
+            {catalogTracks.map((track) => (
+              <div
+                key={`${track.source}-${track.id}`}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: 10,
+                  borderRadius: 12,
+                  background: "rgba(255,255,255,0.04)",
+                  flexWrap: "wrap",
+                }}
+              >
+                {track.artwork ? (
+                  <img
+                    src={track.artwork}
+                    alt=""
+                    width={58}
+                    height={58}
+                    style={{ borderRadius: 8, objectFit: "cover" }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 58,
+                      height: 58,
+                      borderRadius: 8,
+                      display: "grid",
+                      placeItems: "center",
+                      background: "rgba(187,138,255,0.15)",
+                    }}
+                  >
+                    🎵
+                  </div>
+                )}
 
-              return (
-                <div
-                  key={track.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: 10,
-                    borderRadius: 12,
-                    background: "rgba(255,255,255,0.04)",
-                  }}
-                >
-                  {artwork ? (
-                    <img
-                      src={artwork}
-                      alt=""
-                      width={58}
-                      height={58}
-                      style={{ borderRadius: 8, objectFit: "cover" }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: 58,
-                        height: 58,
-                        borderRadius: 8,
-                        display: "grid",
-                        placeItems: "center",
-                        background: "rgba(187,138,255,0.15)",
-                      }}
+                <div style={{ flex: 1, minWidth: 130 }}>
+                  <strong style={{ display: "block" }}>{track.title}</strong>
+
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    {track.artist}
+                    {track.duration
+                      ? ` · ${formatDuration(track.duration)}`
+                      : ""}
+                    {" · "}
+                    {track.source}
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <button
+                    className="btn"
+                    type="button"
+                    disabled={!track.url}
+                    onClick={() => playCatalogTrack(track)}
+                    title="Слухати"
+                  >
+                    ▶
+                  </button>
+
+                  <button
+                    className="btn"
+                    type="button"
+                    disabled={saving || !track.url}
+                    onClick={() => saveCatalogTrack(track, "personal")}
+                    title="В особистий альбом"
+                  >
+                    +🎧
+                  </button>
+
+                  {isManagement && (
+                    <button
+                      className="btn"
+                      type="button"
+                      disabled={saving || !track.url}
+                      onClick={() => saveCatalogTrack(track, "shared")}
+                      title="У спільний альбом"
                     >
-                      🎵
-                    </div>
+                      +🌐
+                    </button>
                   )}
 
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <strong style={{ display: "block" }}>{track.title}</strong>
-
-                    <span className="muted" style={{ fontSize: 12 }}>
-                      {track.user?.name || "Невідомий виконавець"}
-                      {track.duration
-                        ? ` · ${formatDuration(track.duration)}`
-                        : ""}
-                    </span>
-                  </div>
-
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <button
-                      className="btn"
-                      type="button"
-                      onClick={() => playAudius(track)}
-                      title="Слухати"
-                    >
-                      ▶
-                    </button>
-
-                    <button
-                      className="btn"
-                      type="button"
-                      disabled={saving}
-                      onClick={() => saveAudiusTrack(track, "personal")}
-                      title="В особистий альбом"
-                    >
-                      +🎧
-                    </button>
-
-                    {isManagement && (
-                      <button
-                        className="btn"
-                        type="button"
-                        disabled={saving}
-                        onClick={() => saveAudiusTrack(track, "shared")}
-                        title="У спільний альбом"
-                      >
-                        +🌐
-                      </button>
-                    )}
-
-                    <button
-                      className="btn"
-                      type="button"
-                      disabled={saving}
-                      onClick={() => recommendAudiusTrack(track)}
-                      title="Запропонувати керівництву"
-                    >
-                      💡
-                    </button>
-                  </div>
+                  <button
+                    className="btn"
+                    type="button"
+                    disabled={saving || !track.url}
+                    onClick={() => recommendCatalogTrack(track)}
+                    title="Запропонувати керівництву"
+                  >
+                    💡
+                  </button>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
 
         <p className="muted" style={{ fontSize: 12, marginTop: 14 }}>
-          Музичний каталог надає Audius. Доступність окремих композицій
-          залежить від їхніх авторів.
+          Audius і Jamendo надають незалежні музичні каталоги. Доступність
+          композицій та можливість відтворення залежать від авторів і джерела.
         </p>
       </section>
 
@@ -864,9 +1008,11 @@ export default function MusicRoom() {
                 }}
               >
                 <strong>{item.title}</strong>
-                <p className="muted">{item.artist}</p>
+                <p className="muted">
+                  {item.artist} · {item.source}
+                </p>
 
-                {item.source === "Audius" ? (
+                {item.source === "Audius" || item.source === "Jamendo" ? (
                   <button
                     className="btn"
                     type="button"
@@ -951,7 +1097,13 @@ export default function MusicRoom() {
                 onClick={() => {
                   setAudioError("");
                   setResolvedId("");
-                  setPlaying(makePlaying(track));
+                  setPlaying({
+                    id: track.id,
+                    title: track.title,
+                    artist: track.artist,
+                    source: track.source,
+                    url: track.url,
+                  });
                 }}
                 style={{
                   flex: 1,
@@ -1000,7 +1152,9 @@ export default function MusicRoom() {
         {playing ? (
           <>
             <h3>{playing.title}</h3>
-            <p className="muted">{playing.artist}</p>
+            <p className="muted">
+              {playing.artist} · {playing.source}
+            </p>
 
             {playing.source === "Audius" ? (
               resolving ? (
@@ -1024,6 +1178,24 @@ export default function MusicRoom() {
                   Твій браузер не підтримує аудіоплеєр.
                 </audio>
               ) : null
+            ) : playing.source === "Jamendo" ? (
+              <audio
+                ref={audioRef}
+                key={playing.url}
+                controls
+                autoPlay
+                preload="metadata"
+                src={playing.url}
+                onError={() => {
+                  setAudioError(
+                    "Jamendo не зміг передати аудіо. Спробуй іншу композицію."
+                  );
+                }}
+                onCanPlay={() => setAudioError("")}
+                style={{ width: "100%", marginTop: 12 }}
+              >
+                Твій браузер не підтримує аудіоплеєр.
+              </audio>
             ) : playing.source === "SoundCloud" &&
               soundCloudEmbed(playing.url) ? (
               <iframe
@@ -1059,11 +1231,7 @@ export default function MusicRoom() {
               </p>
             )}
 
-            <button
-              className="btn"
-              type="button"
-              onClick={stopPlaying}
-            >
+            <button className="btn" type="button" onClick={stopPlaying}>
               ■ Зупинити
             </button>
           </>
