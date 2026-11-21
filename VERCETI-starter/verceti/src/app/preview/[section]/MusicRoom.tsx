@@ -707,7 +707,14 @@ export default function MusicRoom() {
   }
 
   return (
-    <div style={{ display: "grid", gap: 18, marginTop: 24 }}>
+    <div
+      style={{
+        display: "grid",
+        gap: 18,
+        marginTop: 24,
+        paddingBottom: 220,
+      }}
+    >
       <section className="panel">
         <h2 style={{ marginTop: 0 }}>🎵 Музичний простір VERCETI</h2>
 
@@ -751,7 +758,7 @@ export default function MusicRoom() {
         </div>
       </section>
 
-      <section className="panel">
+      <section className="panel" style={{ order: 2 }}>
         <h2 style={{ marginTop: 0 }}>🔎 Знайти музику</h2>
 
         <p className="muted">
@@ -969,7 +976,7 @@ export default function MusicRoom() {
         </p>
       </section>
 
-      <section className="panel">
+      <section className="panel" style={{ order: 1 }}>
         <h2 style={{ marginTop: 0 }}>
           {tab === "personal" && "🎧 Особиста музика"}
           {tab === "shared" && "🌐 Спільна музика"}
@@ -1146,7 +1153,25 @@ export default function MusicRoom() {
         )}
       </section>
 
-      <section className="panel">
+      <section
+        className="panel"
+        style={{
+          position: "fixed",
+          bottom: 12,
+          left: 12,
+          right: 12,
+          zIndex: 1000,
+          width: "auto",
+          maxWidth: 900,
+          margin: "0 auto",
+          background: "rgba(25, 20, 38, 0.97)",
+          border: "1px solid rgba(187,138,255,0.5)",
+          boxShadow: "0 0 25px rgba(0,0,0,0.4)",
+          backdropFilter: "blur(16px)",
+          maxHeight: "45vh",
+          overflowY: "auto",
+        }}
+      >
         <h2 style={{ marginTop: 0 }}>▶ Музичний плеєр</h2>
 
         {playing ? (
