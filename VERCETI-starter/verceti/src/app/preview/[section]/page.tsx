@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createNews, deleteNews } from "./actions";
 import ChatRoom from "./ChatRoom";
 import VoiceRoom from "./VoiceRoom";
+import MusicRoom from "./MusicRoom";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: { title: "Учасники", text: "Список учасників, ролі та профілі.", items: ["Пошук за нікнеймом та ігровим ID", "Кольорові позначки ролей", "Історія зміни ролей"] },
@@ -102,6 +103,14 @@ export default async function PreviewSection({
               Голосове спілкування та демонстрація екрана в одному місці.
             </p>
             <VoiceRoom />
+          </>
+        ) : section === "music" ? (
+          <>
+            <h1>Музика VERCETI</h1>
+            <p className="muted">
+              Музичний простір спільноти та список відтворення.
+            </p>
+            <MusicRoom />
           </>
         ) : section === "news" ? (
           <>
