@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 const JAMENDO_API = "https://api.jamendo.com/v3.0";
 
-async function jamendoRequest(endpoint: string, params: URLSearchParams) {
+async function jamendoRequest(
+  endpoint: string,
+  params: URLSearchParams
+) {
   const response = await fetch(
     `${JAMENDO_API}${endpoint}?${params.toString()}`,
     { cache: "no-store" }
@@ -82,7 +85,6 @@ export async function GET(request: NextRequest) {
       }
 
       params.set("search", query);
-      params.set("lang", "uk");
 
       results = await jamendoRequest("/tracks/", params);
     } else {
@@ -119,4 +121,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
