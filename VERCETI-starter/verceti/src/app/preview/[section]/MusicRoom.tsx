@@ -28,32 +28,47 @@ type Recommendation = {
 };
 
 function getEmbedUrl(track: Track) {
-  if (track.source === "YouTube") {
-    let videoId = "";
+  try {
+    const url = new URL(track.url);
 
-    try {
-      const url = new URL(track.url);
+    if (track.source === "YouTube") {
+      let videoId = "";
 
-      if (url.hostname.includes("youtu.be")) {
-        videoId = url.pathname.slice(1);
-      } else if (url.hostname.includes("youtube.com")) {
+      if (
+        url.hostname === "youtu.be" ||
+        url.hostname === "www.youtu.be"
+      ) {
+        videoId = url.pathname.split("/")[1] || "";
+      } else if (
+        url.hostname === "youtube.com" ||
+        url.hostname === "www.youtube.com" ||
+        url.hostname === "m.youtube.com"
+      ) {
         videoId =
           url.searchParams.get("v") ||
           url.pathname.split("/").pop() ||
           "";
       }
-    } catch {
+
+      if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) return "";
+
+      return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&rel=0`;
+    }
+
+    if (
+      url.hostname !== "soundcloud.com" &&
+      url.hostname !== "www.soundcloud.com" &&
+      url.hostname !== "m.soundcloud.com"
+    ) {
       return "";
     }
 
-    if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) return "";
-
-    return `https://www.youtube-nocookie.com/embed/${videoId}`;
+    return `https://w.soundcloud.com/player/?url=${encodeURIComponent(
+      track.url
+    )}&auto_play=false&visual=true`;
+  } catch {
+    return "";
   }
-
-  return `https://w.soundcloud.com/player/?url=${encodeURIComponent(
-    track.url
-  )}&auto_play=false&visual=true`;
 }
 
 function validLink(source: Source, value: string) {
@@ -63,20 +78,20 @@ function validLink(source: Source, value: string) {
     if (url.protocol !== "https:") return false;
 
     if (source === "YouTube") {
-      return (
-        url.hostname === "youtube.com" ||
-        url.hostname === "www.youtube.com" ||
-        url.hostname === "m.youtube.com" ||
-        url.hostname === "youtu.be" ||
-        url.hostname === "www.youtu.be"
-      );
+      return [
+        "youtube.com",
+        "www.youtube.com",
+        "m.youtube.com",
+        "youtu.be",
+        "www.youtu.be"
+      ].includes(url.hostname);
     }
 
-    return (
-      url.hostname === "soundcloud.com" ||
-      url.hostname === "www.soundcloud.com" ||
-      url.hostname === "m.soundcloud.com"
-    );
+    return [
+      "soundcloud.com",
+      "www.soundcloud.com",
+      "m.soundcloud.com"
+    ].includes(url.hostname);
   } catch {
     return false;
   }
@@ -88,24 +103,26 @@ export default function MusicRoom() {
   const [tab, setTab] = useState<Tab>("personal");
   const [userId, setUserId] = useState("");
   const [role, setRole] = useState("");
+
   const [tracks, setTracks] = useState<Track[]>([]);
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [favorites, setFavorites] = useState<Track[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const [source, setSource] = useState<Source>("YouTube");
   const [url, setUrl] = useState("");
-  const [showAdd, setShowAdd] = useState(false);
 
+  const [showAdd, setShowAdd] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
   const isManagement = ["admin", "leader", "moderator"].includes(role);
 
-  const visibleTracks =
-    tab === "favorites" ? favorites : tracks;
+  const visibleTracks = tab === "favorites" ? favorites : tracks;
 
   const currentTrack =
     visibleTracks.find((track) => track.id === activeId) || null;
@@ -137,6 +154,8 @@ export default function MusicRoom() {
   useEffect(() => {
     if (!userId) return;
 
+    let cancelled = false;
+
     async function loadData() {
       setLoading(true);
       setMessage("");
@@ -148,13 +167,15 @@ export default function MusicRoom() {
           .eq("playlist_type", tab)
           .order("created_at", { ascending: false });
 
+        if (cancelled) return;
+
         if (error) {
-          setMessage("Не вдалося завантажити музику: " + error.message);
+          setMessage("Помилка завантаження: " + error.message);
         } else {
           const list = (data || []) as Track[];
           setTracks(list);
 
-          if (!list.some((track) => track.id === activeId)) {
+          if (!list.some((item) => item.id === activeId)) {
             setActiveId(list[0]?.id || null);
           }
         }
@@ -166,8 +187,10 @@ export default function MusicRoom() {
           .select("*")
           .order("created_at", { ascending: false });
 
+        if (cancelled) return;
+
         if (error) {
-          setMessage("Не вдалося завантажити рекомендації: " + error.message);
+          setMessage("Помилка рекомендацій: " + error.message);
         } else {
           setRecommendations((data || []) as Recommendation[]);
         }
@@ -178,8 +201,10 @@ export default function MusicRoom() {
           .from("music_favorites")
           .select("track_id");
 
+        if (cancelled) return;
+
         if (error) {
-          setMessage("Не вдалося завантажити улюблене: " + error.message);
+          setMessage("Помилка улюбленого: " + error.message);
         } else {
           const ids = (data || []).map((item) => item.track_id);
 
@@ -189,8 +214,10 @@ export default function MusicRoom() {
               .select("*")
               .in("id", ids);
 
+            if (cancelled) return;
+
             if (savedError) {
-              setMessage("Не вдалося завантажити пісні: " + savedError.message);
+              setMessage("Помилка завантаження пісень: " + savedError.message);
             } else {
               setFavorites((saved || []) as Track[]);
             }
@@ -200,10 +227,14 @@ export default function MusicRoom() {
         }
       }
 
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     }
 
     loadData();
+
+    return () => {
+      cancelled = true;
+    };
   }, [supabase, userId, tab]);
 
   function clearForm() {
@@ -216,7 +247,7 @@ export default function MusicRoom() {
 
   async function addTrack() {
     if (!title.trim() || !validLink(source, url.trim())) {
-      setMessage("Вкажи назву та правильне посилання YouTube або SoundCloud.");
+      setMessage("Введи назву та правильне посилання на музику.");
       return;
     }
 
@@ -224,6 +255,8 @@ export default function MusicRoom() {
       setMessage("Додавати спільну музику може лише керівництво.");
       return;
     }
+
+    setSaving(true);
 
     const playlistType = tab === "shared" ? "shared" : "personal";
 
@@ -241,6 +274,8 @@ export default function MusicRoom() {
       .select()
       .single();
 
+    setSaving(false);
+
     if (error) {
       setMessage("Не вдалося додати пісню: " + error.message);
       return;
@@ -248,15 +283,17 @@ export default function MusicRoom() {
 
     setTracks((previous) => [data as Track, ...previous]);
     setActiveId(data.id);
-    setMessage("Композицію додано!");
+    setMessage("Композицію успішно додано!");
     clearForm();
   }
 
   async function sendRecommendation() {
     if (!title.trim() || !validLink(source, url.trim())) {
-      setMessage("Вкажи назву та правильне посилання на композицію.");
+      setMessage("Введи назву та правильне посилання.");
       return;
     }
+
+    setSaving(true);
 
     const { error } = await supabase
       .from("music_recommendations")
@@ -268,8 +305,10 @@ export default function MusicRoom() {
         user_id: userId
       });
 
+    setSaving(false);
+
     if (error) {
-      setMessage("Не вдалося надіслати рекомендацію: " + error.message);
+      setMessage("Не вдалося надіслати: " + error.message);
       return;
     }
 
@@ -292,12 +331,17 @@ export default function MusicRoom() {
       .eq("id", track.id);
 
     if (error) {
-      setMessage("Не вдалося видалити композицію: " + error.message);
+      setMessage("Помилка видалення: " + error.message);
       return;
     }
 
-    setTracks((previous) => previous.filter((item) => item.id !== track.id));
-    setFavorites((previous) => previous.filter((item) => item.id !== track.id));
+    setTracks((previous) =>
+      previous.filter((item) => item.id !== track.id)
+    );
+
+    setFavorites((previous) =>
+      previous.filter((item) => item.id !== track.id)
+    );
 
     if (activeId === track.id) setActiveId(null);
 
@@ -315,19 +359,25 @@ export default function MusicRoom() {
         .eq("user_id", userId);
 
       if (error) {
-        setMessage("Не вдалося прибрати з улюбленого: " + error.message);
+        setMessage("Помилка: " + error.message);
         return;
       }
 
-      setFavorites((previous) => previous.filter((item) => item.id !== track.id));
+      setFavorites((previous) =>
+        previous.filter((item) => item.id !== track.id)
+      );
+
       setMessage("Видалено з улюбленого.");
     } else {
       const { error } = await supabase
         .from("music_favorites")
-        .insert({ track_id: track.id, user_id: userId });
+        .insert({
+          track_id: track.id,
+          user_id: userId
+        });
 
       if (error) {
-        setMessage("Не вдалося зберегти композицію: " + error.message);
+        setMessage("Помилка збереження: " + error.message);
         return;
       }
 
@@ -337,7 +387,7 @@ export default function MusicRoom() {
   }
 
   async function reviewRecommendation(
-    recommendation: Recommendation,
+    item: Recommendation,
     approved: boolean
   ) {
     if (!isManagement) return;
@@ -346,40 +396,49 @@ export default function MusicRoom() {
       const { error: insertError } = await supabase
         .from("music_tracks")
         .insert({
-          title: recommendation.title,
-          artist: recommendation.artist,
-          source: recommendation.source,
-          url: recommendation.url,
+          title: item.title,
+          artist: item.artist,
+          source: item.source,
+          url: item.url,
           playlist_type: "shared",
           user_id: null,
           created_by: userId
         });
 
       if (insertError) {
-        setMessage("Не вдалося додати до спільної музики: " + insertError.message);
+        setMessage("Помилка додавання: " + insertError.message);
         return;
       }
     }
 
     const { error } = await supabase
       .from("music_recommendations")
-      .update({ status: approved ? "approved" : "rejected" })
-      .eq("id", recommendation.id);
+      .update({
+        status: approved ? "approved" : "rejected"
+      })
+      .eq("id", item.id);
 
     if (error) {
-      setMessage("Не вдалося оновити рекомендацію: " + error.message);
+      setMessage("Помилка зміни статусу: " + error.message);
       return;
     }
 
     setRecommendations((previous) =>
-      previous.map((item) =>
-        item.id === recommendation.id
-          ? { ...item, status: approved ? "approved" : "rejected" }
-          : item
+      previous.map((recommendation) =>
+        recommendation.id === item.id
+          ? {
+              ...recommendation,
+              status: approved ? "approved" : "rejected"
+            }
+          : recommendation
       )
     );
 
-    setMessage(approved ? "Пісню додано до спільного плейлиста!" : "Рекомендацію відхилено.");
+    setMessage(
+      approved
+        ? "Пісню додано до спільного плейлиста!"
+        : "Рекомендацію відхилено."
+    );
   }
 
   function changeTab(nextTab: Tab) {
@@ -438,9 +497,14 @@ export default function MusicRoom() {
             </p>
           </div>
 
-          {(tab === "personal" || tab === "recommendations" ||
+          {(tab === "personal" ||
+            tab === "recommendations" ||
             (tab === "shared" && isManagement)) && (
-            <button className="btn" type="button" onClick={() => setShowAdd(!showAdd)}>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => setShowAdd(!showAdd)}
+            >
               + {tab === "recommendations" ? "Запропонувати пісню" : "Додати музику"}
             </button>
           )}
@@ -469,7 +533,10 @@ export default function MusicRoom() {
             />
 
             <label className="muted">Джерело</label>
-            <select value={source} onChange={(event) => setSource(event.target.value as Source)}>
+            <select
+              value={source}
+              onChange={(event) => setSource(event.target.value as Source)}
+            >
               <option value="YouTube">YouTube</option>
               <option value="SoundCloud">SoundCloud</option>
             </select>
@@ -478,7 +545,7 @@ export default function MusicRoom() {
             <input
               value={url}
               onChange={(event) => setUrl(event.target.value)}
-              placeholder="https://..."
+              placeholder="https://www.youtube.com/watch?v=..."
               type="url"
             />
 
@@ -487,10 +554,11 @@ export default function MusicRoom() {
                 className="btn"
                 type="button"
                 onClick={tab === "recommendations" ? sendRecommendation : addTrack}
-                disabled={!title.trim() || !url.trim()}
+                disabled={!title.trim() || !url.trim() || saving}
               >
-                {tab === "recommendations" ? "Надіслати рекомендацію" : "Зберегти пісню"}
+                {saving ? "Збереження..." : tab === "recommendations" ? "Надіслати рекомендацію" : "Зберегти пісню"}
               </button>
+
               <button className="btn" type="button" onClick={clearForm}>
                 Скасувати
               </button>
@@ -509,13 +577,30 @@ export default function MusicRoom() {
             <p className="muted">Рекомендацій поки немає.</p>
           ) : (
             recommendations.map((item) => (
-              <div key={item.id} style={{ padding: 14, marginTop: 10, borderRadius: 10, background: "rgba(255,255,255,0.04)" }}>
+              <div
+                key={item.id}
+                style={{
+                  padding: 14,
+                  marginTop: 10,
+                  borderRadius: 10,
+                  background: "rgba(255,255,255,0.04)"
+                }}
+              >
                 <strong>{item.title}</strong>
                 <p className="muted">{item.artist}</p>
-                <a href={item.url} target="_blank" rel="noreferrer">Відкрити посилання</a>
+                <a href={item.url} target="_blank" rel="noreferrer">
+                  Відкрити посилання
+                </a>
                 <p className="page-note">
-                  Статус: {item.status === "pending" ? "Очікує розгляду" : item.status === "approved" ? "Схвалено" : "Відхилено"}
+                  Статус: {
+                    item.status === "pending"
+                      ? "Очікує розгляду"
+                      : item.status === "approved"
+                        ? "Схвалено"
+                        : "Відхилено"
+                  }
                 </p>
+
                 {isManagement && item.status === "pending" && (
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <button className="btn" type="button" onClick={() => reviewRecommendation(item, true)}>
@@ -550,7 +635,10 @@ export default function MusicRoom() {
                     : "rgba(255,255,255,0.04)"
                 }}
               >
-                <span className="muted">{String(index + 1).padStart(2, "0")}</span>
+                <span className="muted">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+
                 <button
                   type="button"
                   onClick={() => setActiveId(track.id)}
@@ -565,15 +653,27 @@ export default function MusicRoom() {
                   }}
                 >
                   <strong style={{ display: "block" }}>{track.title}</strong>
-                  <span className="muted" style={{ fontSize: 12 }}>{track.artist}</span>
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    {track.artist}
+                  </span>
                 </button>
 
-                <button className="btn" type="button" onClick={() => toggleFavorite(track)} title="Улюблене">
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={() => toggleFavorite(track)}
+                  title="Улюблене"
+                >
                   {isFavorite ? "⭐" : "☆"}
                 </button>
 
                 {(track.playlist_type === "personal" || isManagement) && (
-                  <button className="btn" type="button" onClick={() => deleteTrack(track)} title="Видалити">
+                  <button
+                    className="btn"
+                    type="button"
+                    onClick={() => deleteTrack(track)}
+                    title="Видалити"
+                  >
                     🗑
                   </button>
                 )}
@@ -585,43 +685,48 @@ export default function MusicRoom() {
 
       {(tab === "personal" || tab === "shared" || tab === "favorites") && (
         <section className="panel">
-          <h2 style={{ marginTop: 0 }}>▶ Плеєр</h2>
+          <h2 style={{ marginTop: 0 }}>▶ Музичний плеєр</h2>
 
           {currentTrack ? (
             <>
               <h3>{currentTrack.title}</h3>
               <p className="muted">{currentTrack.artist}</p>
-              {currentTrack.source === "YouTube" ? (
+
+              {getEmbedUrl(currentTrack) ? (
                 <iframe
                   key={currentTrack.id}
                   src={getEmbedUrl(currentTrack)}
                   title={currentTrack.title}
                   width="100%"
-                  height="315"
-                  style={{ border: 0, borderRadius: 12, marginTop: 12 }}
+                  height={currentTrack.source === "YouTube" ? 315 : 166}
+                  style={{
+                    border: 0,
+                    borderRadius: 12,
+                    marginTop: 12
+                  }}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   referrerPolicy="strict-origin-when-cross-origin"
                   allowFullScreen
                 />
               ) : (
-                <iframe
-                  key={currentTrack.id}
-                  title={currentTrack.title}
-                  width="100%"
-                  height="166"
-                  scrolling="no"
-                  frameBorder="0"
-                  allow="autoplay"
-                  src={getEmbedUrl(currentTrack)}
-                  style={{ borderRadius: 12, marginTop: 12 }}
-                />
+                <p className="muted">
+                  Не вдалося створити програвач. Перевір посилання.
+                </p>
               )}
+
               <p className="page-note">
-                Керуй відтворенням у вбудованому програвачі YouTube або SoundCloud.
+                Натисни Play безпосередньо у програвачі. Якщо відео недоступне
+                для вбудованого відтворення, відкрий його на YouTube.
               </p>
+
+              <a href={currentTrack.url} target="_blank" rel="noreferrer">
+                Відкрити оригінал у {currentTrack.source}
+              </a>
             </>
           ) : (
-            <p className="muted">Вибери композицію зі списку, щоб відкрити програвач.</p>
+            <p className="muted">
+              Вибери композицію зі списку, щоб відкрити програвач.
+            </p>
           )}
         </section>
       )}
