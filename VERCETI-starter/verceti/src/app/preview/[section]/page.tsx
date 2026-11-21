@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createNews } from "./actions";
+
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: { title: "Учасники", text: "Список учасників, ролі та профілі.", items: ["Пошук за нікнеймом та ігровим ID", "Кольорові позначки ролей", "Історія зміни ролей"] },
   chat: { title: "Чат", text: "Місце для загального та приватного спілкування.", items: ["Загальний чат", "Особисті повідомлення", "Скарги та модерація"] },
@@ -31,8 +32,16 @@ const categoryLabels: Record<string, string> = {
   important: "ВАЖЛИВО"
 };
 
-export default async function PreviewSection({ params }: { params: Promise<{ section: string }> }) {
+export default async function PreviewSection({
+  params,
+  searchParams
+}: {
+  params: Promise<{ section: string }>;
+  searchParams: Promise<{ status?: string }>;
+}) {
   const { section } = await params;
+  const { status } = await searchParams;
+
   const data = descriptions[section] ?? {
     title: "Розділ",
     text: "Цей розділ буде реалізовано на наступному етапі.",
@@ -49,9 +58,15 @@ export default async function PreviewSection({ params }: { params: Promise<{ sec
   }[] = [];
 
   let newsError = false;
+  let isStaff = false;
 
   if (section === "news") {
     const supabase = await createClient();
+
+    const { data: staffStatus, error: staffError } =
+      await supabase.rpc("is_verceti_staff");
+
+    isStaff = !staffError && staffStatus === true;
 
     const { data, error } = await supabase
       .from("news")
@@ -75,6 +90,74 @@ export default async function PreviewSection({ params }: { params: Promise<{ sec
           <>
             <h1>Новини</h1>
             <p className="muted">Новини спільноти, оголошення та події.</p>
+
+            {isStaff && (
+              <div className="panel" style={{ marginTop: 24 }}>
+                <h2>Створити новину</h2>
+
+                <form action={createNews} className="member-list">
+                  <label htmlFor="news-title">Заголовок</label>
+                  <input
+                    id="news-title"
+                    name="title"
+                    type="text"
+                    required
+                    maxLength={150}
+                    placeholder="Введіть заголовок"
+                  />
+
+                  <label htmlFor="news-content">Текст новини</label>
+                  <textarea
+                    id="news-content"
+                    name="content"
+                    required
+                    maxLength={10000}
+                    rows={5}
+                    placeholder="Введіть текст новини"
+                  />
+
+                  <label htmlFor="news-category">Категорія</label>
+                  <select id="news-category" name="category" required defaultValue="announcement">
+                    <option value="announcement">Оголошення</option>
+                    <option value="event">Подія</option>
+                    <option value="important">Важливо</option>
+                  </select>
+
+                  <label htmlFor="news-date">Дата події (необов'язково)</label>
+                  <input id="news-date" name="event_date" type="date" />
+
+                  <button className="btn" type="submit">
+                    Опублікувати новину
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {status === "created" && (
+              <div className="panel" style={{ marginTop: 16 }}>
+                Новину успішно опубліковано.
+              </div>
+            )}
+            {status === "empty" && (
+              <div className="panel" style={{ marginTop: 16 }}>
+                Заповни заголовок і текст новини.
+              </div>
+            )}
+            {status === "invalid" && (
+              <div className="panel" style={{ marginTop: 16 }}>
+                Обрана неправильна категорія.
+              </div>
+            )}
+            {status === "forbidden" && (
+              <div className="panel" style={{ marginTop: 16 }}>
+                У тебе немає прав для створення новин.
+              </div>
+            )}
+            {status === "error" && (
+              <div className="panel" style={{ marginTop: 16 }}>
+                Не вдалося опублікувати новину. Перевір журнал помилок.
+              </div>
+            )}
 
             {newsError ? (
               <div className="panel" style={{ marginTop: 24 }}>
