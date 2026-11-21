@@ -1,5 +1,6 @@
 
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: { title: "Учасники", text: "Список учасників, ролі та профілі.", items: ["Пошук за нікнеймом та ігровим ID", "Кольорові позначки ролей", "Історія зміни ролей"] },
@@ -17,12 +18,6 @@ const descriptions: Record<string, { title: string; text: string; items: string[
   settings: { title: "Налаштування", text: "Персональні параметри та безпека.", items: ["Приватність", "Звуки сповіщень", "Захист акаунта"] }
 };
 
-const news = [
-  { type: "ОГОЛОШЕННЯ", title: "Вітаємо у VERCETI", text: "Тут публікуватимуться важливі новини та повідомлення спільноти.", date: "21.11.2026" },
-  { type: "МАЙБУТНЯ ПОДІЯ", title: "Зустріч учасників", text: "Демонстраційна подія. Дату та подробиці буде оголошено керівництвом.", date: "25.11.2026" },
-  { type: "МИНУЛА ПОДІЯ", title: "Відкриття спільноти", text: "Приклад запису про минулу подію. Тут зберігатиметься її підсумок.", date: "15.11.2026" }
-];
-
 const ruleGroups = [
   { title: "Правила спільноти", items: ["Поважайте інших учасників.", "Не допускайте образ, цькування та погроз.", "Не поширюйте особисту інформацію інших людей.", "Дотримуйтеся рішень керівництва."] },
   { title: "Правила чату", items: ["Не спамте та не засмічуйте повідомленнями чат.", "Не публікуйте заборонений або образливий контент.", "Не провокуйте конфлікти та не порушуйте порядок спілкування."] },
@@ -30,9 +25,46 @@ const ruleGroups = [
   { title: "Можливі санкції", items: ["Попередження.", "Тимчасове обмеження чату або голосу.", "Тимчасове відсторонення від спільноти.", "Видалення зі спільноти у разі серйозних або повторних порушень."] }
 ];
 
+const categoryLabels: Record<string, string> = {
+  announcement: "ОГОЛОШЕННЯ",
+  event: "ПОДІЯ",
+  important: "ВАЖЛИВО"
+};
+
 export default async function PreviewSection({ params }: { params: Promise<{ section: string }> }) {
   const { section } = await params;
-  const data = descriptions[section] ?? { title: "Розділ", text: "Цей розділ буде реалізовано на наступному етапі.", items: ["Структура сторінки", "Права доступу", "Робочі функції"] };
+  const data = descriptions[section] ?? {
+    title: "Розділ",
+    text: "Цей розділ буде реалізовано на наступному етапі.",
+    items: ["Структура сторінки", "Права доступу", "Робочі функції"]
+  };
+
+  let newsItems: {
+    id: string;
+    title: string;
+    content: string;
+    category: string;
+    event_date: string | null;
+    created_at: string;
+  }[] = [];
+
+  let newsError = false;
+
+  if (section === "news") {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from("news")
+      .select("id, title, content, category, event_date, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("VERCETI news loading error:", error.message);
+      newsError = true;
+    } else {
+      newsItems = data ?? [];
+    }
+  }
 
   return (
     <main className="login-wrap">
@@ -43,17 +75,40 @@ export default async function PreviewSection({ params }: { params: Promise<{ sec
           <>
             <h1>Новини</h1>
             <p className="muted">Новини спільноти, оголошення та події.</p>
-            <div className="member-list" style={{ margin: "24px 0" }}>
-              {news.map((item) => (
-                <div className="panel" key={item.title} style={{ marginBottom: 14 }}>
-                  <div className="eyebrow">{item.type}</div>
-                  <h2>{item.title}</h2>
-                  <p className="muted">{item.text}</p>
-                  <div className="notice-time">Дата: {item.date}</div>
-                </div>
-              ))}
-            </div>
-            <p className="page-note">Усі учасники зможуть читати новини. Публікація та редагування будуть доступні адміну й уповноваженому керівництву. Записи зараз демонстраційні.</p>
+
+            {newsError ? (
+              <div className="panel" style={{ marginTop: 24 }}>
+                <p className="muted">Не вдалося завантажити новини. Перевір підключення до бази даних.</p>
+              </div>
+            ) : newsItems.length === 0 ? (
+              <div className="panel" style={{ marginTop: 24 }}>
+                <h2>Поки що новин немає</h2>
+                <p className="muted">Нові оголошення спільноти з&apos;являтимуться тут.</p>
+              </div>
+            ) : (
+              <div className="member-list" style={{ margin: "24px 0" }}>
+                {newsItems.map((item) => (
+                  <div className="panel" key={item.id} style={{ marginBottom: 14 }}>
+                    <div className="eyebrow">
+                      {categoryLabels[item.category] ?? item.category.toUpperCase()}
+                    </div>
+                    <h2>{item.title}</h2>
+                    <p className="muted">{item.content}</p>
+                    <div className="notice-time">
+                      Дата: {new Date(
+                        item.event_date
+                          ? `${item.event_date}T12:00:00`
+                          : item.created_at
+                      ).toLocaleDateString("uk-UA")}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p className="page-note">
+              Новини завантажуються з бази даних VERCETI.
+            </p>
           </>
         ) : section === "rules" ? (
           <>
