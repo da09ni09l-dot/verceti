@@ -1,3 +1,4 @@
+
 export const members = [
   { name: "НічнийВовк", role: "ЛІДЕР", color: "pink", status: "online", hours: "18 год 42 хв" },
   { name: "VioletFox", role: "МОДЕР", color: "cyan", status: "online", hours: "12 год 08 хв" },
@@ -14,12 +15,14 @@ export const notices = [
 
 export const menu = [
   ["Головна", "⌂", "home"],
+  ["Новини", "▤", "news"],
   ["Учасники", "♙", "members"],
   ["Чат", "▤", "chat"],
   ["Голосові кімнати", "◖", "voice"],
   ["Трансляції", "◉", "streams"],
   ["Музика", "♫", "music"],
   ["Фото та відео", "▧", "media"],
+  ["Правила", "⚖", "rules"],
   ["Тестування", "✧", "tests"],
   ["Анкети", "▣", "forms"],
   ["Рулетка та бонуси", "◇", "rewards"],
