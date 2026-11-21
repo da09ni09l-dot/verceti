@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 type Album = {
   id: string;
@@ -9,6 +10,12 @@ type Album = {
   description: string;
   icon: string;
   access: string;
+};
+
+type MediaFile = {
+  name: string;
+  url: string;
+  isVideo: boolean;
 };
 
 const albums: Album[] = [
@@ -42,12 +49,136 @@ const albums: Album[] = [
   }
 ];
 
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+
 export default function MediaRoom() {
+  const supabase = createClient();
+
   const [activeAlbum, setActiveAlbum] = useState<string | null>(null);
+  const [files, setFiles] = useState<MediaFile[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [message, setMessage] = useState("");
 
   const selectedAlbum = albums.find(
     (album) => album.id === activeAlbum
   );
+
+  async function loadFiles(albumId: string) {
+    setLoading(true);
+    setMessage("");
+
+    const { data, error } = await supabase.storage
+      .from("verceti-media")
+      .list(albumId, {
+        limit: 100,
+        sortBy: { column: "created_at", order: "desc" }
+      });
+
+    if (error) {
+      setMessage("Не вдалося завантажити список файлів: " + error.message);
+      setFiles([]);
+      setLoading(false);
+      return;
+    }
+
+    const mediaFiles: MediaFile[] = [];
+
+    for (const file of data ?? []) {
+      if (!file.name || file.name.startsWith(".")) continue;
+
+      const path = `${albumId}/${file.name}`;
+
+      const { data: signedData, error: signedError } =
+        await supabase.storage
+          .from("verceti-media")
+          .createSignedUrl(path, 3600);
+
+      if (signedError || !signedData) continue;
+
+      const isVideo =
+        file.metadata?.mimetype?.startsWith("video/") ||
+        /\.(mp4|webm|mov|m4v)$/i.test(file.name);
+
+      mediaFiles.push({
+        name: file.name,
+        url: signedData.signedUrl,
+        isVideo: Boolean(isVideo)
+      });
+    }
+
+    setFiles(mediaFiles);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    if (activeAlbum) {
+      loadFiles(activeAlbum);
+    } else {
+      setFiles([]);
+      setMessage("");
+    }
+  }, [activeAlbum]);
+
+  async function uploadFiles(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const selectedFiles = Array.from(event.target.files ?? []);
+
+    if (!activeAlbum || selectedFiles.length === 0) return;
+
+    const isVideoAlbum = activeAlbum.includes("videos");
+
+    for (const file of selectedFiles) {
+      if (file.size > MAX_FILE_SIZE) {
+        setMessage(`Файл ${file.name} перевищує ліміт 50 МБ.`);
+        event.target.value = "";
+        return;
+      }
+
+      if (
+        isVideoAlbum
+          ? !file.type.startsWith("video/")
+          : !file.type.startsWith("image/")
+      ) {
+        setMessage(
+          isVideoAlbum
+            ? "У цей альбом можна додавати лише відео."
+            : "У цей альбом можна додавати лише фотографії."
+        );
+        event.target.value = "";
+        return;
+      }
+    }
+
+    setUploading(true);
+    setMessage("");
+
+    for (const file of selectedFiles) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const filePath = `${activeAlbum}/${crypto.randomUUID()}-${safeName}`;
+
+      const { error } = await supabase.storage
+        .from("verceti-media")
+        .upload(filePath, file, {
+          contentType: file.type,
+          upsert: false
+        });
+
+      if (error) {
+        setMessage("Помилка завантаження: " + error.message);
+        setUploading(false);
+        event.target.value = "";
+        return;
+      }
+    }
+
+    setMessage("Файли успішно завантажено!");
+    await loadFiles(activeAlbum);
+
+    setUploading(false);
+    event.target.value = "";
+  }
 
   return (
     <div style={{ display: "grid", gap: 18, marginTop: 24 }}>
@@ -96,29 +227,125 @@ export default function MediaRoom() {
                 {selectedAlbum.access}
               </div>
 
-              <div
-                style={{
-                  marginTop: 20,
-                  padding: 24,
-                  textAlign: "center",
-                  borderRadius: 12,
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px dashed rgba(187,138,255,0.35)"
-                }}
-              >
-                <div style={{ fontSize: 42 }}>🖼️</div>
+              <div style={{ marginTop: 22 }}>
+                <label
+                  className="btn"
+                  style={{
+                    display: "inline-block",
+                    cursor: uploading ? "wait" : "pointer",
+                    opacity: uploading ? 0.6 : 1
+                  }}
+                >
+                  {uploading ? "Завантаження..." : "＋ Додати файли"}
 
-                <h3>Альбом поки порожній</h3>
-
-                <p className="muted">
-                  Тут будуть відображатися фотографії та відео.
-                </p>
+                  <input
+                    type="file"
+                    accept={
+                      activeAlbum.includes("videos")
+                        ? "video/*"
+                        : "image/*"
+                    }
+                    multiple
+                    disabled={uploading}
+                    onChange={uploadFiles}
+                    style={{ display: "none" }}
+                  />
+                </label>
 
                 <p className="page-note">
-                  Завантаження файлів і перевірка прав доступу будуть
-                  підключені окремо.
+                  Максимальний розмір одного файлу — 50 МБ.
                 </p>
               </div>
+
+              {message && (
+                <p className="page-note" role="status">
+                  {message}
+                </p>
+              )}
+
+              {loading ? (
+                <p className="muted">Завантаження медіатеки...</p>
+              ) : files.length === 0 ? (
+                <div
+                  style={{
+                    marginTop: 20,
+                    padding: 24,
+                    textAlign: "center",
+                    borderRadius: 12,
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px dashed rgba(187,138,255,0.35)"
+                  }}
+                >
+                  <div style={{ fontSize: 42 }}>🖼️</div>
+                  <h3>Альбом поки порожній</h3>
+                  <p className="muted">
+                    Додай перші фотографії або відео.
+                  </p>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(auto-fill, minmax(180px, 1fr))",
+                    gap: 14,
+                    marginTop: 22
+                  }}
+                >
+                  {files.map((file) => (
+                    <div
+                      key={file.name}
+                      style={{
+                        overflow: "hidden",
+                        borderRadius: 12,
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(187,138,255,0.2)"
+                      }}
+                    >
+                      {file.isVideo ? (
+                        <video
+                          src={file.url}
+                          controls
+                          style={{
+                            width: "100%",
+                            aspectRatio: "4 / 3",
+                            objectFit: "cover"
+                          }}
+                        />
+                      ) : (
+                        <a
+                          href={file.url}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <img
+                            src={file.url}
+                            alt={file.name}
+                            loading="lazy"
+                            style={{
+                              width: "100%",
+                              aspectRatio: "4 / 3",
+                              objectFit: "cover",
+                              display: "block"
+                            }}
+                          />
+                        </a>
+                      )}
+
+                      <p
+                        style={{
+                          padding: "8px 10px",
+                          margin: 0,
+                          fontSize: 12,
+                          overflowWrap: "anywhere"
+                        }}
+                      >
+                        {file.name}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -146,21 +373,15 @@ export default function MediaRoom() {
                   border: "1px solid rgba(187,138,255,0.2)"
                 }}
               >
-                <div style={{ fontSize: 36 }}>
-                  {album.icon}
-                </div>
+                <div style={{ fontSize: 36 }}>{album.icon}</div>
 
-                <h3 style={{ marginBottom: 8 }}>
-                  {album.title}
-                </h3>
+                <h3 style={{ marginBottom: 8 }}>{album.title}</h3>
 
                 <p className="muted" style={{ fontSize: 13 }}>
                   {album.description}
                 </p>
 
-                <span className="tag">
-                  {album.access}
-                </span>
+                <span className="tag">{album.access}</span>
 
                 <div
                   style={{
@@ -178,8 +399,8 @@ export default function MediaRoom() {
       </section>
 
       <p className="page-note">
-        Це перша версія інтерфейсу медіатеки. Файли поки не завантажуються
-        та не зберігаються. Реальне сховище й контроль доступу додамо окремо.
+        Медіафайли зберігаються у приватному сховищі VERCETI.
+        Доступ до них контролюється правилами Supabase.
       </p>
     </div>
   );
