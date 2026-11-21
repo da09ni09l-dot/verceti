@@ -1,7 +1,7 @@
 
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-
+import { createNews } from "./actions";
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: { title: "Учасники", text: "Список учасників, ролі та профілі.", items: ["Пошук за нікнеймом та ігровим ID", "Кольорові позначки ролей", "Історія зміни ролей"] },
   chat: { title: "Чат", text: "Місце для загального та приватного спілкування.", items: ["Загальний чат", "Особисті повідомлення", "Скарги та модерація"] },
