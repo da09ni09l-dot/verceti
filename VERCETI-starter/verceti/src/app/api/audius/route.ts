@@ -40,6 +40,43 @@ export async function GET(request: NextRequest) {
       }
 
       path = `/tracks/search?query=${encodeURIComponent(query)}&limit=20`;
+    } else if (action === "resolve") {
+      const trackUrl = searchParams.get("url")?.trim();
+
+      if (!trackUrl) {
+        return NextResponse.json(
+          { error: "Не вказано посилання на композицію" },
+          { status: 400 }
+        );
+      }
+
+      const parsedUrl = new URL(trackUrl);
+
+      if (
+        !["audius.co", "www.audius.co", "m.audius.co"].includes(
+          parsedUrl.hostname
+        )
+      ) {
+        return NextResponse.json(
+          { error: "Це не посилання Audius" },
+          { status: 400 }
+        );
+      }
+
+      const result = await audiusRequest(
+        `/resolve?url=${encodeURIComponent(trackUrl)}`
+      );
+
+      const trackId = result?.data?.id;
+
+      if (!trackId) {
+        return NextResponse.json(
+          { error: "Не вдалося знайти композицію в Audius" },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({ id: trackId });
     } else {
       return NextResponse.json(
         { error: "Невідома дія" },
@@ -54,7 +91,12 @@ export async function GET(request: NextRequest) {
     console.error("Audius error:", error);
 
     return NextResponse.json(
-      { error: "Не вдалося отримати музику з Audius" },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Не вдалося отримати музику з Audius",
+      },
       { status: 500 }
     );
   }
