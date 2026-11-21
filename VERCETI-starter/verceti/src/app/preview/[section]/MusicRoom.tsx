@@ -52,7 +52,12 @@ type PlayingTrack = {
 function audiusIdFromUrl(value: string) {
   try {
     const url = new URL(value);
-    return url.hash.match(/audius-track-id=([^&]+)/)?.[1] || "";
+
+    const hashId = url.hash.match(/audius-track-id=([^&]+)/)?.[1];
+    if (hashId) return decodeURIComponent(hashId);
+
+    const path = url.pathname.replace(/\/+$/, "");
+    return path.split("/").filter(Boolean).pop() || "";
   } catch {
     return "";
   }
@@ -61,15 +66,6 @@ function audiusIdFromUrl(value: string) {
 function audiusTrackUrl(track: AudiusTrack) {
   const permalink = track.permalink || "https://audius.co/";
   return `${permalink}#audius-track-id=${encodeURIComponent(track.id)}`;
-}
-
-function streamUrl(track: PlayingTrack) {
-  if (track.source !== "Audius") return "";
-
-  const id = audiusIdFromUrl(track.url);
-  if (!id) return "";
-
-  return `https://api.audius.co/v1/tracks/${encodeURIComponent(id)}/stream?app_name=VERCETI`;
 }
 
 function soundCloudEmbed(url: string) {
@@ -103,7 +99,7 @@ const tabs: { value: Tab; label: string }[] = [
   { value: "personal", label: "🎧 Особистий" },
   { value: "shared", label: "🌐 Спільний" },
   { value: "recommendations", label: "💡 Рекомендації" },
-  { value: "favorites", label: "⭐ Улюблене" }
+  { value: "favorites", label: "⭐ Улюблене" },
 ];
 
 export default function MusicRoom() {
@@ -125,6 +121,9 @@ export default function MusicRoom() {
   const [musicLoading, setMusicLoading] = useState(false);
 
   const [playing, setPlaying] = useState<PlayingTrack | null>(null);
+  const [resolvedId, setResolvedId] = useState("");
+  const [resolving, setResolving] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -167,7 +166,6 @@ export default function MusicRoom() {
     []
   );
 
-  // Завантаження користувача та його ролі
   useEffect(() => {
     let cancelled = false;
 
@@ -206,12 +204,10 @@ export default function MusicRoom() {
     };
   }, [supabase]);
 
-  // Завантаження каталогу Audius
   useEffect(() => {
     loadAudius("trending");
   }, [loadAudius]);
 
-  // Завантаження музики відповідно до відкритої вкладки
   useEffect(() => {
     if (!userId) return;
 
@@ -304,7 +300,6 @@ export default function MusicRoom() {
     };
   }, [supabase, userId, tab]);
 
-  // Перемикання альбомів
   function changeTab(nextTab: Tab) {
     setTab(nextTab);
     setMessage("");
@@ -317,19 +312,20 @@ export default function MusicRoom() {
       title: track.title,
       artist: track.artist,
       source: track.source,
-      url: track.url
+      url: track.url,
     };
   }
 
   function playAudius(track: AudiusTrack) {
     setAudioError("");
+    setResolvedId("");
 
     setPlaying({
       id: track.id,
       title: track.title,
       artist: track.user?.name || "Невідомий виконавець",
       source: "Audius",
-      url: audiusTrackUrl(track)
+      url: audiusTrackUrl(track),
     });
   }
 
@@ -359,7 +355,7 @@ export default function MusicRoom() {
         url: audiusTrackUrl(track),
         playlist_type: playlistType,
         user_id: playlistType === "personal" ? userId : null,
-        created_by: userId
+        created_by: userId,
       })
       .select()
       .single();
@@ -398,7 +394,7 @@ export default function MusicRoom() {
         artist: track.user?.name || "Невідомий виконавець",
         source: "Audius",
         url: audiusTrackUrl(track),
-        user_id: userId
+        user_id: userId,
       });
 
     setSaving(false);
@@ -432,7 +428,7 @@ export default function MusicRoom() {
     setFavoriteIds((previous) => previous.filter((id) => id !== track.id));
 
     if (playing?.id === track.id) {
-      setPlaying(null);
+      stopPlaying();
     }
 
     setMessage("Композицію видалено.");
@@ -463,7 +459,7 @@ export default function MusicRoom() {
         .from("music_favorites")
         .insert({
           track_id: track.id,
-          user_id: userId
+          user_id: userId,
         });
 
       if (error) {
@@ -493,7 +489,7 @@ export default function MusicRoom() {
           url: item.url,
           playlist_type: "shared",
           user_id: null,
-          created_by: userId
+          created_by: userId,
         });
 
       if (insertError) {
@@ -517,7 +513,7 @@ export default function MusicRoom() {
         recommendation.id === item.id
           ? {
               ...recommendation,
-              status: approved ? "approved" : "rejected"
+              status: approved ? "approved" : "rejected",
             }
           : recommendation
       )
@@ -530,8 +526,87 @@ export default function MusicRoom() {
     );
   }
 
+  async function resolveAudiusId(track: PlayingTrack) {
+    const directId = track.url.match(/audius-track-id=([^&]+)/)?.[1];
+
+    if (directId) {
+      return decodeURIComponent(directId);
+    }
+
+    const params = new URLSearchParams({
+      action: "resolve",
+      url: track.url.split("#")[0],
+    });
+
+    const response = await fetch(`/api/audius?${params.toString()}`);
+    const result = await response.json();
+
+    if (!response.ok || !result.id) {
+      throw new Error(result.error || "Не вдалося знайти композицію в Audius.");
+    }
+
+    return String(result.id);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function preparePlayer() {
+      if (!playing || playing.source !== "Audius") {
+        setResolvedId("");
+        setResolving(false);
+        return;
+      }
+
+      setResolving(true);
+      setAudioError("");
+      setResolvedId("");
+
+      try {
+        const id = await resolveAudiusId(playing);
+
+        if (!cancelled) {
+          setResolvedId(id);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAudioError(
+            error instanceof Error
+              ? error.message
+              : "Не вдалося підготувати композицію."
+          );
+        }
+      } finally {
+        if (!cancelled) setResolving(false);
+      }
+    }
+
+    preparePlayer();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [playing]);
+
+  function stopPlaying() {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
+    setPlaying(null);
+    setResolvedId("");
+    setAudioError("");
+    setResolving(false);
+  }
+
   const visibleTracks = tab === "favorites" ? favorites : tracks;
-  const currentStream = playing ? streamUrl(playing) : "";
+
+  const currentStream = resolvedId
+    ? `https://api.audius.co/v1/tracks/${encodeURIComponent(
+        resolvedId
+      )}/stream?app_name=VERCETI`
+    : "";
 
   return (
     <div style={{ display: "grid", gap: 18, marginTop: 24 }}>
@@ -549,7 +624,7 @@ export default function MusicRoom() {
             display: "flex",
             gap: 8,
             flexWrap: "wrap",
-            marginTop: 18
+            marginTop: 18,
           }}
         >
           {tabs.map((item) => (
@@ -565,10 +640,11 @@ export default function MusicRoom() {
                   tab === item.value
                     ? "rgba(187,138,255,0.35)"
                     : "rgba(255,255,255,0.05)",
-                border: tab === item.value
-                  ? "1px solid rgba(187,138,255,0.8)"
-                  : "1px solid transparent",
-                cursor: "pointer"
+                border:
+                  tab === item.value
+                    ? "1px solid rgba(187,138,255,0.8)"
+                    : "1px solid transparent",
+                cursor: "pointer",
               }}
             >
               {item.label}
@@ -658,7 +734,7 @@ export default function MusicRoom() {
                     gap: 12,
                     padding: 10,
                     borderRadius: 12,
-                    background: "rgba(255,255,255,0.04)"
+                    background: "rgba(255,255,255,0.04)",
                   }}
                 >
                   {artwork ? (
@@ -677,7 +753,7 @@ export default function MusicRoom() {
                         borderRadius: 8,
                         display: "grid",
                         placeItems: "center",
-                        background: "rgba(187,138,255,0.15)"
+                        background: "rgba(187,138,255,0.15)",
                       }}
                     >
                       🎵
@@ -784,24 +860,25 @@ export default function MusicRoom() {
                   padding: 14,
                   marginTop: 10,
                   borderRadius: 10,
-                  background: "rgba(255,255,255,0.04)"
+                  background: "rgba(255,255,255,0.04)",
                 }}
               >
                 <strong>{item.title}</strong>
                 <p className="muted">{item.artist}</p>
 
-                {item.source === "Audius" && audiusIdFromUrl(item.url) ? (
+                {item.source === "Audius" ? (
                   <button
                     className="btn"
                     type="button"
                     onClick={() => {
                       setAudioError("");
+                      setResolvedId("");
                       setPlaying({
                         id: item.id,
                         title: item.title,
                         artist: item.artist,
                         source: item.source,
-                        url: item.url
+                        url: item.url,
                       });
                     }}
                   >
@@ -862,7 +939,7 @@ export default function MusicRoom() {
                 background:
                   playing?.id === track.id
                     ? "rgba(187,138,255,0.15)"
-                    : "rgba(255,255,255,0.04)"
+                    : "rgba(255,255,255,0.04)",
               }}
             >
               <span className="muted">
@@ -873,6 +950,7 @@ export default function MusicRoom() {
                 type="button"
                 onClick={() => {
                   setAudioError("");
+                  setResolvedId("");
                   setPlaying(makePlaying(track));
                 }}
                 style={{
@@ -882,7 +960,7 @@ export default function MusicRoom() {
                   background: "transparent",
                   border: 0,
                   color: "inherit",
-                  cursor: "pointer"
+                  cursor: "pointer",
                 }}
               >
                 <strong style={{ display: "block" }}>{track.title}</strong>
@@ -924,18 +1002,20 @@ export default function MusicRoom() {
             <h3>{playing.title}</h3>
             <p className="muted">{playing.artist}</p>
 
-            {playing.source === "Audius" && currentStream ? (
-              <>
+            {playing.source === "Audius" ? (
+              resolving ? (
+                <p className="muted">Підключаємо композицію до плеєра...</p>
+              ) : currentStream ? (
                 <audio
                   ref={audioRef}
-                  key={playing.id}
+                  key={resolvedId}
                   controls
                   autoPlay
                   preload="auto"
                   src={currentStream}
                   onError={() => {
                     setAudioError(
-                      "Не вдалося відтворити цю композицію. Можливо, вона недоступна для прослуховування."
+                      "Audius не зміг передати аудіо. Спробуй іншу композицію."
                     );
                   }}
                   onCanPlay={() => setAudioError("")}
@@ -943,13 +1023,7 @@ export default function MusicRoom() {
                 >
                   Твій браузер не підтримує аудіоплеєр.
                 </audio>
-
-                {audioError && (
-                  <p className="page-note" role="alert">
-                    {audioError}
-                  </p>
-                )}
-              </>
+              ) : null
             ) : playing.source === "SoundCloud" &&
               soundCloudEmbed(playing.url) ? (
               <iframe
@@ -963,8 +1037,13 @@ export default function MusicRoom() {
               />
             ) : (
               <p className="muted">
-                Цей запис не підтримується новим плеєром. Знайди композицію
-                через пошук вище.
+                Цей формат поки не підтримується вбудованим плеєром.
+              </p>
+            )}
+
+            {audioError && (
+              <p className="page-note" role="alert">
+                {audioError}
               </p>
             )}
 
@@ -983,14 +1062,7 @@ export default function MusicRoom() {
             <button
               className="btn"
               type="button"
-              onClick={() => {
-                if (audioRef.current) {
-                  audioRef.current.pause();
-                  audioRef.current.currentTime = 0;
-                }
-                setPlaying(null);
-                setAudioError("");
-              }}
+              onClick={stopPlaying}
             >
               ■ Зупинити
             </button>
