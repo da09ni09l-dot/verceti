@@ -1,11 +1,12 @@
 
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createNews, deleteNews } from "./actions";
+import SectionNavigation from "./SectionNavigation";
 import ChatRoom from "./ChatRoom";
 import VoiceRoom from "./VoiceRoom";
 import MusicRoom from "./MusicRoom";
 import MediaRoom from "./MediaRoom";
+
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: { title: "Учасники", text: "Список учасників, ролі та профілі.", items: ["Пошук за нікнеймом та ігровим ID", "Кольорові позначки ролей", "Історія зміни ролей"] },
   voice: { title: "Голосові кімнати", text: "Голосові канали та демонстрація екрана.", items: ["Кілька голосових каналів", "Голосове спілкування", "Демонстрація екрана"] },
@@ -86,6 +87,8 @@ export default async function PreviewSection({
   return (
     <main className="login-wrap">
       <section className="login-card">
+        <SectionNavigation />
+
         <div className="eyebrow">VERCETI · ПОПЕРЕДНІЙ ПЕРЕГЛЯД</div>
 
         {section === "chat" ? (
@@ -112,7 +115,7 @@ export default async function PreviewSection({
             </p>
             <MusicRoom />
           </>
-               ) : section === "media" ? (
+        ) : section === "media" ? (
           <>
             <h1>Фото та відео VERCETI</h1>
             <p className="muted">
@@ -120,7 +123,7 @@ export default async function PreviewSection({
             </p>
             <MediaRoom />
           </>
-    ) : section === "news" ? (
+        ) : section === "news" ? (
           <>
             <h1>Новини</h1>
             <p className="muted">Новини спільноти, оголошення та події.</p>
@@ -339,10 +342,6 @@ export default async function PreviewSection({
             </p>
           </>
         )}
-
-        <Link className="btn" href="/">
-          ← Повернутися на головну
-        </Link>
       </section>
     </main>
   );
