@@ -76,7 +76,11 @@ function soundCloudEmbed(url: string) {
   try {
     const parsed = new URL(url);
 
-    if (!["soundcloud.com", "www.soundcloud.com", "m.soundcloud.com"].includes(parsed.hostname)) {
+    if (
+      !["soundcloud.com", "www.soundcloud.com", "m.soundcloud.com"].includes(
+        parsed.hostname
+      )
+    ) {
       return "";
     }
 
@@ -146,7 +150,10 @@ export default function MusicRoom() {
     loadUser();
   }, [supabase]);
 
-  async function loadAudius(action: "trending" | "latest" | "search", query = "") {
+  async function loadAudius(
+    action: "trending" | "latest" | "search",
+    query = ""
+  ) {
     setMusicLoading(true);
     setMessage("");
 
@@ -280,7 +287,10 @@ export default function MusicRoom() {
     });
   }
 
-  async function saveAudiusTrack(track: AudiusTrack, playlistType: PlaylistType) {
+  async function saveAudiusTrack(
+    track: AudiusTrack,
+    playlistType: PlaylistType
+  ) {
     if (!userId) return;
 
     if (playlistType === "shared" && !isManagement) {
@@ -413,7 +423,10 @@ export default function MusicRoom() {
     }
   }
 
-  async function reviewRecommendation(item: Recommendation, approved: boolean) {
+  async function reviewRecommendation(
+    item: Recommendation,
+    approved: boolean
+  ) {
     if (!isManagement) return;
 
     if (approved) {
@@ -448,7 +461,10 @@ export default function MusicRoom() {
     setRecommendations((previous) =>
       previous.map((recommendation) =>
         recommendation.id === item.id
-          ? { ...recommendation, status: approved ? "approved" : "rejected" }
+          ? {
+              ...recommendation,
+              status: approved ? "approved" : "rejected"
+            }
           : recommendation
       )
     );
@@ -486,9 +502,10 @@ export default function MusicRoom() {
               type="button"
               onClick={() => changeTab(value as Tab)}
               style={{
-                background: tab === value
-                  ? "rgba(187,138,255,0.3)"
-                  : "rgba(255,255,255,0.05)"
+                background:
+                  tab === value
+                    ? "rgba(187,138,255,0.3)"
+                    : "rgba(255,255,255,0.05)"
               }}
             >
               {label}
@@ -500,7 +517,7 @@ export default function MusicRoom() {
       <section className="panel">
         <h2 style={{ marginTop: 0 }}>🔎 Знайти музику</h2>
         <p className="muted">
-          Введи назву композиції або ім'я виконавця.
+          Введи назву композиції або ім&apos;я виконавця.
         </p>
 
         <form
@@ -516,7 +533,11 @@ export default function MusicRoom() {
             placeholder="Наприклад, The Weeknd або Imagine Dragons"
             style={{ flex: 1, minWidth: 180 }}
           />
-          <button className="btn" type="submit" disabled={!search.trim() || musicLoading}>
+          <button
+            className="btn"
+            type="submit"
+            disabled={!search.trim() || musicLoading}
+          >
             Шукати
           </button>
         </form>
@@ -551,7 +572,9 @@ export default function MusicRoom() {
         {musicLoading ? (
           <p className="muted">Шукаємо музику...</p>
         ) : audiusTracks.length === 0 ? (
-          <p className="muted">Композицій не знайдено. Спробуй інший запит.</p>
+          <p className="muted">
+            Композицій не знайдено. Спробуй інший запит.
+          </p>
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
             {audiusTracks.map((track) => {
@@ -599,7 +622,9 @@ export default function MusicRoom() {
                     <strong style={{ display: "block" }}>{track.title}</strong>
                     <span className="muted" style={{ fontSize: 12 }}>
                       {track.user?.name || "Невідомий виконавець"}
-                      {track.duration ? ` · ${formatDuration(track.duration)}` : ""}
+                      {track.duration
+                        ? ` · ${formatDuration(track.duration)}`
+                        : ""}
                     </span>
                   </div>
 
@@ -647,8 +672,10 @@ export default function MusicRoom() {
             })}
           </div>
         )}
+
         <p className="muted" style={{ fontSize: 12, marginTop: 14 }}>
-          Музичний каталог надає Audius. Доступність окремих композицій залежить від їхніх авторів.
+          Музичний каталог надає Audius. Доступність окремих композицій
+          залежить від їхніх авторів.
         </p>
       </section>
 
@@ -663,11 +690,16 @@ export default function MusicRoom() {
         <p className="muted">
           {tab === "personal" && "Твій особистий плейлист"}
           {tab === "shared" && "Музика всієї спільноти"}
-          {tab === "recommendations" && "Пропозиції учасників для спільного плейлиста"}
+          {tab === "recommendations" &&
+            "Пропозиції учасників для спільного плейлиста"}
           {tab === "favorites" && "Пісні, які ти зберіг"}
         </p>
 
-        {message && <p className="page-note" role="status">{message}</p>}
+        {message && (
+          <p className="page-note" role="status">
+            {message}
+          </p>
+        )}
 
         {loading ? (
           <p className="muted">Завантаження...</p>
@@ -692,13 +724,15 @@ export default function MusicRoom() {
                   <button
                     className="btn"
                     type="button"
-                    onClick={() => setPlaying({
-                      id: item.id,
-                      title: item.title,
-                      artist: item.artist,
-                      source: item.source,
-                      url: item.url
-                    })}
+                    onClick={() =>
+                      setPlaying({
+                        id: item.id,
+                        title: item.title,
+                        artist: item.artist,
+                        source: item.source,
+                        url: item.url
+                      })
+                    }
                   >
                     ▶ Слухати
                   </button>
@@ -709,21 +743,28 @@ export default function MusicRoom() {
                 )}
 
                 <p className="page-note">
-                  Статус: {
-                    item.status === "pending"
-                      ? "Очікує розгляду"
-                      : item.status === "approved"
-                        ? "Схвалено"
-                        : "Відхилено"
-                  }
+                  Статус:{" "}
+                  {item.status === "pending"
+                    ? "Очікує розгляду"
+                    : item.status === "approved"
+                      ? "Схвалено"
+                      : "Відхилено"}
                 </p>
 
                 {isManagement && item.status === "pending" && (
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button className="btn" type="button" onClick={() => reviewRecommendation(item, true)}>
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={() => reviewRecommendation(item, true)}
+                    >
                       ✓ Додати до спільного
                     </button>
-                    <button className="btn" type="button" onClick={() => reviewRecommendation(item, false)}>
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={() => reviewRecommendation(item, false)}
+                    >
                       Відхилити
                     </button>
                   </div>
@@ -744,9 +785,10 @@ export default function MusicRoom() {
                 padding: 12,
                 marginTop: 8,
                 borderRadius: 10,
-                background: playing?.id === track.id
-                  ? "rgba(187,138,255,0.15)"
-                  : "rgba(255,255,255,0.04)"
+                background:
+                  playing?.id === track.id
+                    ? "rgba(187,138,255,0.15)"
+                    : "rgba(255,255,255,0.04)"
               }}
             >
               <span className="muted">
@@ -815,7 +857,8 @@ export default function MusicRoom() {
               >
                 Твій браузер не підтримує аудіоплеєр.
               </audio>
-            ) : playing.source === "SoundCloud" && soundCloudEmbed(playing.url) ? (
+            ) : playing.source === "SoundCloud" &&
+              soundCloudEmbed(playing.url) ? (
               <iframe
                 key={playing.id}
                 src={soundCloudEmbed(playing.url)}
@@ -827,7 +870,8 @@ export default function MusicRoom() {
               />
             ) : (
               <p className="muted">
-                Цей старий запис не підтримується новим плеєром Audius. Знайди композицію через пошук вище.
+                Цей старий запис не підтримується новим плеєром Audius.
+                Знайди композицію через пошук вище.
               </p>
             )}
 
