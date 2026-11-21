@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
 
 type Source = "Audius" | "Jamendo" | "YouTube" | "SoundCloud";
@@ -138,6 +139,17 @@ export default function MusicRoom() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [audioError, setAudioError] = useState("");
+
+  // Дозволяє безпечно показувати плеєр через createPortal після завантаження сторінки
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+
+    return () => {
+      setIsMounted(false);
+    };
+  }, []);
 
   const isManagement = ["admin", "leader", "moderator"].includes(role);
 
@@ -759,7 +771,7 @@ export default function MusicRoom() {
         </div>
       </section>
 
-      {/* ОСОБИСТИЙ / СПІЛЬНИЙ АЛЬБОМ — ТЕПЕР ОДРАЗУ ПІД ВКЛАДКАМИ */}
+      {/* АЛЬБОМ ОДРАЗУ ПІД ВКЛАДКАМИ */}
       <section className="panel">
         <h2 style={{ marginTop: 0 }}>
           {tab === "personal" && "🎧 Особиста музика"}
@@ -937,7 +949,7 @@ export default function MusicRoom() {
         )}
       </section>
 
-      {/* ПОШУК МУЗИКИ — ПІСЛЯ АЛЬБОМІВ */}
+      {/* ПОШУК МУЗИКИ ПІСЛЯ АЛЬБОМІВ */}
       <section className="panel">
         <h2 style={{ marginTop: 0 }}>🔎 Знайти музику</h2>
 
@@ -1156,121 +1168,127 @@ export default function MusicRoom() {
         </p>
       </section>
 
-      {/* ЗАКРІПЛЕНИЙ ПЛЕЄР */}
-      <section
-        className="panel"
-        style={{
-          position: "fixed",
-          bottom: "max(12px, env(safe-area-inset-bottom))",
-          left: 12,
-          right: 12,
-          zIndex: 10000,
-          width: "auto",
-          maxWidth: 900,
-          margin: "0 auto",
-          background: "rgba(25, 20, 38, 0.97)",
-          border: "1px solid rgba(187,138,255,0.5)",
-          boxShadow: "0 0 25px rgba(0,0,0,0.4)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          maxHeight: "45vh",
-          overflowY: "auto",
-        }}
-      >
-        <h2 style={{ marginTop: 0 }}>▶ Музичний плеєр</h2>
+      {/* ЗАКРІПЛЕНИЙ ПЛЕЄР — ПОЗА ОСНОВНИМ КОНТЕЙНЕРОМ */}
+      {isMounted &&
+        createPortal(
+          <section
+            className="panel"
+            style={{
+              position: "fixed",
+              bottom: "max(12px, env(safe-area-inset-bottom))",
+              left: 12,
+              right: 12,
+              zIndex: 10000,
+              width: "auto",
+              maxWidth: 900,
+              margin: "0 auto",
+              background: "rgba(25, 20, 38, 0.97)",
+              border: "1px solid rgba(187,138,255,0.5)",
+              boxShadow: "0 0 25px rgba(0,0,0,0.4)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              maxHeight: "45vh",
+              overflowY: "auto",
+            }}
+          >
+            <h2 style={{ marginTop: 0 }}>▶ Музичний плеєр</h2>
 
-        {playing ? (
-          <>
-            <h3>{playing.title}</h3>
-            <p className="muted">
-              {playing.artist} · {playing.source}
-            </p>
+            {playing ? (
+              <>
+                <h3>{playing.title}</h3>
+                <p className="muted">
+                  {playing.artist} · {playing.source}
+                </p>
 
-            {playing.source === "Audius" ? (
-              resolving ? (
-                <p className="muted">Підключаємо композицію до плеєра...</p>
-              ) : currentStream ? (
-                <audio
-                  ref={audioRef}
-                  key={resolvedId}
-                  controls
-                  autoPlay
-                  preload="auto"
-                  src={currentStream}
-                  onError={() => {
-                    setAudioError(
-                      "Audius не зміг передати аудіо. Спробуй іншу композицію."
-                    );
-                  }}
-                  onCanPlay={() => setAudioError("")}
-                  style={{ width: "100%", marginTop: 12 }}
-                >
-                  Твій браузер не підтримує аудіоплеєр.
-                </audio>
-              ) : null
-            ) : playing.source === "Jamendo" ? (
-              <audio
-                ref={audioRef}
-                key={playing.url}
-                controls
-                autoPlay
-                preload="metadata"
-                src={playing.url}
-                onError={() => {
-                  setAudioError(
-                    "Jamendo не зміг передати аудіо. Спробуй іншу композицію."
-                  );
-                }}
-                onCanPlay={() => setAudioError("")}
-                style={{ width: "100%", marginTop: 12 }}
-              >
-                Твій браузер не підтримує аудіоплеєр.
-              </audio>
-            ) : playing.source === "SoundCloud" &&
-              soundCloudEmbed(playing.url) ? (
-              <iframe
-                key={playing.id}
-                src={soundCloudEmbed(playing.url)}
-                title={playing.title}
-                width="100%"
-                height="166"
-                style={{ border: 0, borderRadius: 12, marginTop: 12 }}
-                allow="autoplay"
-              />
+                {playing.source === "Audius" ? (
+                  resolving ? (
+                    <p className="muted">
+                      Підключаємо композицію до плеєра...
+                    </p>
+                  ) : currentStream ? (
+                    <audio
+                      ref={audioRef}
+                      key={resolvedId}
+                      controls
+                      autoPlay
+                      preload="auto"
+                      src={currentStream}
+                      onError={() => {
+                        setAudioError(
+                          "Audius не зміг передати аудіо. Спробуй іншу композицію."
+                        );
+                      }}
+                      onCanPlay={() => setAudioError("")}
+                      style={{ width: "100%", marginTop: 12 }}
+                    >
+                      Твій браузер не підтримує аудіоплеєр.
+                    </audio>
+                  ) : null
+                ) : playing.source === "Jamendo" ? (
+                  <audio
+                    ref={audioRef}
+                    key={playing.url}
+                    controls
+                    autoPlay
+                    preload="metadata"
+                    src={playing.url}
+                    onError={() => {
+                      setAudioError(
+                        "Jamendo не зміг передати аудіо. Спробуй іншу композицію."
+                      );
+                    }}
+                    onCanPlay={() => setAudioError("")}
+                    style={{ width: "100%", marginTop: 12 }}
+                  >
+                    Твій браузер не підтримує аудіоплеєр.
+                  </audio>
+                ) : playing.source === "SoundCloud" &&
+                  soundCloudEmbed(playing.url) ? (
+                  <iframe
+                    key={playing.id}
+                    src={soundCloudEmbed(playing.url)}
+                    title={playing.title}
+                    width="100%"
+                    height="166"
+                    style={{ border: 0, borderRadius: 12, marginTop: 12 }}
+                    allow="autoplay"
+                  />
+                ) : (
+                  <p className="muted">
+                    Цей формат поки не підтримується вбудованим плеєром.
+                  </p>
+                )}
+
+                {audioError && (
+                  <p className="page-note" role="alert">
+                    {audioError}
+                  </p>
+                )}
+
+                {playing.source === "Audius" && (
+                  <p>
+                    <a
+                      href={playing.url.split("#")[0]}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Відкрити сторінку композиції в Audius
+                    </a>
+                  </p>
+                )}
+
+                <button className="btn" type="button" onClick={stopPlaying}>
+                  ■ Зупинити
+                </button>
+              </>
             ) : (
               <p className="muted">
-                Цей формат поки не підтримується вбудованим плеєром.
+                Вибери композицію зі списку або натисни ▶ біля результату пошуку.
               </p>
             )}
-
-            {audioError && (
-              <p className="page-note" role="alert">
-                {audioError}
-              </p>
-            )}
-
-            {playing.source === "Audius" && (
-              <p>
-                <a
-                  href={playing.url.split("#")[0]}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Відкрити сторінку композиції в Audius
-                </a>
-              </p>
-            )}
-
-            <button className="btn" type="button" onClick={stopPlaying}>
-              ■ Зупинити
-            </button>
-          </>
-        ) : (
-          <p className="muted">
-            Вибери композицію зі списку або натисни ▶ біля результату пошуку.
-          </p>
+          </section>,
+          document.body
         )}
-      </section>
     </div>
   );
 }
