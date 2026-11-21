@@ -16,13 +16,25 @@ const initialTracks: Track[] = [
 ];
 
 export default function MusicRoom() {
-  const [tracks, setTracks] = useState(initialTracks);
-  const [activeTrack, setActiveTrack] = useState<number | null>(1);
+  const [tab, setTab] = useState<"personal" | "shared">("personal");
+
+  const [personalTracks, setPersonalTracks] = useState(initialTracks);
+  const [sharedTracks, setSharedTracks] = useState(initialTracks);
+
+  const [personalActive, setPersonalActive] = useState<number | null>(1);
+  const [sharedActive, setSharedActive] = useState<number | null>(1);
+
   const [playing, setPlaying] = useState(false);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const [source, setSource] = useState("YouTube");
   const [showAdd, setShowAdd] = useState(false);
+
+  const tracks = tab === "personal" ? personalTracks : sharedTracks;
+  const activeTrack = tab === "personal" ? personalActive : sharedActive;
+
+  const setTracks = tab === "personal" ? setPersonalTracks : setSharedTracks;
+  const setActiveTrack = tab === "personal" ? setPersonalActive : setSharedActive;
 
   const currentTrack = tracks.find((track) => track.id === activeTrack);
 
@@ -57,6 +69,12 @@ export default function MusicRoom() {
     setPlaying(false);
   }
 
+  function switchTab(nextTab: "personal" | "shared") {
+    setTab(nextTab);
+    setPlaying(false);
+    setShowAdd(false);
+  }
+
   return (
     <div style={{ display: "grid", gap: 18, marginTop: 24 }}>
       <section className="panel">
@@ -81,6 +99,74 @@ export default function MusicRoom() {
 
         <div
           style={{
+            display: "flex",
+            gap: 10,
+            flexWrap: "wrap",
+            marginTop: 20
+          }}
+        >
+          <button
+            className="btn"
+            type="button"
+            onClick={() => switchTab("personal")}
+            style={{
+              background: tab === "personal"
+                ? "rgba(187,138,255,0.3)"
+                : "rgba(255,255,255,0.05)",
+              border: tab === "personal"
+                ? "1px solid rgba(187,138,255,0.5)"
+                : "1px solid transparent"
+            }}
+          >
+            🎧 Особистий плеєр
+          </button>
+
+          <button
+            className="btn"
+            type="button"
+            onClick={() => switchTab("shared")}
+            style={{
+              background: tab === "shared"
+                ? "rgba(187,138,255,0.3)"
+                : "rgba(255,255,255,0.05)",
+              border: tab === "shared"
+                ? "1px solid rgba(187,138,255,0.5)"
+                : "1px solid transparent"
+            }}
+          >
+            🌐 Спільний плеєр
+          </button>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap"
+          }}
+        >
+          <div>
+            <h2 style={{ margin: 0 }}>
+              {tab === "personal" ? "🎧 Особиста музика" : "🌐 Спільна музика"}
+            </h2>
+            <p className="muted">
+              {tab === "personal"
+                ? "Твій особистий список композицій"
+                : "Єдиний список відтворення спільноти"}
+            </p>
+          </div>
+
+          <span className="badge">
+            {tab === "personal" ? "Особистий режим" : "Спільний режим"}
+          </span>
+        </div>
+
+        <div
+          style={{
             marginTop: 20,
             padding: 24,
             borderRadius: 14,
@@ -90,7 +176,7 @@ export default function MusicRoom() {
             border: "1px solid rgba(187,138,255,0.2)"
           }}
         >
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🎧</div>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>🎵</div>
 
           <h2 style={{ margin: 0 }}>
             {currentTrack?.title || "Нічого не вибрано"}
@@ -154,8 +240,9 @@ export default function MusicRoom() {
           </div>
 
           <p className="page-note">
-            Це поки демонстраційний плеєр. Реальне відтворення музики
-            та синхронізацію між учасниками підключимо окремо.
+            {tab === "personal"
+              ? "Особистий режим. Зараз це демонстраційний плеєр без реального аудіо."
+              : "Спільний режим. Синхронізацію музики між учасниками підключимо окремо."}
           </p>
         </div>
       </section>
@@ -173,7 +260,7 @@ export default function MusicRoom() {
           <div>
             <h2 style={{ margin: 0 }}>📃 Список відтворення</h2>
             <p className="muted">
-              Композиції спільноти: {tracks.length}
+              Композицій: {tracks.length}
             </p>
           </div>
 
