@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
@@ -16,14 +17,86 @@ const descriptions: Record<string, { title: string; text: string; items: string[
   settings: { title: "Налаштування", text: "Персональні параметри та безпека.", items: ["Приватність", "Звуки сповіщень", "Захист акаунта"] }
 };
 
+const news = [
+  { type: "ОГОЛОШЕННЯ", title: "Вітаємо у VERCETI", text: "Тут публікуватимуться важливі новини та повідомлення спільноти.", date: "21.11.2026" },
+  { type: "МАЙБУТНЯ ПОДІЯ", title: "Зустріч учасників", text: "Демонстраційна подія. Дату та подробиці буде оголошено керівництвом.", date: "25.11.2026" },
+  { type: "МИНУЛА ПОДІЯ", title: "Відкриття спільноти", text: "Приклад запису про минулу подію. Тут зберігатиметься її підсумок.", date: "15.11.2026" }
+];
+
+const ruleGroups = [
+  { title: "Правила спільноти", items: ["Поважайте інших учасників.", "Не допускайте образ, цькування та погроз.", "Не поширюйте особисту інформацію інших людей.", "Дотримуйтеся рішень керівництва."] },
+  { title: "Правила чату", items: ["Не спамте та не засмічуйте повідомленнями чат.", "Не публікуйте заборонений або образливий контент.", "Не провокуйте конфлікти та не порушуйте порядок спілкування."] },
+  { title: "Правила голосових кімнат", items: ["Не перебивайте інших учасників навмисно.", "Не використовуйте мікрофон для шуму або образ.", "Дотримуйтеся вказівок модератора кімнати."] },
+  { title: "Можливі санкції", items: ["Попередження.", "Тимчасове обмеження чату або голосу.", "Тимчасове відсторонення від спільноти.", "Видалення зі спільноти у разі серйозних або повторних порушень."] }
+];
+
 export default async function PreviewSection({ params }: { params: Promise<{ section: string }> }) {
   const { section } = await params;
   const data = descriptions[section] ?? { title: "Розділ", text: "Цей розділ буде реалізовано на наступному етапі.", items: ["Структура сторінки", "Права доступу", "Робочі функції"] };
-  return <main className="login-wrap"><section className="login-card">
-    <div className="eyebrow">VERCETI · ПОПЕРЕДНІЙ ПЕРЕГЛЯД</div>
-    <h1>{data.title}</h1><p className="muted">{data.text}</p>
-    <div className="member-list" style={{margin:"24px 0"}}>{data.items.map((item) => <div className="member-row" key={item}><span style={{color:"#bb8aff"}}>✦</span><span style={{fontSize:13,flex:1}}>{item}</span><span className="tag">ПЛАН</span></div>)}</div>
-    <p className="page-note">Це поки що схема розділу, а не підключена функція.</p>
-    <Link className="btn" href="/">← Повернутися на головну</Link>
-  </section></main>;
+
+  return (
+    <main className="login-wrap">
+      <section className="login-card">
+        <div className="eyebrow">VERCETI · ПОПЕРЕДНІЙ ПЕРЕГЛЯД</div>
+
+        {section === "news" ? (
+          <>
+            <h1>Новини</h1>
+            <p className="muted">Новини спільноти, оголошення та події.</p>
+            <div className="member-list" style={{ margin: "24px 0" }}>
+              {news.map((item) => (
+                <div className="panel" key={item.title} style={{ marginBottom: 14 }}>
+                  <div className="eyebrow">{item.type}</div>
+                  <h2>{item.title}</h2>
+                  <p className="muted">{item.text}</p>
+                  <div className="notice-time">Дата: {item.date}</div>
+                </div>
+              ))}
+            </div>
+            <p className="page-note">Усі учасники зможуть читати новини. Публікація та редагування будуть доступні адміну й уповноваженому керівництву. Записи зараз демонстраційні.</p>
+          </>
+        ) : section === "rules" ? (
+          <>
+            <h1>Правила VERCETI</h1>
+            <p className="muted">Правила поведінки та порядок у спільноті.</p>
+            {ruleGroups.map((group) => (
+              <div className="panel" key={group.title} style={{ marginTop: 16 }}>
+                <h2>{group.title}</h2>
+                <div className="member-list">
+                  {group.items.map((item) => (
+                    <div className="member-row" key={item}>
+                      <span style={{ color: "#bb8aff" }}>✦</span>
+                      <span style={{ fontSize: 13, flex: 1 }}>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <div className="panel" style={{ marginTop: 16 }}>
+              <h2>Історія оновлень правил</h2>
+              <p className="muted">Поки що змін не зафіксовано. Тут відображатимуться дата та опис кожного оновлення.</p>
+            </div>
+            <p className="page-note">Правила зможуть читати всі учасники. Створювати, редагувати й видаляти їх зможуть адміністратор та уповноважене керівництво. Це демонстраційний вміст.</p>
+          </>
+        ) : (
+          <>
+            <h1>{data.title}</h1>
+            <p className="muted">{data.text}</p>
+            <div className="member-list" style={{ margin: "24px 0" }}>
+              {data.items.map((item) => (
+                <div className="member-row" key={item}>
+                  <span style={{ color: "#bb8aff" }}>✦</span>
+                  <span style={{ fontSize: 13, flex: 1 }}>{item}</span>
+                  <span className="tag">ПЛАН</span>
+                </div>
+              ))}
+            </div>
+            <p className="page-note">Це поки що схема розділу, а не підключена функція.</p>
+          </>
+        )}
+
+        <Link className="btn" href="/">← Повернутися на головну</Link>
+      </section>
+    </main>
+  );
 }
