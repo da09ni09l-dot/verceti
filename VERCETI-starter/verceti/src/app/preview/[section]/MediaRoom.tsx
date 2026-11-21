@@ -59,11 +59,29 @@ export default function MediaRoom() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
-
+  const [canManage, setCanManage] = useState(false);
   const selectedAlbum = albums.find(
     (album) => album.id === activeAlbum
   );
+  useEffect(() => {
+  async function checkRole() {
+    const { data: { user } } = await supabase.auth.getUser();
 
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    setCanManage(
+      ["admin", "leader", "moderator"].includes(data?.role ?? "")
+    );
+  }
+
+  checkRole();
+}, []);
   async function loadFiles(albumId: string) {
     setLoading(true);
     setMessage("");
