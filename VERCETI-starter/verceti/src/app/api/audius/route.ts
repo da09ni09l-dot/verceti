@@ -1,18 +1,13 @@
+
 import { NextRequest, NextResponse } from "next/server";
 
 const AUDIUS_API = "https://api.audius.co/v1";
 
 async function audiusRequest(path: string) {
-  const apiKey = process.env.AUDIUS_API_KEY;
+  const separator = path.includes("?") ? "&" : "?";
+  const url = `${AUDIUS_API}${path}${separator}app_name=VERCETI`;
 
-  if (!apiKey) {
-    throw new Error("Не налаштований AUDIUS_API_KEY у Vercel");
-  }
-
-  const response = await fetch(`${AUDIUS_API}${path}`, {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
+  const response = await fetch(url, {
     cache: "no-store",
   });
 
@@ -27,6 +22,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get("action") || "trending";
+
     let path = "";
 
     if (action === "trending") {
