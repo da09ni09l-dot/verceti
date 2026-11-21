@@ -13,6 +13,12 @@ type ChatMessage = {
   role: string;
 };
 
+type Player = {
+  id: string;
+  nickname: string | null;
+  role: string;
+};
+
 const roleLabels: Record<string, string> = {
   admin: "Адміністратор",
   leader: "Лідер",
@@ -33,6 +39,7 @@ const roleColors: Record<string, string> = {
 
 export default function ChatRoom() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [content, setContent] = useState("");
   const [userId, setUserId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -46,7 +53,7 @@ export default function ChatRoom() {
     const currentUserId = authData.user?.id ?? "";
     setUserId(currentUserId);
 
-    const { data, error: messagesError } = await supabase
+    const { data: messageData, error: messagesError } = await supabase
       .from("chat_messages")
       .select("id, user_id, content, created_at")
       .order("created_at", { ascending: true })
@@ -58,29 +65,26 @@ export default function ChatRoom() {
       return;
     }
 
-    const userIds = [...new Set((data ?? []).map((item) => item.user_id))];
+    const { data: profileData, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, nickname, role")
+      .order("nickname", { ascending: true });
 
-    let profiles: {
-      id: string;
-      nickname: string | null;
-      role: string;
-    }[] = [];
-
-    if (userIds.length > 0) {
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("id, nickname, role")
-        .in("id", userIds);
-
-      profiles = profileData ?? [];
+    if (profilesError) {
+      setError("Не вдалося завантажити список учасників.");
+      setLoading(false);
+      return;
     }
 
+    const profileList = (profileData ?? []) as Player[];
+    setPlayers(profileList);
+
     const profileMap = new Map(
-      profiles.map((profile) => [profile.id, profile])
+      profileList.map((profile) => [profile.id, profile])
     );
 
     setMessages(
-      (data ?? []).map((item) => {
+      (messageData ?? []).map((item) => {
         const profile = profileMap.get(item.user_id);
 
         return {
@@ -160,10 +164,7 @@ export default function ChatRoom() {
   }
 
   async function deleteMessage(id: string) {
-    const confirmed = window.confirm(
-      "Точно видалити це повідомлення?"
-    );
-
+    const confirmed = window.confirm("Точно видалити це повідомлення?");
     if (!confirmed) return;
 
     const { error: deleteError } = await supabase
@@ -180,135 +181,233 @@ export default function ChatRoom() {
   }
 
   return (
-    <div className="panel" style={{ marginTop: 24 }}>
-      <h2>Загальний чат</h2>
-      <p className="muted">
-        Повідомлення доступні всім авторизованим учасникам VERCETI.
-      </p>
-
-      <div
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "minmax(180px, 230px) minmax(0, 1fr)",
+        gap: 16,
+        marginTop: 24,
+        alignItems: "start"
+      }}
+    >
+      <aside
         style={{
-          minHeight: 260,
-          maxHeight: 480,
-          overflowY: "auto",
+          position: "sticky",
+          top: 16,
           display: "flex",
           flexDirection: "column",
-          gap: 12,
-          padding: 12,
-          marginTop: 16,
-          borderRadius: 12,
-          background: "rgba(0,0,0,0.18)"
+          gap: 14
         }}
       >
-        {loading ? (
-          <p className="muted">Завантаження повідомлень...</p>
-        ) : messages.length === 0 ? (
-          <p className="muted">
-            Повідомлень поки немає. Напиши першим!
+        <div className="panel">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              color: "#d5b5ff",
+              fontWeight: 700
+            }}
+          >
+            <span>📌</span>
+            <span>Загальний чат</span>
+          </div>
+          <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
+            Основна кімната спільноти
           </p>
-        ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              style={{
-                padding: 12,
-                borderRadius: 10,
-                background: "rgba(255,255,255,0.045)",
-                border: "1px solid rgba(255,255,255,0.07)"
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 8,
-                  flexWrap: "wrap",
-                  marginBottom: 6
-                }}
-              >
-                <div>
-                  <strong>{message.nickname}</strong>
+        </div>
+
+        <div className="panel">
+          <h2 style={{ marginTop: 0 }}>Учасники</h2>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+              maxHeight: 420,
+              overflowY: "auto"
+            }}
+          >
+            {players.length === 0 ? (
+              <p className="muted">Учасників поки немає.</p>
+            ) : (
+              players.map((player) => (
+                <div
+                  key={player.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    minWidth: 0
+                  }}
+                >
                   <span
                     style={{
-                      marginLeft: 8,
-                      color: roleColors[message.role] ?? "#b9c0cc",
-                      fontSize: 12
+                      width: 9,
+                      height: 9,
+                      borderRadius: "50%",
+                      background: "#85818e",
+                      flexShrink: 0
                     }}
-                  >
-                    {roleLabels[message.role] ?? message.role}
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        overflowWrap: "anywhere"
+                      }}
+                    >
+                      {player.nickname || "Без нікнейму"}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: roleColors[player.role] ?? "#b9c0cc"
+                      }}
+                    >
+                      {roleLabels[player.role] ?? player.role}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <p className="page-note">
+            Статус онлайн поки не підключений.
+          </p>
+        </div>
+      </aside>
+
+      <section className="panel" style={{ minWidth: 0 }}>
+        <h2 style={{ marginTop: 0 }}>Загальний чат</h2>
+        <p className="muted">
+          Повідомлення доступні всім авторизованим учасникам VERCETI.
+        </p>
+
+        <div
+          style={{
+            minHeight: 300,
+            maxHeight: 520,
+            overflowY: "auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+            padding: 12,
+            marginTop: 16,
+            borderRadius: 12,
+            background: "rgba(0,0,0,0.18)"
+          }}
+        >
+          {loading ? (
+            <p className="muted">Завантаження повідомлень...</p>
+          ) : messages.length === 0 ? (
+            <p className="muted">
+              Повідомлень поки немає. Напиши першим!
+            </p>
+          ) : (
+            messages.map((message) => (
+              <div
+                key={message.id}
+                style={{
+                  padding: 12,
+                  borderRadius: 10,
+                  background: "rgba(255,255,255,0.045)",
+                  border: "1px solid rgba(255,255,255,0.07)"
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    flexWrap: "wrap",
+                    marginBottom: 6
+                  }}
+                >
+                  <div>
+                    <strong>{message.nickname}</strong>
+                    <span
+                      style={{
+                        marginLeft: 8,
+                        color: roleColors[message.role] ?? "#b9c0cc",
+                        fontSize: 12
+                      }}
+                    >
+                      {roleLabels[message.role] ?? message.role}
+                    </span>
+                  </div>
+
+                  <span className="notice-time">
+                    {new Date(message.created_at).toLocaleString("uk-UA")}
                   </span>
                 </div>
 
-                <span className="notice-time">
-                  {new Date(message.created_at).toLocaleString("uk-UA")}
-                </span>
-              </div>
-
-              <p
-                style={{
-                  whiteSpace: "pre-wrap",
-                  overflowWrap: "anywhere",
-                  margin: 0
-                }}
-              >
-                {message.content}
-              </p>
-
-              {message.user_id === userId && (
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => void deleteMessage(message.id)}
+                <p
                   style={{
-                    marginTop: 8,
-                    padding: "5px 10px",
-                    fontSize: 12
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere",
+                    margin: 0
                   }}
                 >
-                  Видалити своє повідомлення
-                </button>
-              )}
-            </div>
-          ))
+                  {message.content}
+                </p>
+
+                {message.user_id === userId && (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => void deleteMessage(message.id)}
+                    style={{
+                      marginTop: 8,
+                      padding: "5px 10px",
+                      fontSize: 12
+                    }}
+                  >
+                    Видалити своє повідомлення
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+
+        {error && (
+          <p style={{ color: "#ff8585", marginTop: 12 }}>
+            {error}
+          </p>
         )}
-      </div>
 
-      {error && (
-        <p style={{ color: "#ff8585", marginTop: 12 }}>
-          {error}
-        </p>
-      )}
-
-      <form
-        onSubmit={sendMessage}
-        style={{
-          display: "flex",
-          gap: 10,
-          marginTop: 16,
-          alignItems: "stretch"
-        }}
-      >
-        <input
-          value={content}
-          onChange={(event) => setContent(event.target.value)}
-          placeholder="Напиши повідомлення..."
-          maxLength={2000}
-          required
-          style={{ flex: 1, minWidth: 0 }}
-        />
-
-        <button
-          className="btn"
-          type="submit"
-          disabled={sending || !content.trim()}
+        <form
+          onSubmit={sendMessage}
+          style={{
+            display: "flex",
+            gap: 10,
+            marginTop: 16,
+            alignItems: "stretch"
+          }}
         >
-          {sending ? "Надсилання..." : "Надіслати"}
-        </button>
-      </form>
+          <input
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+            placeholder="Напиши повідомлення..."
+            maxLength={2000}
+            required
+            style={{ flex: 1, minWidth: 0 }}
+          />
 
-      <p className="page-note">
-        Показано до 100 останніх повідомлень. Учасник може видаляти лише власні повідомлення.
-      </p>
+          <button
+            className="btn"
+            type="submit"
+            disabled={sending || !content.trim()}
+          >
+            {sending ? "Надсилання..." : "Надіслати"}
+          </button>
+        </form>
+
+        <p className="page-note">
+          Показано до 100 останніх повідомлень. Учасник може видаляти лише власні повідомлення.
+        </p>
+      </section>
     </div>
   );
 }
