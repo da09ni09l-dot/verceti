@@ -1,7 +1,7 @@
 
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { createNews } from "./actions";
+import { createNews, deleteNews } from "./actions";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: { title: "Учасники", text: "Список учасників, ролі та профілі.", items: ["Пошук за нікнеймом та ігровим ID", "Кольорові позначки ролей", "Історія зміни ролей"] },
@@ -138,6 +138,16 @@ export default async function PreviewSection({
                 Новину успішно опубліковано.
               </div>
             )}
+            {status === "deleted" && (
+              <div className="panel" style={{ marginTop: 16 }}>
+                Новину успішно видалено.
+              </div>
+            )}
+            {status === "delete-error" && (
+              <div className="panel" style={{ marginTop: 16 }}>
+                Не вдалося видалити новину.
+              </div>
+            )}
             {status === "empty" && (
               <div className="panel" style={{ marginTop: 16 }}>
                 Заповни заголовок і текст новини.
@@ -145,12 +155,12 @@ export default async function PreviewSection({
             )}
             {status === "invalid" && (
               <div className="panel" style={{ marginTop: 16 }}>
-                Обрана неправильна категорія.
+                Перевір правильність заповнення даних.
               </div>
             )}
             {status === "forbidden" && (
               <div className="panel" style={{ marginTop: 16 }}>
-                У тебе немає прав для створення новин.
+                У тебе немає прав для цієї дії.
               </div>
             )}
             {status === "error" && (
@@ -184,6 +194,22 @@ export default async function PreviewSection({
                           : item.created_at
                       ).toLocaleDateString("uk-UA")}
                     </div>
+
+                    {isStaff && (
+                      <form
+                        action={deleteNews}
+                        style={{ marginTop: 14 }}
+                      >
+                        <input type="hidden" name="id" value={item.id} />
+                        <button
+                          className="btn"
+                          type="submit"
+                          style={{ background: "#8f303f", borderColor: "#b94b5c" }}
+                        >
+                          Видалити новину
+                        </button>
+                      </form>
+                    )}
                   </div>
                 ))}
               </div>
