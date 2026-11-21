@@ -4,18 +4,16 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { CookieOptions } from "@supabase/ssr";
 
 export async function middleware(request: NextRequest) {
-  // Local preview only. This bypass is automatically disabled in production.
-  if (
-    process.env.NODE_ENV !== "production" &&
-    process.env.NEXT_PUBLIC_DEMO_MODE === "true"
-  ) {
-    return NextResponse.next();
-  }
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key || !/^https?:\/\/.+/.test(url)) {
+    console.error("VERCETI: Supabase environment variables are missing or invalid", {
+      hasUrl: !!url,
+      validUrl: !!url && /^https?:\/\/.+/.test(url),
+      hasKey: !!key,
+    });
 
-  if (!url || !key) {
     return NextResponse.redirect(new URL("/setup", request.url));
   }
 
@@ -24,7 +22,6 @@ export async function middleware(request: NextRequest) {
   const supabase = createServerClient(url, key, {
     cookies: {
       getAll: () => request.cookies.getAll(),
-
       setAll(
         cookiesToSet: {
           name: string;
@@ -67,3 +64,4 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
+
