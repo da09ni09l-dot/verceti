@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type ChatMessage = {
@@ -37,6 +37,36 @@ const roleColors: Record<string, string> = {
   junior: "#b9c0cc"
 };
 
+const stickers = [
+  "😀", "😂", "😍", "🥰", "😎", "🤩",
+  "😭", "😡", "🤔", "😴", "🥳", "🤗",
+  "❤️", "💜", "🔥", "✨", "👍", "👎",
+  "👏", "🙏", "💯", "🎉", "🐱", "🐼"
+];
+
+function parseMessage(content: string) {
+  try {
+    const value = JSON.parse(content);
+
+    if (
+      value &&
+      typeof value === "object" &&
+      ["image", "audio", "sticker"].includes(value.type)
+    ) {
+      return value as {
+        type: "image" | "audio" | "sticker";
+        url?: string;
+        name?: string;
+        emoji?: string;
+      };
+    }
+  } catch {
+    // Звичайне текстове повідомлення.
+  }
+
+  return null;
+}
+
 export default function ChatRoom() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -45,8 +75,15 @@ export default function ChatRoom() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [showStickers, setShowStickers] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const supabase = useMemo(() => createClient(), []);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
   const loadMessages = useCallback(async () => {
     const { data: authData } = await supabase.auth.getUser();
@@ -119,8 +156,68 @@ export default function ChatRoom() {
 
     return () => {
       void supabase.removeChannel(channel);
+      streamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, [loadMessages, supabase]);
+
+  async function saveMessage(messageContent: string) {
+    const { data: authData, error: authError } =
+      await supabase.auth.getUser();
+
+    if (authError || !authData.user) {
+      throw new Error("Потрібно увійти в акаунт.");
+    }
+
+    const { error: insertError } = await supabase
+      .from("chat_messages")
+      .insert({
+        user_id: authData.user.id,
+        content: messageContent
+      });
+
+    if (insertError) {
+      throw new Error("Не вдалося надіслати повідомлення.");
+    }
+
+    await loadMessages();
+  }
+
+  async function uploadFile(file: File, type: "image" | "audio") {
+    const { data: authData } = await supabase.auth.getUser();
+
+    if (!authData.user) {
+      throw new Error("Потрібно увійти в акаунт.");
+    }
+
+    const extension = file.name.includes(".")
+      ? file.name.split(".").pop()
+      : type === "image" ? "jpg" : "webm";
+
+    const filePath = `${authData.user.id}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("chat-media")
+      .upload(filePath, file, {
+        contentType: file.type,
+        upsert: false
+      });
+
+    if (uploadError) {
+      throw new Error("Не вдалося завантажити файл.");
+    }
+
+    const { data } = supabase.storage
+      .from("chat-media")
+      .getPublicUrl(filePath);
+
+    await saveMessage(
+      JSON.stringify({
+        type,
+        url: data.publicUrl,
+        name: file.name
+      })
+    );
+  }
 
   async function sendMessage(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -137,30 +234,154 @@ export default function ChatRoom() {
     setSending(true);
     setError("");
 
-    const { data: authData, error: authError } =
-      await supabase.auth.getUser();
-
-    if (authError || !authData.user) {
-      setError("Потрібно увійти в акаунт.");
+    try {
+      await saveMessage(message);
+      setContent("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Помилка надсилання.");
+    } finally {
       setSending(false);
+    }
+  }
+
+  async function handleImage(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Можна додавати лише зображення.");
       return;
     }
 
-    const { error: insertError } = await supabase
-      .from("chat_messages")
-      .insert({
-        user_id: authData.user.id,
-        content: message
-      });
-
-    if (insertError) {
-      setError("Не вдалося надіслати повідомлення.");
-    } else {
-      setContent("");
-      await loadMessages();
+    if (file.size > 15 * 1024 * 1024) {
+      setError("Максимальний розмір фото — 15 МБ.");
+      return;
     }
 
-    setSending(false);
+    setUploading(true);
+    setError("");
+
+    try {
+      await uploadFile(file, "image");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Помилка завантаження фото.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function sendSticker(emoji: string) {
+    setSending(true);
+    setError("");
+    setShowStickers(false);
+
+    try {
+      await saveMessage(
+        JSON.stringify({
+          type: "sticker",
+          emoji
+        })
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не вдалося надіслати стікер.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function startRecording() {
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      setError("Запис голосу не підтримується цим браузером.");
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true
+      });
+
+      streamRef.current = stream;
+
+      const mimeType = [
+        "audio/webm;codecs=opus",
+        "audio/ogg;codecs=opus",
+        "audio/mp4"
+      ].find((type) => MediaRecorder.isTypeSupported(type));
+
+      const recorder = new MediaRecorder(
+        stream,
+        mimeType ? { mimeType } : undefined
+      );
+
+      recorderRef.current = recorder;
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const blob = new Blob(chunksRef.current, {
+          type: recorder.mimeType || "audio/webm"
+        });
+
+        stream.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+
+        if (blob.size === 0) {
+          setError("Запис порожній. Спробуй ще раз.");
+          return;
+        }
+
+        if (blob.size > 15 * 1024 * 1024) {
+          setError("Голосове повідомлення завелике.");
+          return;
+        }
+
+        setUploading(true);
+        setError("");
+
+        const extension = blob.type.includes("ogg")
+          ? "ogg"
+          : blob.type.includes("mp4")
+            ? "mp4"
+            : "webm";
+
+        const file = new File(
+          [blob],
+          `voice-${Date.now()}.${extension}`,
+          { type: blob.type }
+        );
+
+        try {
+          await uploadFile(file, "audio");
+        } catch (err) {
+          setError(
+            err instanceof Error ? err.message : "Не вдалося надіслати голосове."
+          );
+        } finally {
+          setUploading(false);
+        }
+      };
+
+      recorder.start();
+      setRecording(true);
+      setError("");
+    } catch {
+      setError("Немає доступу до мікрофона. Дозволь його в браузері.");
+    }
+  }
+
+  function stopRecording() {
+    if (recorderRef.current?.state === "recording") {
+      recorderRef.current.stop();
+    }
+
+    setRecording(false);
   }
 
   async function deleteMessage(id: string) {
@@ -305,69 +526,108 @@ export default function ChatRoom() {
               Повідомлень поки немає. Напиши першим!
             </p>
           ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                style={{
-                  padding: 12,
-                  borderRadius: 10,
-                  background: "rgba(255,255,255,0.045)",
-                  border: "1px solid rgba(255,255,255,0.07)"
-                }}
-              >
+            messages.map((message) => {
+              const attachment = parseMessage(message.content);
+
+              return (
                 <div
+                  key={message.id}
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 8,
-                    flexWrap: "wrap",
-                    marginBottom: 6
+                    padding: 12,
+                    borderRadius: 10,
+                    background: "rgba(255,255,255,0.045)",
+                    border: "1px solid rgba(255,255,255,0.07)"
                   }}
                 >
-                  <div>
-                    <strong>{message.nickname}</strong>
-                    <span
-                      style={{
-                        marginLeft: 8,
-                        color: roleColors[message.role] ?? "#b9c0cc",
-                        fontSize: 12
-                      }}
-                    >
-                      {roleLabels[message.role] ?? message.role}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 8,
+                      flexWrap: "wrap",
+                      marginBottom: 6
+                    }}
+                  >
+                    <div>
+                      <strong>{message.nickname}</strong>
+                      <span
+                        style={{
+                          marginLeft: 8,
+                          color: roleColors[message.role] ?? "#b9c0cc",
+                          fontSize: 12
+                        }}
+                      >
+                        {roleLabels[message.role] ?? message.role}
+                      </span>
+                    </div>
+
+                    <span className="notice-time">
+                      {new Date(message.created_at).toLocaleString("uk-UA")}
                     </span>
                   </div>
 
-                  <span className="notice-time">
-                    {new Date(message.created_at).toLocaleString("uk-UA")}
-                  </span>
+                  {attachment?.type === "image" && attachment.url ? (
+                    <a href={attachment.url} target="_blank" rel="noreferrer">
+                      <img
+                        src={attachment.url}
+                        alt="Фото з чату"
+                        style={{
+                          display: "block",
+                          maxWidth: "100%",
+                          maxHeight: 360,
+                          borderRadius: 10,
+                          objectFit: "contain"
+                        }}
+                      />
+                    </a>
+                  ) : attachment?.type === "audio" && attachment.url ? (
+                    <div style={{ width: "100%", maxWidth: 360 }}>
+                      <div style={{ marginBottom: 6 }}>🎤 Голосове повідомлення</div>
+                      <audio
+                        controls
+                        preload="metadata"
+                        src={attachment.url}
+                        style={{ width: "100%" }}
+                      />
+                    </div>
+                  ) : attachment?.type === "sticker" ? (
+                    <div
+                      style={{
+                        fontSize: 64,
+                        lineHeight: 1.3
+                      }}
+                    >
+                      {attachment.emoji}
+                    </div>
+                  ) : (
+                    <p
+                      style={{
+                        whiteSpace: "pre-wrap",
+                        overflowWrap: "anywhere",
+                        margin: 0
+                      }}
+                    >
+                      {message.content}
+                    </p>
+                  )}
+
+                  {message.user_id === userId && (
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => void deleteMessage(message.id)}
+                      style={{
+                        marginTop: 8,
+                        padding: "5px 10px",
+                        fontSize: 12
+                      }}
+                    >
+                      Видалити своє повідомлення
+                    </button>
+                  )}
                 </div>
-
-                <p
-                  style={{
-                    whiteSpace: "pre-wrap",
-                    overflowWrap: "anywhere",
-                    margin: 0
-                  }}
-                >
-                  {message.content}
-                </p>
-
-                {message.user_id === userId && (
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={() => void deleteMessage(message.id)}
-                    style={{
-                      marginTop: 8,
-                      padding: "5px 10px",
-                      fontSize: 12
-                    }}
-                  >
-                    Видалити своє повідомлення
-                  </button>
-                )}
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
@@ -377,35 +637,127 @@ export default function ChatRoom() {
           </p>
         )}
 
+        {showStickers && (
+          <div
+            className="panel"
+            style={{
+              marginTop: 14,
+              display: "grid",
+              gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+              gap: 8
+            }}
+          >
+            {stickers.map((sticker) => (
+              <button
+                type="button"
+                key={sticker}
+                onClick={() => void sendSticker(sticker)}
+                disabled={sending || uploading}
+                style={{
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "rgba(255,255,255,0.06)",
+                  borderRadius: 10,
+                  padding: 8,
+                  fontSize: 25,
+                  cursor: "pointer"
+                }}
+              >
+                {sticker}
+              </button>
+            ))}
+          </div>
+        )}
+
         <form
           onSubmit={sendMessage}
           style={{
             display: "flex",
+            flexWrap: "wrap",
             gap: 10,
             marginTop: 16,
             alignItems: "stretch"
           }}
         >
           <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            onChange={handleImage}
+            style={{ display: "none" }}
+          />
+
+          <button
+            type="button"
+            className="btn"
+            title="Додати фото"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || sending}
+          >
+            📷 Фото
+          </button>
+
+          <button
+            type="button"
+            className="btn"
+            title="Стікери"
+            onClick={() => setShowStickers((value) => !value)}
+            disabled={sending || uploading}
+          >
+            😊 Стікери
+          </button>
+
+          <button
+            type="button"
+            className="btn"
+            title="Записати голос"
+            onClick={() => {
+              if (recording) {
+                stopRecording();
+              } else {
+                void startRecording();
+              }
+            }}
+            disabled={uploading || sending}
+            style={{
+              background: recording ? "#8f303f" : undefined,
+              borderColor: recording ? "#b94b5c" : undefined
+            }}
+          >
+            {recording ? "⏹ Зупинити запис" : "🎤 Голос"}
+          </button>
+
+          <input
             value={content}
             onChange={(event) => setContent(event.target.value)}
             placeholder="Напиши повідомлення..."
             maxLength={2000}
-            required
-            style={{ flex: 1, minWidth: 0 }}
+            style={{ flex: 1, minWidth: 120 }}
           />
 
           <button
             className="btn"
             type="submit"
-            disabled={sending || !content.trim()}
+            disabled={sending || uploading || !content.trim()}
           >
             {sending ? "Надсилання..." : "Надіслати"}
           </button>
         </form>
 
+        {uploading && (
+          <p className="muted" style={{ marginTop: 10 }}>
+            Завантаження вкладення...
+          </p>
+        )}
+
+        {recording && (
+          <p style={{ color: "#ff8585", marginTop: 10 }}>
+            <span>● </span>Йде запис голосу. Натисни «Зупинити запис», щоб надіслати.
+          </p>
+        )}
+
         <p className="page-note">
-          Показано до 100 останніх повідомлень. Учасник може видаляти лише власні повідомлення.
+          Показано до 100 останніх повідомлень. Можна надсилати текст, фото,
+          голосові повідомлення та стікери. Учасник може видаляти лише власні повідомлення.
         </p>
       </section>
     </div>
