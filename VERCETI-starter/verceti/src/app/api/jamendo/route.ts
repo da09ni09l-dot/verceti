@@ -3,10 +3,30 @@ import { NextRequest, NextResponse } from "next/server";
 
 const JAMENDO_API = "https://api.jamendo.com/v3.0";
 
+type JamendoTrack = {
+  id: string | number;
+  name?: string;
+  artist_name?: string;
+  album_image?: string;
+  image?: string;
+  duration?: number | string;
+  audio?: string;
+  audiodownload_allowed?: boolean;
+  shareurl?: string;
+};
+
+type JamendoResponse = {
+  headers?: {
+    status?: string;
+    error_message?: string;
+  };
+  results?: JamendoTrack[];
+};
+
 async function jamendoRequest(
   endpoint: string,
   params: URLSearchParams
-) {
+): Promise<JamendoTrack[]> {
   const response = await fetch(
     `${JAMENDO_API}${endpoint}?${params.toString()}`,
     { cache: "no-store" }
@@ -16,7 +36,7 @@ async function jamendoRequest(
     throw new Error(`Jamendo API помилка: ${response.status}`);
   }
 
-  const data = await response.json();
+  const data: JamendoResponse = await response.json();
 
   if (data.headers?.status !== "success") {
     throw new Error(
@@ -51,7 +71,7 @@ export async function GET(request: NextRequest) {
       type: "single albumtrack",
     });
 
-    let results: any[] = [];
+    let results: JamendoTrack[] = [];
 
     if (action === "ukrainian") {
       const chartParams = new URLSearchParams(params);
@@ -64,7 +84,7 @@ export async function GET(request: NextRequest) {
       );
 
       const ids = chart
-        .map((item: any) => String(item.id))
+        .map((item) => String(item.id))
         .filter(Boolean);
 
       if (ids.length > 0) {
@@ -94,7 +114,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const tracks = results.map((track: any) => ({
+    const tracks = results.map((track) => ({
       id: String(track.id),
       title: track.name || "Без назви",
       artist: track.artist_name || "Невідомий виконавець",
