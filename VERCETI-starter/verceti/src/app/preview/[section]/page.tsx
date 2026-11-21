@@ -5,7 +5,7 @@ import { createNews, deleteNews } from "./actions";
 import ChatRoom from "./ChatRoom";
 import VoiceRoom from "./VoiceRoom";
 import MusicRoom from "./MusicRoom";
-
+import MediaRoom from "./MediaRoom";
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: { title: "Учасники", text: "Список учасників, ролі та профілі.", items: ["Пошук за нікнеймом та ігровим ID", "Кольорові позначки ролей", "Історія зміни ролей"] },
   voice: { title: "Голосові кімнати", text: "Голосові канали та демонстрація екрана.", items: ["Кілька голосових каналів", "Голосове спілкування", "Демонстрація екрана"] },
