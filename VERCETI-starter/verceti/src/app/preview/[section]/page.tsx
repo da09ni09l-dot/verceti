@@ -112,7 +112,15 @@ export default async function PreviewSection({
             </p>
             <MusicRoom />
           </>
-        ) : section === "news" ? (
+               ) : section === "media" ? (
+          <>
+            <h1>Фото та відео VERCETI</h1>
+            <p className="muted">
+              Фотоальбоми та відео спільноти.
+            </p>
+            <MediaRoom />
+          </>
+    ) : section === "news" ? (
           <>
             <h1>Новини</h1>
             <p className="muted">Новини спільноти, оголошення та події.</p>
