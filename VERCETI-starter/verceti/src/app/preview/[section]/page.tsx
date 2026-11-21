@@ -96,7 +96,7 @@ export default async function PreviewSection({
                 <h2>Створити новину</h2>
 
                 <form action={createNews} className="member-list">
-                  <label htmlFor="news-date">Дата події (необов&apos;язково)</label>
+                  <label htmlFor="news-title">Заголовок</label>
                   <input
                     id="news-title"
                     name="title"
@@ -123,7 +123,7 @@ export default async function PreviewSection({
                     <option value="important">Важливо</option>
                   </select>
 
-                  <label htmlFor="news-date">Дата події (необов'язково)</label>
+                  <label htmlFor="news-date">Дата події (необов&apos;язково)</label>
                   <input id="news-date" name="event_date" type="date" />
 
                   <button className="btn" type="submit">
