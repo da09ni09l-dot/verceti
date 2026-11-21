@@ -1,294 +1,462 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+type Source = "YouTube" | "SoundCloud";
+type Tab = "personal" | "shared" | "recommendations" | "favorites";
 
 type Track = {
-  id: number;
+  id: string;
   title: string;
   artist: string;
+  source: Source;
+  url: string;
+  playlist_type: "personal" | "shared";
+  user_id: string | null;
 };
 
-const initialTracks: Track[] = [
-  { id: 1, title: "Нічне місто", artist: "VERCETI Radio" },
-  { id: 2, title: "Без меж", artist: "VERCETI Radio" },
-  { id: 3, title: "Атмосфера", artist: "VERCETI Radio" }
-];
+type Recommendation = {
+  id: string;
+  title: string;
+  artist: string;
+  source: Source;
+  url: string;
+  user_id: string;
+  status: "pending" | "approved" | "rejected";
+};
+
+function getEmbedUrl(track: Track) {
+  if (track.source === "YouTube") {
+    let videoId = "";
+
+    try {
+      const url = new URL(track.url);
+
+      if (url.hostname.includes("youtu.be")) {
+        videoId = url.pathname.slice(1);
+      } else if (url.hostname.includes("youtube.com")) {
+        videoId =
+          url.searchParams.get("v") ||
+          url.pathname.split("/").pop() ||
+          "";
+      }
+    } catch {
+      return "";
+    }
+
+    if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) return "";
+
+    return `https://www.youtube-nocookie.com/embed/${videoId}`;
+  }
+
+  return `https://w.soundcloud.com/player/?url=${encodeURIComponent(
+    track.url
+  )}&auto_play=false&visual=true`;
+}
+
+function validLink(source: Source, value: string) {
+  try {
+    const url = new URL(value);
+
+    if (url.protocol !== "https:") return false;
+
+    if (source === "YouTube") {
+      return (
+        url.hostname === "youtube.com" ||
+        url.hostname === "www.youtube.com" ||
+        url.hostname === "m.youtube.com" ||
+        url.hostname === "youtu.be" ||
+        url.hostname === "www.youtu.be"
+      );
+    }
+
+    return (
+      url.hostname === "soundcloud.com" ||
+      url.hostname === "www.soundcloud.com" ||
+      url.hostname === "m.soundcloud.com"
+    );
+  } catch {
+    return false;
+  }
+}
 
 export default function MusicRoom() {
-  const [tab, setTab] = useState<"personal" | "shared">("personal");
+  const supabase = useMemo(() => createClient(), []);
 
-  const [personalTracks, setPersonalTracks] = useState(initialTracks);
-  const [sharedTracks, setSharedTracks] = useState(initialTracks);
+  const [tab, setTab] = useState<Tab>("personal");
+  const [userId, setUserId] = useState("");
+  const [role, setRole] = useState("");
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [favorites, setFavorites] = useState<Track[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
-  const [personalActive, setPersonalActive] = useState<number | null>(1);
-  const [sharedActive, setSharedActive] = useState<number | null>(1);
-
-  const [playing, setPlaying] = useState(false);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
-  const [source, setSource] = useState("YouTube");
+  const [source, setSource] = useState<Source>("YouTube");
+  const [url, setUrl] = useState("");
   const [showAdd, setShowAdd] = useState(false);
 
-  const tracks = tab === "personal" ? personalTracks : sharedTracks;
-  const activeTrack = tab === "personal" ? personalActive : sharedActive;
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
 
-  const setTracks = tab === "personal" ? setPersonalTracks : setSharedTracks;
-  const setActiveTrack = tab === "personal" ? setPersonalActive : setSharedActive;
+  const isManagement = ["admin", "leader", "moderator"].includes(role);
 
-  const currentTrack = tracks.find((track) => track.id === activeTrack);
+  const visibleTracks =
+    tab === "favorites" ? favorites : tracks;
 
-  function addTrack() {
-    if (!title.trim()) return;
+  const currentTrack =
+    visibleTracks.find((track) => track.id === activeId) || null;
 
-    const track: Track = {
-      id: Date.now(),
-      title: title.trim(),
-      artist: artist.trim() || "Невідомий виконавець"
-    };
+  useEffect(() => {
+    async function loadUser() {
+      const { data, error } = await supabase.auth.getUser();
 
-    setTracks((previous) => [...previous, track]);
-    setActiveTrack(track.id);
-    setPlaying(false);
+      if (error || !data.user) {
+        setMessage("Увійди в акаунт, щоб користуватися музикою.");
+        setLoading(false);
+        return;
+      }
+
+      setUserId(data.user.id);
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .single();
+
+      setRole(profile?.role || "");
+    }
+
+    loadUser();
+  }, [supabase]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    async function loadData() {
+      setLoading(true);
+      setMessage("");
+
+      if (tab === "personal" || tab === "shared") {
+        const { data, error } = await supabase
+          .from("music_tracks")
+          .select("*")
+          .eq("playlist_type", tab)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          setMessage("Не вдалося завантажити музику: " + error.message);
+        } else {
+          const list = (data || []) as Track[];
+          setTracks(list);
+
+          if (!list.some((track) => track.id === activeId)) {
+            setActiveId(list[0]?.id || null);
+          }
+        }
+      }
+
+      if (tab === "recommendations") {
+        const { data, error } = await supabase
+          .from("music_recommendations")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          setMessage("Не вдалося завантажити рекомендації: " + error.message);
+        } else {
+          setRecommendations((data || []) as Recommendation[]);
+        }
+      }
+
+      if (tab === "favorites") {
+        const { data, error } = await supabase
+          .from("music_favorites")
+          .select("track_id");
+
+        if (error) {
+          setMessage("Не вдалося завантажити улюблене: " + error.message);
+        } else {
+          const ids = (data || []).map((item) => item.track_id);
+
+          if (ids.length) {
+            const { data: saved, error: savedError } = await supabase
+              .from("music_tracks")
+              .select("*")
+              .in("id", ids);
+
+            if (savedError) {
+              setMessage("Не вдалося завантажити пісні: " + savedError.message);
+            } else {
+              setFavorites((saved || []) as Track[]);
+            }
+          } else {
+            setFavorites([]);
+          }
+        }
+      }
+
+      setLoading(false);
+    }
+
+    loadData();
+  }, [supabase, userId, tab]);
+
+  function clearForm() {
     setTitle("");
     setArtist("");
+    setUrl("");
+    setSource("YouTube");
     setShowAdd(false);
   }
 
-  function deleteTrack(id: number) {
-    setTracks((previous) => previous.filter((track) => track.id !== id));
+  async function addTrack() {
+    if (!title.trim() || !validLink(source, url.trim())) {
+      setMessage("Вкажи назву та правильне посилання YouTube або SoundCloud.");
+      return;
+    }
 
-    if (activeTrack === id) {
-      setActiveTrack(null);
-      setPlaying(false);
+    if (tab === "shared" && !isManagement) {
+      setMessage("Додавати спільну музику може лише керівництво.");
+      return;
+    }
+
+    const playlistType = tab === "shared" ? "shared" : "personal";
+
+    const { data, error } = await supabase
+      .from("music_tracks")
+      .insert({
+        title: title.trim(),
+        artist: artist.trim() || "Невідомий виконавець",
+        source,
+        url: url.trim(),
+        playlist_type: playlistType,
+        user_id: playlistType === "personal" ? userId : null,
+        created_by: userId
+      })
+      .select()
+      .single();
+
+    if (error) {
+      setMessage("Не вдалося додати пісню: " + error.message);
+      return;
+    }
+
+    setTracks((previous) => [data as Track, ...previous]);
+    setActiveId(data.id);
+    setMessage("Композицію додано!");
+    clearForm();
+  }
+
+  async function sendRecommendation() {
+    if (!title.trim() || !validLink(source, url.trim())) {
+      setMessage("Вкажи назву та правильне посилання на композицію.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("music_recommendations")
+      .insert({
+        title: title.trim(),
+        artist: artist.trim() || "Невідомий виконавець",
+        source,
+        url: url.trim(),
+        user_id: userId
+      });
+
+    if (error) {
+      setMessage("Не вдалося надіслати рекомендацію: " + error.message);
+      return;
+    }
+
+    setMessage("Рекомендацію надіслано керівництву!");
+    clearForm();
+  }
+
+  async function deleteTrack(track: Track) {
+    if (
+      track.playlist_type === "shared" &&
+      !isManagement
+    ) {
+      setMessage("Видаляти спільну музику може лише керівництво.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("music_tracks")
+      .delete()
+      .eq("id", track.id);
+
+    if (error) {
+      setMessage("Не вдалося видалити композицію: " + error.message);
+      return;
+    }
+
+    setTracks((previous) => previous.filter((item) => item.id !== track.id));
+    setFavorites((previous) => previous.filter((item) => item.id !== track.id));
+
+    if (activeId === track.id) setActiveId(null);
+
+    setMessage("Композицію видалено.");
+  }
+
+  async function toggleFavorite(track: Track) {
+    const exists = favorites.some((item) => item.id === track.id);
+
+    if (exists) {
+      const { error } = await supabase
+        .from("music_favorites")
+        .delete()
+        .eq("track_id", track.id)
+        .eq("user_id", userId);
+
+      if (error) {
+        setMessage("Не вдалося прибрати з улюбленого: " + error.message);
+        return;
+      }
+
+      setFavorites((previous) => previous.filter((item) => item.id !== track.id));
+      setMessage("Видалено з улюбленого.");
+    } else {
+      const { error } = await supabase
+        .from("music_favorites")
+        .insert({ track_id: track.id, user_id: userId });
+
+      if (error) {
+        setMessage("Не вдалося зберегти композицію: " + error.message);
+        return;
+      }
+
+      setFavorites((previous) => [...previous, track]);
+      setMessage("Додано до улюбленого!");
     }
   }
 
-  function selectTrack(id: number) {
-    setActiveTrack(id);
-    setPlaying(false);
+  async function reviewRecommendation(
+    recommendation: Recommendation,
+    approved: boolean
+  ) {
+    if (!isManagement) return;
+
+    if (approved) {
+      const { error: insertError } = await supabase
+        .from("music_tracks")
+        .insert({
+          title: recommendation.title,
+          artist: recommendation.artist,
+          source: recommendation.source,
+          url: recommendation.url,
+          playlist_type: "shared",
+          user_id: null,
+          created_by: userId
+        });
+
+      if (insertError) {
+        setMessage("Не вдалося додати до спільної музики: " + insertError.message);
+        return;
+      }
+    }
+
+    const { error } = await supabase
+      .from("music_recommendations")
+      .update({ status: approved ? "approved" : "rejected" })
+      .eq("id", recommendation.id);
+
+    if (error) {
+      setMessage("Не вдалося оновити рекомендацію: " + error.message);
+      return;
+    }
+
+    setRecommendations((previous) =>
+      previous.map((item) =>
+        item.id === recommendation.id
+          ? { ...item, status: approved ? "approved" : "rejected" }
+          : item
+      )
+    );
+
+    setMessage(approved ? "Пісню додано до спільного плейлиста!" : "Рекомендацію відхилено.");
   }
 
-  function switchTab(nextTab: "personal" | "shared") {
+  function changeTab(nextTab: Tab) {
     setTab(nextTab);
-    setPlaying(false);
+    setActiveId(null);
     setShowAdd(false);
+    setMessage("");
   }
 
   return (
     <div style={{ display: "grid", gap: 18, marginTop: 24 }}>
       <section className="panel">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap"
-          }}
-        >
-          <div>
-            <h2 style={{ margin: 0 }}>🎵 Музичний простір</h2>
-            <p className="muted">
-              Музика для всієї спільноти VERCETI
-            </p>
-          </div>
+        <h2 style={{ marginTop: 0 }}>🎵 Музичний простір VERCETI</h2>
+        <p className="muted">
+          Музика, рекомендації та улюблені композиції спільноти.
+        </p>
 
-          <span className="badge">Музика</span>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            gap: 10,
-            flexWrap: "wrap",
-            marginTop: 20
-          }}
-        >
-          <button
-            className="btn"
-            type="button"
-            onClick={() => switchTab("personal")}
-            style={{
-              background: tab === "personal"
-                ? "rgba(187,138,255,0.3)"
-                : "rgba(255,255,255,0.05)",
-              border: tab === "personal"
-                ? "1px solid rgba(187,138,255,0.5)"
-                : "1px solid transparent"
-            }}
-          >
-            🎧 Особистий плеєр
-          </button>
-
-          <button
-            className="btn"
-            type="button"
-            onClick={() => switchTab("shared")}
-            style={{
-              background: tab === "shared"
-                ? "rgba(187,138,255,0.3)"
-                : "rgba(255,255,255,0.05)",
-              border: tab === "shared"
-                ? "1px solid rgba(187,138,255,0.5)"
-                : "1px solid transparent"
-            }}
-          >
-            🌐 Спільний плеєр
-          </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 18 }}>
+          {[
+            ["personal", "🎧 Особистий"],
+            ["shared", "🌐 Спільний"],
+            ["recommendations", "💡 Рекомендації"],
+            ["favorites", "⭐ Улюблене"]
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              className="btn"
+              type="button"
+              onClick={() => changeTab(value as Tab)}
+              style={{
+                background: tab === value
+                  ? "rgba(187,138,255,0.3)"
+                  : "rgba(255,255,255,0.05)"
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </section>
 
       <section className="panel">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap"
-          }}
-        >
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>
             <h2 style={{ margin: 0 }}>
-              {tab === "personal" ? "🎧 Особиста музика" : "🌐 Спільна музика"}
+              {tab === "personal" && "🎧 Особиста музика"}
+              {tab === "shared" && "🌐 Спільна музика"}
+              {tab === "recommendations" && "💡 Рекомендації"}
+              {tab === "favorites" && "⭐ Улюблені композиції"}
             </h2>
             <p className="muted">
-              {tab === "personal"
-                ? "Твій особистий список композицій"
-                : "Єдиний список відтворення спільноти"}
+              {tab === "personal" && "Твій особистий плейлист"}
+              {tab === "shared" && "Музика всієї спільноти"}
+              {tab === "recommendations" && "Пропозиції учасників для спільного плейлиста"}
+              {tab === "favorites" && "Пісні, які ти зберіг"}
             </p>
           </div>
 
-          <span className="badge">
-            {tab === "personal" ? "Особистий режим" : "Спільний режим"}
-          </span>
-        </div>
-
-        <div
-          style={{
-            marginTop: 20,
-            padding: 24,
-            borderRadius: 14,
-            textAlign: "center",
-            background:
-              "linear-gradient(135deg, rgba(115,65,180,0.25), rgba(30,20,55,0.7))",
-            border: "1px solid rgba(187,138,255,0.2)"
-          }}
-        >
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🎵</div>
-
-          <h2 style={{ margin: 0 }}>
-            {currentTrack?.title || "Нічого не вибрано"}
-          </h2>
-
-          <p className="muted">
-            {currentTrack?.artist || "Вибери композицію зі списку"}
-          </p>
-
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: 12,
-              alignItems: "center",
-              marginTop: 20
-            }}
-          >
-            <button
-              className="btn"
-              type="button"
-              disabled={!currentTrack}
-              onClick={() => {
-                const index = tracks.findIndex(
-                  (track) => track.id === activeTrack
-                );
-                if (index > 0) selectTrack(tracks[index - 1].id);
-              }}
-            >
-              ⏮
+          {(tab === "personal" || tab === "recommendations" ||
+            (tab === "shared" && isManagement)) && (
+            <button className="btn" type="button" onClick={() => setShowAdd(!showAdd)}>
+              + {tab === "recommendations" ? "Запропонувати пісню" : "Додати музику"}
             </button>
-
-            <button
-              className="btn"
-              type="button"
-              disabled={!currentTrack}
-              onClick={() => setPlaying((value) => !value)}
-              style={{
-                minWidth: 110,
-                background: "rgba(187,138,255,0.25)"
-              }}
-            >
-              {playing ? "⏸ Пауза" : "▶ Слухати"}
-            </button>
-
-            <button
-              className="btn"
-              type="button"
-              disabled={!currentTrack}
-              onClick={() => {
-                const index = tracks.findIndex(
-                  (track) => track.id === activeTrack
-                );
-                if (index >= 0 && index < tracks.length - 1) {
-                  selectTrack(tracks[index + 1].id);
-                }
-              }}
-            >
-              ⏭
-            </button>
-          </div>
-
-          <p className="page-note">
-            {tab === "personal"
-              ? "Особистий режим. Зараз це демонстраційний плеєр без реального аудіо."
-              : "Спільний режим. Синхронізацію музики між учасниками підключимо окремо."}
-          </p>
-        </div>
-      </section>
-
-      <section className="panel">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap"
-          }}
-        >
-          <div>
-            <h2 style={{ margin: 0 }}>📃 Список відтворення</h2>
-            <p className="muted">
-              Композицій: {tracks.length}
-            </p>
-          </div>
-
-          <button
-            className="btn"
-            type="button"
-            onClick={() => setShowAdd((value) => !value)}
-          >
-            + Додати музику
-          </button>
+          )}
         </div>
 
         {showAdd && (
-          <div
-            style={{
-              marginTop: 18,
-              padding: 16,
-              borderRadius: 12,
-              background: "rgba(0,0,0,0.2)"
-            }}
-          >
-            <h3 style={{ marginTop: 0 }}>Додати композицію</h3>
+          <div style={{ marginTop: 18, padding: 16, borderRadius: 12, background: "rgba(0,0,0,0.2)" }}>
+            <h3 style={{ marginTop: 0 }}>
+              {tab === "recommendations" ? "Нова рекомендація" : "Додати композицію"}
+            </h3>
 
             <label className="muted">Назва композиції</label>
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="Введи назву"
+              placeholder="Назва пісні"
               maxLength={100}
             />
 
@@ -301,70 +469,91 @@ export default function MusicRoom() {
             />
 
             <label className="muted">Джерело</label>
-            <select
-              value={source}
-              onChange={(event) => setSource(event.target.value)}
-            >
-              <option>YouTube</option>
-              <option>SoundCloud</option>
+            <select value={source} onChange={(event) => setSource(event.target.value as Source)}>
+              <option value="YouTube">YouTube</option>
+              <option value="SoundCloud">SoundCloud</option>
             </select>
 
-            <p className="page-note">
-              Обране джерело: {source}. Підключення посилань буде наступним етапом.
-            </p>
+            <label className="muted">Посилання на музику</label>
+            <input
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              placeholder="https://..."
+              type="url"
+            />
 
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
               <button
                 className="btn"
                 type="button"
-                onClick={addTrack}
-                disabled={!title.trim()}
+                onClick={tab === "recommendations" ? sendRecommendation : addTrack}
+                disabled={!title.trim() || !url.trim()}
               >
-                Додати
+                {tab === "recommendations" ? "Надіслати рекомендацію" : "Зберегти пісню"}
               </button>
-
-              <button
-                className="btn"
-                type="button"
-                onClick={() => setShowAdd(false)}
-              >
+              <button className="btn" type="button" onClick={clearForm}>
                 Скасувати
               </button>
             </div>
           </div>
         )}
 
-        <div style={{ marginTop: 16 }}>
-          {tracks.length === 0 ? (
-            <p className="muted">Список поки порожній.</p>
+        {message && (
+          <p className="page-note" role="status">{message}</p>
+        )}
+
+        {loading ? (
+          <p className="muted">Завантаження...</p>
+        ) : tab === "recommendations" ? (
+          recommendations.length === 0 ? (
+            <p className="muted">Рекомендацій поки немає.</p>
           ) : (
-            tracks.map((track, index) => (
+            recommendations.map((item) => (
+              <div key={item.id} style={{ padding: 14, marginTop: 10, borderRadius: 10, background: "rgba(255,255,255,0.04)" }}>
+                <strong>{item.title}</strong>
+                <p className="muted">{item.artist}</p>
+                <a href={item.url} target="_blank" rel="noreferrer">Відкрити посилання</a>
+                <p className="page-note">
+                  Статус: {item.status === "pending" ? "Очікує розгляду" : item.status === "approved" ? "Схвалено" : "Відхилено"}
+                </p>
+                {isManagement && item.status === "pending" && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button className="btn" type="button" onClick={() => reviewRecommendation(item, true)}>
+                      ✓ Додати до спільного
+                    </button>
+                    <button className="btn" type="button" onClick={() => reviewRecommendation(item, false)}>
+                      Відхилити
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )
+        ) : visibleTracks.length === 0 ? (
+          <p className="muted">У цьому списку поки немає композицій.</p>
+        ) : (
+          visibleTracks.map((track, index) => {
+            const isFavorite = favorites.some((item) => item.id === track.id);
+
+            return (
               <div
                 key={track.id}
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 12,
+                  gap: 10,
                   padding: 12,
                   marginTop: 8,
                   borderRadius: 10,
-                  background:
-                    activeTrack === track.id
-                      ? "rgba(187,138,255,0.15)"
-                      : "rgba(255,255,255,0.04)",
-                  border:
-                    activeTrack === track.id
-                      ? "1px solid rgba(187,138,255,0.3)"
-                      : "1px solid transparent"
+                  background: activeId === track.id
+                    ? "rgba(187,138,255,0.15)"
+                    : "rgba(255,255,255,0.04)"
                 }}
               >
-                <span style={{ opacity: 0.6, minWidth: 22 }}>
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-
+                <span className="muted">{String(index + 1).padStart(2, "0")}</span>
                 <button
                   type="button"
-                  onClick={() => selectTrack(track.id)}
+                  onClick={() => setActiveId(track.id)}
                   style={{
                     flex: 1,
                     minWidth: 0,
@@ -375,27 +564,67 @@ export default function MusicRoom() {
                     cursor: "pointer"
                   }}
                 >
-                  <strong style={{ display: "block" }}>
-                    {track.title}
-                  </strong>
-                  <span className="muted" style={{ fontSize: 12 }}>
-                    {track.artist}
-                  </span>
+                  <strong style={{ display: "block" }}>{track.title}</strong>
+                  <span className="muted" style={{ fontSize: 12 }}>{track.artist}</span>
                 </button>
 
-                <button
-                  className="btn"
-                  type="button"
-                  onClick={() => deleteTrack(track.id)}
-                  title="Видалити зі списку"
-                >
-                  🗑
+                <button className="btn" type="button" onClick={() => toggleFavorite(track)} title="Улюблене">
+                  {isFavorite ? "⭐" : "☆"}
                 </button>
+
+                {(track.playlist_type === "personal" || isManagement) && (
+                  <button className="btn" type="button" onClick={() => deleteTrack(track)} title="Видалити">
+                    🗑
+                  </button>
+                )}
               </div>
-            ))
-          )}
-        </div>
+            );
+          })
+        )}
       </section>
+
+      {(tab === "personal" || tab === "shared" || tab === "favorites") && (
+        <section className="panel">
+          <h2 style={{ marginTop: 0 }}>▶ Плеєр</h2>
+
+          {currentTrack ? (
+            <>
+              <h3>{currentTrack.title}</h3>
+              <p className="muted">{currentTrack.artist}</p>
+              {currentTrack.source === "YouTube" ? (
+                <iframe
+                  key={currentTrack.id}
+                  src={getEmbedUrl(currentTrack)}
+                  title={currentTrack.title}
+                  width="100%"
+                  height="315"
+                  style={{ border: 0, borderRadius: 12, marginTop: 12 }}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
+              ) : (
+                <iframe
+                  key={currentTrack.id}
+                  title={currentTrack.title}
+                  width="100%"
+                  height="166"
+                  scrolling="no"
+                  frameBorder="0"
+                  allow="autoplay"
+                  src={getEmbedUrl(currentTrack)}
+                  style={{ borderRadius: 12, marginTop: 12 }}
+                />
+              )}
+              <p className="page-note">
+                Керуй відтворенням у вбудованому програвачі YouTube або SoundCloud.
+              </p>
+            </>
+          ) : (
+            <p className="muted">Вибери композицію зі списку, щоб відкрити програвач.</p>
+          )}
+        </section>
+      )}
     </div>
   );
 }
