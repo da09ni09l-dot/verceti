@@ -7,7 +7,7 @@ import {
   deleteApplicationQuestion,
   submitApplication,
   editApplicationAnswers,
-    reviewApplication,
+  reviewApplication,
   deleteApplication,
 } from "./application-actions";
 
@@ -24,6 +24,7 @@ const roleLabels: Record<string, string> = {
   senior: "Senior",
   moderator: "Moderator",
   leader: "Leader",
+  admin: "Admin",
 };
 
 export default async function ApplicationsSection({
@@ -43,9 +44,13 @@ export default async function ApplicationsSection({
 
   const { data: staffResult } = await supabase.rpc("is_verceti_staff");
   const isStaff = staffResult === true;
+
   const { data: currentRole } = await supabase.rpc(
-  "current_verceti_role"
-);
+    "current_verceti_role"
+  );
+
+  const isAdmin = currentRole === "admin";
+
   const { data: questionsData, error: questionsError } = await supabase
     .from("application_questions")
     .select("*")
@@ -95,52 +100,67 @@ export default async function ApplicationsSection({
       {status === "question-created" && (
         <div className="panel">Запитання успішно додано.</div>
       )}
+
       {status === "question-updated" && (
         <div className="panel">Запитання успішно оновлено.</div>
       )}
+
       {status === "question-deleted" && (
         <div className="panel">Запитання видалено.</div>
       )}
+
       {status === "submitted" && (
         <div className="panel">Анкету успішно надіслано на перевірку.</div>
       )}
+
       {status === "answers-updated" && (
         <div className="panel">Відповіді анкети оновлено.</div>
       )}
+
       {status === "reviewed" && (
         <div className="panel">Рішення щодо анкети збережено.</div>
       )}
+
       {status === "application-deleted" && (
-  <div className="panel">Анкету учасника успішно видалено.</div>
-)}
+        <div className="panel">Анкету учасника успішно видалено.</div>
+      )}
+
       {status === "already-pending" && (
         <div className="panel">Твоя анкета вже очікує перевірки.</div>
       )}
+
       {status === "no-questions" && (
         <div className="panel">Керівництво ще не створило запитань.</div>
       )}
+
       {status === "answers-required" && (
         <div className="panel">Заповни всі обов&apos;язкові поля.</div>
       )}
+
       {status === "question-options" && (
         <div className="panel">
           Для списку вибору потрібно щонайменше два варіанти.
         </div>
       )}
+
       {status === "question-invalid" && (
         <div className="panel">Перевір правильність запитання.</div>
       )}
+
       {status === "question-error" && (
         <div className="panel">Не вдалося зберегти запитання.</div>
       )}
+
       {status === "application-error" && (
         <div className="panel">Не вдалося зберегти анкету.</div>
       )}
+
       {status === "review-error" && (
         <div className="panel">
           Не вдалося зберегти рішення. Перевір права доступу та статус анкети.
         </div>
       )}
+
       {status === "forbidden" && (
         <div className="panel">У тебе немає прав для цієї дії.</div>
       )}
@@ -160,6 +180,7 @@ export default async function ApplicationsSection({
       {isStaff && (
         <div className="panel" style={{ marginTop: 24 }}>
           <h2>Конструктор анкети</h2>
+
           <p className="muted">
             Створюй запитання, які побачать учасники спільноти.
           </p>
@@ -399,7 +420,7 @@ export default async function ApplicationsSection({
                             >
                               <option value="">Обери відповідь</option>
                               {Array.isArray(question.options) &&
-                               question.options.map((option: string) => (
+                                question.options.map((option: string) => (
                                   <option key={option} value={option}>
                                     {option}
                                   </option>
@@ -438,6 +459,7 @@ export default async function ApplicationsSection({
           ) : (
             applications.map((application) => {
               const profile = profileById.get(application.user_id);
+
               const answers =
                 application.answers &&
                 typeof application.answers === "object" &&
@@ -470,6 +492,30 @@ export default async function ApplicationsSection({
                     Надіслано:{" "}
                     {new Date(application.created_at).toLocaleString("uk-UA")}
                   </p>
+
+                  {isAdmin && (
+                    <form
+                      action={deleteApplication}
+                      style={{ marginTop: 12 }}
+                    >
+                      <input
+                        type="hidden"
+                        name="id"
+                        value={application.id}
+                      />
+
+                      <button
+                        className="btn"
+                        type="submit"
+                        style={{
+                          background: "#8f303f",
+                          borderColor: "#b94b5c",
+                        }}
+                      >
+                        Видалити анкету
+                      </button>
+                    </form>
+                  )}
 
                   <h4>Відповіді</h4>
 
