@@ -115,6 +115,11 @@ type DisciplinaryActionItem = {
   createdAt: string;
 };
 
+type DisciplinaryMember = {
+  id: string;
+  nickname: string;
+};
+
 export default async function PreviewSection({
   params,
   searchParams
@@ -206,6 +211,9 @@ export default async function PreviewSection({
 
   let disciplinaryActions: DisciplinaryActionItem[] = [];
   let disciplinaryActionsError = false;
+
+  let disciplinaryMembers: DisciplinaryMember[] = [];
+  let disciplinaryMembersError = false;
 
   if (section === "stats") {
     const sevenDaysAgo = new Date(
@@ -377,6 +385,29 @@ export default async function PreviewSection({
         }));
       }
     }
+
+    if (isStaff) {
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, nickname")
+        .order("nickname", { ascending: true })
+        .limit(1000);
+
+      if (profilesError) {
+        console.error(
+          "VERCETI disciplinary members loading error:",
+          profilesError.message
+        );
+        disciplinaryMembersError = true;
+      } else {
+        disciplinaryMembers = (profilesData ?? [])
+          .filter((profile) => profile.nickname)
+          .map((profile) => ({
+            id: profile.id,
+            nickname: profile.nickname
+          }));
+      }
+    }
   }
 
   if (section === "notifications") {
@@ -530,6 +561,10 @@ export default async function PreviewSection({
             roleHistoryError={roleHistoryError}
             disciplinaryActions={disciplinaryActions}
             disciplinaryActionsError={disciplinaryActionsError}
+            disciplinaryMembers={disciplinaryMembers}
+            disciplinaryMembersError={disciplinaryMembersError}
+            isStaff={isStaff}
+            status={status}
           />
         ) : section === "notifications" ? (
           <>
