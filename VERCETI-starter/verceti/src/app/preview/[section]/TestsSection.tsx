@@ -282,9 +282,16 @@ export default function TestsSection({
     setBusy(true);
 
     try {
+      const submittedAnswers = Object.entries(selectedAnswers).map(
+        ([question_id, answer_ids]) => ({
+          question_id,
+          answer_ids,
+        })
+      );
+
       const result = await submitTestAnswers(
         selectedTestId,
-        selectedAnswers
+        submittedAnswers
       );
 
       setTestResult(result);
