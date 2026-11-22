@@ -21,7 +21,7 @@ export async function loginWithNickname(formData: FormData) {
 
     const { data: profiles, error: profileError } = await admin
       .from("profiles")
-      .select("id, nickname");
+      .select("id, nickname, is_banned");
 
     if (profileError) {
       console.error("Profile lookup error:", profileError.message);
@@ -34,6 +34,12 @@ export async function loginWithNickname(formData: FormData) {
 
     if (!profile) {
       return { error: "Неправильний нікнейм або пароль." };
+    }
+
+    if (profile.is_banned) {
+      return {
+        error: "Твій акаунт заблоковано. Звернися до адміністрації.",
+      };
     }
 
     const { data: userData, error: userError } =
@@ -82,7 +88,6 @@ export async function registerWithNickname(formData: FormData) {
   try {
     const admin = createAdminClient();
 
-    // Перевіряємо, чи нікнейм уже зайнятий.
     const { data: profiles, error: profileError } = await admin
       .from("profiles")
       .select("nickname");
@@ -100,7 +105,6 @@ export async function registerWithNickname(formData: FormData) {
       return { error: "Цей нікнейм уже зайнятий. Обери інший." };
     }
 
-    // Технічна адреса. Користувач її не вводить і не використовує.
     const email = `user-${crypto.randomUUID()}@verceti.vercel.app`;
 
     const { data, error: createError } =
@@ -121,7 +125,6 @@ export async function registerWithNickname(formData: FormData) {
       };
     }
 
-    // Тригер Supabase автоматично створює профіль із роллю junior.
     const supabase = await createClient();
 
     const { error: loginError } = await supabase.auth.signInWithPassword({
