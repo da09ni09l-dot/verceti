@@ -1,4 +1,4 @@
-
+import TestsSection from "./TestsSection";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createNews, deleteNews } from "./actions";
