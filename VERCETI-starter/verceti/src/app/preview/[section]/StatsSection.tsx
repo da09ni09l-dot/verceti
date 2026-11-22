@@ -1,5 +1,6 @@
 
 import { createDisciplinaryAction } from "./actions";
+import DisciplinaryDeleteForm from "./DisciplinaryDeleteForm";
 
 type RoleHistoryItem = {
   id: string;
@@ -191,6 +192,24 @@ export default function StatsSection({
           </p>
         )}
 
+        {status === "disciplinary-notification-error" && (
+          <p style={{ color: "#ffb45c", marginTop: 12 }}>
+            Дисциплінарний запис збережено, але сповіщення учаснику не вдалося відправити.
+          </p>
+        )}
+
+        {status === "disciplinary-deleted" && (
+          <p style={{ color: "#55d98a", marginTop: 12 }}>
+            Дисциплінарний запис успішно видалено.
+          </p>
+        )}
+
+        {status === "disciplinary-delete-error" && (
+          <p style={{ color: "#ff8585", marginTop: 12 }}>
+            Не вдалося видалити дисциплінарний запис. Перевір журнал помилок Vercel.
+          </p>
+        )}
+
         {status === "disciplinary-invalid-member" && (
           <p style={{ color: "#ff8585", marginTop: 12 }}>
             Не вдалося знайти вибраного учасника. Онови сторінку та спробуй ще раз.
@@ -315,6 +334,9 @@ export default function StatsSection({
                     <th style={{ padding: 10 }}>Причина</th>
                     <th style={{ padding: 10 }}>Модератор</th>
                     <th style={{ padding: 10 }}>Дата</th>
+                    {isStaff && (
+                      <th style={{ padding: 10 }}>Дія</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -335,6 +357,11 @@ export default function StatsSection({
                       <td style={{ padding: 10, whiteSpace: "nowrap" }}>
                         {new Date(item.createdAt).toLocaleString("uk-UA")}
                       </td>
+                      {isStaff && (
+                        <td style={{ padding: 10 }}>
+                          <DisciplinaryDeleteForm id={item.id} />
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
