@@ -2,6 +2,7 @@
 import TestsSection from "./TestsSection";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { logout } from "../../logout/actions";
 import { createNews, deleteNews } from "./actions";
 import {
   createRule,
@@ -522,6 +523,21 @@ export default async function PreviewSection({
     <main className="login-wrap">
       <section className="login-card">
         <SectionNavigation />
+
+        {section === "forms" && (
+          <form
+            action={logout}
+            style={{ marginTop: 16, marginBottom: 16 }}
+          >
+            <button
+              className="btn secondary"
+              type="submit"
+              style={{ width: "100%" }}
+            >
+              Вийти з акаунта
+            </button>
+          </form>
+        )}
 
         <NotificationBell />
 
