@@ -559,71 +559,105 @@ export default async function ApplicationsSection({
                   </details>
 
                   {application.status === "pending" && (
-                    <form
-                      action={reviewApplication}
+                    <div
                       className="member-list"
                       style={{
                         marginTop: 20,
                         borderTop: "1px solid rgba(187,138,255,0.2)",
                         paddingTop: 16,
-                        gap: 10,
+                        gap: 12,
                       }}
                     >
-                      <input
-                        type="hidden"
-                        name="id"
-                        value={application.id}
-                      />
+                      <form action={reviewApplication}>
+                        <input
+                          type="hidden"
+                          name="id"
+                          value={application.id}
+                        />
+                        <input
+                          type="hidden"
+                          name="status"
+                          value="approved"
+                        />
 
-                      <label>Коментар керівництва</label>
-                      <textarea
-                        name="note"
-                        rows={3}
-                        maxLength={2000}
-                        placeholder="Коментар або причина рішення"
-                      />
+                        <label>Коментар керівництва</label>
+                        <textarea
+                          name="note"
+                          rows={3}
+                          maxLength={2000}
+                          placeholder="Коментар або причина рішення"
+                        />
 
-                      <label>Роль після схвалення</label>
-                      <select name="assigned_role" defaultValue="">
-                        <option value="">Не змінювати роль</option>
-                        <option value="junior">Junior</option>
-                        <option value="local">Local</option>
-                        <option value="senior">Senior</option>
-                        <option value="moderator">Moderator</option>
-                        <option value="leader">Leader</option>
-                      </select>
+                        <label>Роль після схвалення</label>
+                        <select name="assigned_role" defaultValue="">
+                          <option value="">Не змінювати роль</option>
+                          <option value="junior">Junior</option>
+                          <option value="local">Local</option>
+                          <option value="senior">Senior</option>
+                          <option value="moderator">Moderator</option>
+                          <option value="leader">Leader</option>
+                        </select>
 
-                      <button
-                        className="btn"
-                        type="submit"
-                        name="status"
-                        value="approved"
-                      >
-                        Підтвердити вступ
-                      </button>
+                        <button className="btn" type="submit">
+                          Підтвердити вступ
+                        </button>
+                      </form>
 
-                      <button
-                        className="btn"
-                        type="submit"
-                        name="status"
-                        value="needs_changes"
-                      >
-                        Повернути на доопрацювання
-                      </button>
+                      <form action={reviewApplication}>
+                        <input
+                          type="hidden"
+                          name="id"
+                          value={application.id}
+                        />
+                        <input
+                          type="hidden"
+                          name="status"
+                          value="needs_changes"
+                        />
 
-                      <button
-                        className="btn"
-                        type="submit"
-                        name="status"
-                        value="rejected"
-                        style={{
-                          background: "#8f303f",
-                          borderColor: "#b94b5c",
-                        }}
-                      >
-                        Відхилити заявку
-                      </button>
-                    </form>
+                        <label>Коментар для доопрацювання</label>
+                        <textarea
+                          name="note"
+                          rows={2}
+                          maxLength={2000}
+                        />
+
+                        <button className="btn" type="submit">
+                          Повернути на доопрацювання
+                        </button>
+                      </form>
+
+                      <form action={reviewApplication}>
+                        <input
+                          type="hidden"
+                          name="id"
+                          value={application.id}
+                        />
+                        <input
+                          type="hidden"
+                          name="status"
+                          value="rejected"
+                        />
+
+                        <label>Причина відхилення</label>
+                        <textarea
+                          name="note"
+                          rows={2}
+                          maxLength={2000}
+                        />
+
+                        <button
+                          className="btn"
+                          type="submit"
+                          style={{
+                            background: "#8f303f",
+                            borderColor: "#b94b5c",
+                          }}
+                        >
+                          Відхилити заявку
+                        </button>
+                      </form>
+                    </div>
                   )}
                 </div>
               );
