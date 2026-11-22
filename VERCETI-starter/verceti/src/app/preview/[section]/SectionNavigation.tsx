@@ -1,11 +1,35 @@
 
-"use client";
-
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
 
-export default function SectionNavigation() {
-  const router = useRouter();
+export default async function SectionNavigation() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let canSeeMainMenu = false;
+
+  if (user) {
+    const { data: staffStatus } = await supabase.rpc(
+      "is_verceti_staff"
+    );
+
+    if (staffStatus === true) {
+      canSeeMainMenu = true;
+    } else {
+      const { data: applications } = await supabase
+        .from("applications")
+        .select("status")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      canSeeMainMenu =
+        applications?.[0]?.status === "approved";
+    }
+  }
 
   return (
     <nav
@@ -18,23 +42,15 @@ export default function SectionNavigation() {
         borderBottom: "1px solid rgba(187, 138, 255, 0.2)",
       }}
     >
-      <button
-        type="button"
-        className="btn"
-        onClick={() => {
-          if (window.history.length > 1) {
-            router.back();
-          } else {
-            router.push("/");
-          }
-        }}
-      >
-        ← Назад
-      </button>
-
-      <Link className="btn" href="/">
-        ⌂ Головне меню
-      </Link>
+      {canSeeMainMenu ? (
+        <Link className="btn" href="/">
+          ⌂ Головне меню
+        </Link>
+      ) : (
+        <Link className="btn" href="/preview/forms">
+          📋 Моя анкета
+        </Link>
+      )}
     </nav>
   );
 }
