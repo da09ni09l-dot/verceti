@@ -18,6 +18,7 @@ import MusicRoom from "./MusicRoom";
 import MediaRoom from "./MediaRoom";
 import ApplicationsSection from "./ApplicationsSection";
 import StatsSection from "./StatsSection";
+import ActivityTracker from "./ActivityTracker";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: {
@@ -1088,6 +1089,22 @@ export default async function PreviewSection({
           </>
         ) : section === "tests" ? (
           <TestsSection isStaff={isStaff} />
+        ) : section === "activity" ? (
+          <>
+            <h1>Онлайн-активність</h1>
+            <p className="muted">
+              Облік фактичного активного часу учасників.
+            </p>
+
+            <ActivityTracker />
+
+            <div className="panel" style={{ marginTop: 20 }}>
+              <strong>Облік активного часу</strong>
+              <p className="muted">
+                Час зараховується, поки сторінка відкрита й активна.
+              </p>
+            </div>
+          </>
         ) : (
           <>
             <h1>{data.title}</h1>
