@@ -67,10 +67,23 @@ export async function GET() {
 
           participantCount = participants.length;
         } catch (error) {
-          console.error(
-            `LiveKit participants for room ${room.id}:`,
-            error
-          );
+          const liveKitError = error as {
+            status?: number;
+            code?: string;
+          };
+
+          // Кімната ще не створена в LiveKit — це нормально.
+          if (
+            liveKitError.status === 404 ||
+            liveKitError.code === "not_found"
+          ) {
+            participantCount = 0;
+          } else {
+            console.error(
+              `LiveKit participants for room ${room.id}:`,
+              error
+            );
+          }
         }
 
         return {
