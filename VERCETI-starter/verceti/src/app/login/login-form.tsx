@@ -24,8 +24,14 @@ export default function LoginForm() {
 
       if (result?.error) {
         setError(result.error);
+        return;
       }
-    } catch {
+
+      if (result?.success) {
+        window.location.href = "/";
+      }
+    } catch (err) {
+      console.error("Login form error:", err);
       setError("Не вдалося виконати вхід. Спробуй ще раз.");
     } finally {
       setLoading(false);
