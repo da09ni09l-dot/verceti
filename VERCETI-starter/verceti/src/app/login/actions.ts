@@ -62,3 +62,87 @@ export async function loginWithNickname(formData: FormData) {
     return { error: "Помилка сервера під час входу." };
   }
 }
+
+export async function registerWithNickname(formData: FormData) {
+  const nickname = String(formData.get("nickname") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+
+  if (!nickname || !password) {
+    return { error: "Заповни нікнейм і пароль." };
+  }
+
+  if (nickname.length > 50) {
+    return { error: "Нікнейм має містити не більше 50 символів." };
+  }
+
+  if (password.length < 6) {
+    return { error: "Пароль має містити щонайменше 6 символів." };
+  }
+
+  try {
+    const admin = createAdminClient();
+
+    // Перевіряємо, чи нікнейм уже зайнятий.
+    const { data: profiles, error: profileError } = await admin
+      .from("profiles")
+      .select("nickname");
+
+    if (profileError) {
+      console.error("Nickname lookup error:", profileError.message);
+      return { error: "Не вдалося перевірити нікнейм." };
+    }
+
+    const nicknameExists = profiles?.some(
+      (item) => item.nickname.toLowerCase() === nickname.toLowerCase()
+    );
+
+    if (nicknameExists) {
+      return { error: "Цей нікнейм уже зайнятий. Обери інший." };
+    }
+
+    // Технічна адреса. Користувач її не вводить і не використовує.
+    const email = `user-${crypto.randomUUID()}@verceti.vercel.app`;
+
+    const { data, error: createError } =
+      await admin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          nickname,
+        },
+      });
+
+    if (createError || !data.user) {
+      console.error("Registration error:", createError?.message);
+
+      return {
+        error: "Не вдалося створити акаунт. Перевір нікнейм і спробуй ще раз.",
+      };
+    }
+
+    // Тригер Supabase автоматично створює профіль із роллю junior.
+    const supabase = await createClient();
+
+    const { error: loginError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (loginError) {
+      console.error("Auto login error:", loginError.message);
+
+      return {
+        error: "Акаунт створено, але автоматичний вхід не вдався. Спробуй увійти.",
+      };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Registration server error:", error);
+
+    return {
+      error: "Помилка сервера під час реєстрації.",
+    };
+  }
+}
