@@ -1,15 +1,18 @@
 
-import { NextResponse } from "next/server";
-import { AccessToken } from "livekit-server-sdk";
+import { NextRequest, NextResponse } from "next/server";
+import {
+  AccessToken,
+  RoomServiceClient,
+} from "livekit-server-sdk";
 import { createClient } from "@/lib/supabase/server";
 
-export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    // Перевіряємо авторизацію користувача
     const supabase = await createClient();
 
+    // Перевірка авторизації
     const {
       data: { user },
       error: authError,
@@ -17,55 +20,103 @@ export async function POST(request: Request) {
 
     if (authError || !user) {
       return NextResponse.json(
-        { error: "Потрібно увійти в акаунт VERCETI." },
+        { error: "Потрібно увійти в акаунт." },
         { status: 401 }
       );
     }
 
-    // Отримуємо номер голосової кімнати
+    // Отримання ID кімнати
     const body = await request.json();
-    const roomId = String(body.roomId ?? "");
+    const roomId = Number(body.roomId);
 
-    if (!/^\d{1,20}$/.test(roomId)) {
+    if (!Number.isSafeInteger(roomId) || roomId <= 0) {
       return NextResponse.json(
-        { error: "Неправильний номер кімнати." },
+        { error: "Неправильний номер голосової кімнати." },
         { status: 400 }
       );
     }
 
-    // Перевіряємо налаштування LiveKit
-    const apiKey = process.env.LIVEKIT_API_KEY;
-    const apiSecret = process.env.LIVEKIT_API_SECRET;
-    const serverUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+    // Перевірка існування кімнати
+    const { data: room, error: roomError } = await supabase
+      .from("voice_rooms")
+      .select("id, name, max_participants")
+      .eq("id", roomId)
+      .maybeSingle();
 
-    if (!apiKey || !apiSecret || !serverUrl) {
-      console.error("LiveKit environment variables are missing.");
+    if (roomError) {
+      console.error("Voice room lookup:", roomError);
 
       return NextResponse.json(
-        { error: "Сервер голосового зв'язку не налаштований." },
+        { error: "Не вдалося перевірити голосову кімнату." },
         { status: 500 }
       );
     }
 
-    // Створюємо спільну назву кімнати
-    const roomName = `verceti-voice-${roomId}`;
+    if (!room) {
+      return NextResponse.json(
+        { error: "Голосову кімнату не знайдено." },
+        { status: 404 }
+      );
+    }
 
-    const participantName =
-      user.user_metadata?.full_name ||
-      user.user_metadata?.name ||
-      user.email?.split("@")[0] ||
-      "Учасник";
+    // Перевірка налаштувань LiveKit
+    const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+    const apiKey = process.env.LIVEKIT_API_KEY;
+    const apiSecret = process.env.LIVEKIT_API_SECRET;
 
-    // Створюємо персональний токен
+    if (!livekitUrl || !apiKey || !apiSecret) {
+      console.error("LiveKit environment variables are missing.");
+
+      return NextResponse.json(
+        { error: "Голосовий сервіс тимчасово недоступний." },
+        { status: 500 }
+      );
+    }
+
+    const livekit = new RoomServiceClient(
+      livekitUrl,
+      apiKey,
+      apiSecret
+    );
+
+    const livekitRoomName = `verceti-voice-${room.id}`;
+
+    // Перевірка кількості учасників на сервері
+    const participants = await livekit.listParticipants(
+      livekitRoomName
+    );
+
+    const alreadyConnected = participants.some(
+      (participant) => participant.identity === user.id
+    );
+
+    if (
+      !alreadyConnected &&
+      room.max_participants !== null &&
+      participants.length >= room.max_participants
+    ) {
+      return NextResponse.json(
+        {
+          error: `Кімната «${room.name}» заповнена. Максимум учасників: ${room.max_participants}.`,
+        },
+        { status: 409 }
+      );
+    }
+
+    // Створення токена
     const accessToken = new AccessToken(apiKey, apiSecret, {
       identity: user.id,
-      name: String(participantName),
+      name:
+        user.user_metadata?.display_name ||
+        user.user_metadata?.full_name ||
+        user.email ||
+        "Учасник",
       ttl: "2h",
     });
 
     accessToken.addGrant({
       roomJoin: true,
-      room: roomName,
+      room: livekitRoomName,
       canPublish: true,
       canSubscribe: true,
       canPublishData: true,
@@ -75,9 +126,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       token,
-      serverUrl,
-      roomName,
-      participantName,
+      serverUrl: livekitUrl,
+      roomName: livekitRoomName,
     });
   } catch (error) {
     console.error("LiveKit token error:", error);
