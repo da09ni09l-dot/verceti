@@ -114,10 +114,12 @@ export default async function ApplicationsSection({
         <div className="panel">Керівництво ще не створило запитань.</div>
       )}
       {status === "answers-required" && (
-        <div className="panel">Заповни всі обов'язкові поля.</div>
+        <div className="panel">Заповни всі обов&apos;язкові поля.</div>
       )}
       {status === "question-options" && (
-        <div className="panel">Для списку вибору потрібно щонайменше два варіанти.</div>
+        <div className="panel">
+          Для списку вибору потрібно щонайменше два варіанти.
+        </div>
       )}
       {status === "question-invalid" && (
         <div className="panel">Перевір правильність запитання.</div>
@@ -129,7 +131,9 @@ export default async function ApplicationsSection({
         <div className="panel">Не вдалося зберегти анкету.</div>
       )}
       {status === "review-error" && (
-        <div className="panel">Не вдалося зберегти рішення. Перевір права доступу та статус анкети.</div>
+        <div className="panel">
+          Не вдалося зберегти рішення. Перевір права доступу та статус анкети.
+        </div>
       )}
       {status === "forbidden" && (
         <div className="panel">У тебе немає прав для цієї дії.</div>
@@ -176,7 +180,7 @@ export default async function ApplicationsSection({
                 defaultValue={question.question}
               />
 
-              <label>Пояснення (необов'язково)</label>
+              <label>Пояснення (необов&apos;язково)</label>
               <textarea
                 name="description"
                 rows={2}
@@ -211,7 +215,7 @@ export default async function ApplicationsSection({
                   name="is_required"
                   defaultChecked={question.is_required}
                 />
-                Обов'язкове запитання
+                Обов&apos;язкове запитання
               </label>
 
               <label>Порядок</label>
@@ -285,7 +289,7 @@ export default async function ApplicationsSection({
                 name="is_required"
                 defaultChecked
               />
-              Обов'язкове запитання
+              Обов&apos;язкове запитання
             </label>
 
             <label>Порядок</label>
