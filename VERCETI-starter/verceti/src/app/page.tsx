@@ -2,9 +2,18 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { menu, members, notices } from "@/lib/demo-data";
+import { members, notices } from "@/lib/demo-data";
+import MenuBadges from "./MenuBadges";
 
-function Stat({ label, value, note }: { label: string; value: string; note: string }) {
+function Stat({
+  label,
+  value,
+  note
+}: {
+  label: string;
+  value: string;
+  note: string;
+}) {
   return (
     <div className="stat-card">
       <div className="stat-label">{label}</div>
@@ -21,18 +30,15 @@ export default async function Home() {
     data: { user }
   } = await supabase.auth.getUser();
 
-  // Якщо користувач не увійшов — відправляємо на вхід.
   if (!user) {
     redirect("/login");
   }
 
-  // Перевіряємо, чи користувач належить до керівництва.
   const { data: staffStatus, error: staffError } =
     await supabase.rpc("is_verceti_staff");
 
   const isStaff = !staffError && staffStatus === true;
 
-  // Звичайному учаснику потрібна схвалена анкета.
   if (!isStaff) {
     const { data: applications, error: applicationError } =
       await supabase
@@ -59,21 +65,12 @@ export default async function Home() {
           <small>PRIVATE COMMUNITY</small>
         </div>
 
-        <nav className="menu" aria-label="Головне меню">
-          {menu.map(([label, icon, id], index) => (
-            <Link
-              key={id}
-              className={index === 0 ? "active" : ""}
-              href={index === 0 ? "/" : `/preview/${id}`}
-            >
-              <span className="menu-icon">{icon}</span>
-              {label}
-            </Link>
-          ))}
-        </nav>
+        <MenuBadges userId={user.id} />
 
         <div className="sidebar-foot">
-          <strong style={{ color: "#d8baff" }}>ЗАКРИТА СПІЛЬНОТА</strong>
+          <strong style={{ color: "#d8baff" }}>
+            ЗАКРИТА СПІЛЬНОТА
+          </strong>
           <br />
           Доступ лише за запрошенням.
           <br />
@@ -117,10 +114,26 @@ export default async function Home() {
         </section>
 
         <section className="grid stats-grid">
-          <Stat label="Учасники" value="128" note="Демонстраційне значення" />
-          <Stat label="Зараз онлайн" value="24" note="Не є реальним лічильником" />
-          <Stat label="Анкети на перевірці" value="7" note="Приклад для макета" />
-          <Stat label="Попередження" value="12" note="Демонстраційна статистика" />
+          <Stat
+            label="Учасники"
+            value="128"
+            note="Демонстраційне значення"
+          />
+          <Stat
+            label="Зараз онлайн"
+            value="24"
+            note="Не є реальним лічильником"
+          />
+          <Stat
+            label="Анкети на перевірці"
+            value="7"
+            note="Приклад для макета"
+          />
+          <Stat
+            label="Попередження"
+            value="12"
+            note="Демонстраційна статистика"
+          />
         </section>
 
         <section className="grid content-grid">
@@ -139,7 +152,9 @@ export default async function Home() {
               {members.map((m) => (
                 <div className="member-row" key={m.name}>
                   <div className="member-left">
-                    <div className="member-avatar">{m.name.slice(0, 1)}</div>
+                    <div className="member-avatar">
+                      {m.name.slice(0, 1)}
+                    </div>
                     <div>
                       <div className="member-name">{m.name}</div>
                       <div className="member-meta">
