@@ -15,6 +15,7 @@ import VoiceRoom from "./VoiceRoom";
 import MusicRoom from "./MusicRoom";
 import MediaRoom from "./MediaRoom";
 import ApplicationsSection from "./ApplicationsSection";
+import StatsSection from "./StatsSection";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: {
@@ -171,6 +172,72 @@ export default async function PreviewSection({
   let notificationItems: Notification[] = [];
   let notificationsError = false;
 
+  let stats = {
+    totalMembers: 0,
+    newMembers7Days: 0,
+    activeChatMembers7Days: 0,
+    chatMessages7Days: 0
+  };
+
+  let statsError = false;
+
+  if (section === "stats") {
+    const sevenDaysAgo = new Date(
+      Date.now() - 7 * 24 * 60 * 60 * 1000
+    ).toISOString();
+
+    const [
+      membersResult,
+      newMembersResult,
+      activeMembersResult,
+      messagesResult
+    ] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true }),
+
+      supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", sevenDaysAgo),
+
+      supabase
+        .from("chat_messages")
+        .select("user_id")
+        .gte("created_at", sevenDaysAgo),
+
+      supabase
+        .from("chat_messages")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", sevenDaysAgo)
+    ]);
+
+    if (
+      membersResult.error ||
+      newMembersResult.error ||
+      activeMembersResult.error ||
+      messagesResult.error
+    ) {
+      console.error("VERCETI stats loading error:", {
+        members: membersResult.error?.message,
+        newMembers: newMembersResult.error?.message,
+        activeMembers: activeMembersResult.error?.message,
+        messages: messagesResult.error?.message
+      });
+
+      statsError = true;
+    } else {
+      stats = {
+        totalMembers: membersResult.count ?? 0,
+        newMembers7Days: newMembersResult.count ?? 0,
+        activeChatMembers7Days: new Set(
+          (activeMembersResult.data ?? []).map((item) => item.user_id)
+        ).size,
+        chatMessages7Days: messagesResult.count ?? 0
+      };
+    }
+  }
+
   if (section === "notifications") {
     const { data, error } = await supabase
       .from("notifications")
@@ -310,6 +377,14 @@ export default async function PreviewSection({
           </>
         ) : section === "forms" ? (
           <ApplicationsSection status={status} />
+        ) : section === "stats" ? (
+          <StatsSection
+            totalMembers={stats.totalMembers}
+            newMembers7Days={stats.newMembers7Days}
+            activeChatMembers7Days={stats.activeChatMembers7Days}
+            chatMessages7Days={stats.chatMessages7Days}
+            loadError={statsError}
+          />
         ) : section === "notifications" ? (
           <>
             <h1>Сповіщення</h1>
