@@ -74,6 +74,22 @@ export async function createTest(formData: FormData) {
   revalidatePath("/preview/tests");
 }
 
+// Отримання всіх тестів для Staff
+export async function getAllTests() {
+  const { supabase } = await checkStaff();
+
+  const { data, error } = await supabase
+    .from("tests")
+    .select("id, title, description, is_active, created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error("Не вдалося отримати список тестів");
+  }
+
+  return data || [];
+}
+
 // Додавання запитання та відповідей
 export async function createTestQuestion(formData: FormData) {
   const { supabase } = await checkStaff();
@@ -163,6 +179,23 @@ export async function createTestQuestion(formData: FormData) {
   }
 
   revalidatePath("/preview/tests");
+}
+
+// Отримання учасників для Staff
+export async function getTestMembers() {
+  const { supabase } = await checkStaff();
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, nickname, game_id, role")
+    .order("nickname", { ascending: true })
+    .limit(1000);
+
+  if (error) {
+    throw new Error("Не вдалося отримати список учасників");
+  }
+
+  return (data || []).filter((item) => item.nickname);
 }
 
 // Надання учаснику доступу до тесту
@@ -262,14 +295,15 @@ export async function getTestForMember(testId: string) {
     throw new Error("Не вказано тест");
   }
 
-  const { data: permission } = await admin
-    .from("test_permissions")
-    .select("id")
-    .eq("test_id", testId)
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const { data: permission, error: permissionError } =
+    await admin
+      .from("test_permissions")
+      .select("id")
+      .eq("test_id", testId)
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-  if (!permission) {
+  if (permissionError || !permission) {
     throw new Error("У вас немає доступу до цього тесту");
   }
 
@@ -328,6 +362,7 @@ export async function getTestForMember(testId: string) {
 }
 
 // Надсилання та перевірка відповідей
+// Учасник отримує тільки відсоток і статус
 export async function submitTestAnswers(
   testId: string,
   submittedAnswers: SubmittedAnswer[]
@@ -339,14 +374,15 @@ export async function submitTestAnswers(
     throw new Error("Некоректні дані тесту");
   }
 
-  const { data: permission } = await admin
-    .from("test_permissions")
-    .select("id")
-    .eq("test_id", testId)
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const { data: permission, error: permissionError } =
+    await admin
+      .from("test_permissions")
+      .select("id")
+      .eq("test_id", testId)
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-  if (!permission) {
+  if (permissionError || !permission) {
     throw new Error("У вас немає доступу до цього тесту");
   }
 
@@ -399,7 +435,6 @@ export async function submitTestAnswers(
     throw new Error("Не вдалося перевірити відповіді");
   }
 
-  // Перевірка належності відповіді саме відповідному запитанню
   const answersByQuestion = new Map(
     questionIds.map((questionId) => [
       questionId,
@@ -465,18 +500,24 @@ export async function submitTestAnswers(
   const attemptNumber =
     (previousResults?.[0]?.attempt_number || 0) + 1;
 
+  const totalQuestions = questionIds.length;
+  const percentage = Math.round(
+    (score / totalQuestions) * 100
+  );
+  const passed = score === totalQuestions;
+
   const { data: result, error: insertError } = await admin
     .from("test_results")
     .insert({
       test_id: testId,
       user_id: user.id,
       score,
-      total_questions: questionIds.length,
-      passed: score === questionIds.length,
+      total_questions: totalQuestions,
+      passed,
       answers: submittedAnswers,
       attempt_number: attemptNumber,
     })
-    .select("id, score, total_questions, passed, attempt_number, created_at")
+    .select("attempt_number, created_at")
     .single();
 
   if (insertError || !result) {
@@ -485,7 +526,12 @@ export async function submitTestAnswers(
 
   revalidatePath("/preview/tests");
 
-  return result;
+  return {
+    percentage,
+    passed,
+    attempt_number: result.attempt_number,
+    created_at: result.created_at,
+  };
 }
 
 // Отримання всіх результатів для Staff
@@ -521,7 +567,143 @@ export async function getAllTestResults() {
   return data || [];
 }
 
-// Отримання власної історії результатів
+// Детальний перегляд відповідей конкретної спроби — тільки Staff
+export async function getTestResultDetails(resultId: string) {
+  const { supabase } = await checkStaff();
+  const admin = createAdminClient();
+
+  if (!resultId) {
+    throw new Error("Не вказано результат тесту");
+  }
+
+  const { data: result, error: resultError } = await admin
+    .from("test_results")
+    .select(`
+      id,
+      test_id,
+      user_id,
+      score,
+      total_questions,
+      passed,
+      answers,
+      attempt_number,
+      created_at
+    `)
+    .eq("id", resultId)
+    .maybeSingle();
+
+  if (resultError || !result) {
+    throw new Error("Не вдалося знайти результат тесту");
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("nickname, game_id, role")
+    .eq("id", result.user_id)
+    .maybeSingle();
+
+  if (profileError) {
+    throw new Error("Не вдалося отримати профіль учасника");
+  }
+
+  const { data: test, error: testError } = await admin
+    .from("tests")
+    .select("title")
+    .eq("id", result.test_id)
+    .maybeSingle();
+
+  if (testError || !test) {
+    throw new Error("Не вдалося отримати назву тесту");
+  }
+
+  const { data: questions, error: questionsError } =
+    await admin
+      .from("test_questions")
+      .select("id, question, position")
+      .eq("test_id", result.test_id)
+      .order("position");
+
+  if (questionsError || !questions) {
+    throw new Error("Не вдалося отримати запитання");
+  }
+
+  const questionIds = questions.map((item) => item.id);
+
+  const { data: answers, error: answersError } = questionIds.length
+    ? await admin
+        .from("test_answers")
+        .select("id, question_id, answer, is_correct, position")
+        .in("question_id", questionIds)
+        .order("position")
+    : { data: [], error: null };
+
+  if (answersError || !answers) {
+    throw new Error("Не вдалося отримати варіанти відповідей");
+  }
+
+  const submittedAnswers = Array.isArray(result.answers)
+    ? result.answers as SubmittedAnswer[]
+    : [];
+
+  const details = questions.map((question) => {
+    const selectedIds =
+      submittedAnswers.find(
+        (item) => item.question_id === question.id
+      )?.answer_ids || [];
+
+    const questionAnswers = answers
+      .filter((item) => item.question_id === question.id)
+      .map((answer) => ({
+        id: answer.id,
+        answer: answer.answer,
+        is_correct: answer.is_correct,
+        is_selected: selectedIds.includes(answer.id),
+      }));
+
+    const selected = questionAnswers
+      .filter((item) => item.is_selected)
+      .map((item) => item.id)
+      .sort();
+
+    const correct = questionAnswers
+      .filter((item) => item.is_correct)
+      .map((item) => item.id)
+      .sort();
+
+    const isCorrect =
+      selected.length === correct.length &&
+      selected.every((id, index) => id === correct[index]);
+
+    return {
+      id: question.id,
+      question: question.question,
+      position: question.position,
+      is_correct: isCorrect,
+      answers: questionAnswers,
+    };
+  });
+
+  return {
+    id: result.id,
+    test_id: result.test_id,
+    test_title: test.title,
+    user_id: result.user_id,
+    nickname: profile?.nickname ?? "Невідомий учасник",
+    game_id: profile?.game_id ?? null,
+    role: profile?.role ?? null,
+    score: result.score,
+    total_questions: result.total_questions,
+    percentage: Math.round(
+      (result.score / Math.max(result.total_questions, 1)) * 100
+    ),
+    passed: result.passed,
+    attempt_number: result.attempt_number,
+    created_at: result.created_at,
+    questions: details,
+  };
+}
+
+// Отримання власної історії — без деталізації відповідей
 export async function getMyTestResults() {
   const { supabase, user } = await getCurrentUser();
 
@@ -529,7 +711,6 @@ export async function getMyTestResults() {
     .from("test_results")
     .select(`
       id,
-      test_id,
       score,
       total_questions,
       passed,
@@ -546,5 +727,14 @@ export async function getMyTestResults() {
     throw new Error("Не вдалося отримати історію результатів");
   }
 
-  return data || [];
+  return (data || []).map((item) => ({
+    id: item.id,
+    percentage: Math.round(
+      (item.score / Math.max(item.total_questions, 1)) * 100
+    ),
+    passed: item.passed,
+    attempt_number: item.attempt_number,
+    created_at: item.created_at,
+    tests: item.tests,
+  }));
 }
