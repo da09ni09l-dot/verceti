@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { members, notices } from "@/lib/demo-data";
 import MenuBadges from "./MenuBadges";
+import { logout } from "./logout/actions";
 
 function Stat({
   label,
@@ -85,12 +86,20 @@ export default async function Home() {
             <h1>Головна</h1>
           </div>
 
-          <div className="user-pill">
-            <div className="avatar">A</div>
-            <div>
-              <strong>Засновник</strong>
-              <div className="role orange">АДМІН</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div className="user-pill">
+              <div className="avatar">A</div>
+              <div>
+                <strong>Засновник</strong>
+                <div className="role orange">АДМІН</div>
+              </div>
             </div>
+
+            <form action={logout}>
+              <button className="btn secondary" type="submit">
+                Вийти
+              </button>
+            </form>
           </div>
         </header>
 
@@ -114,26 +123,10 @@ export default async function Home() {
         </section>
 
         <section className="grid stats-grid">
-          <Stat
-            label="Учасники"
-            value="128"
-            note="Демонстраційне значення"
-          />
-          <Stat
-            label="Зараз онлайн"
-            value="24"
-            note="Не є реальним лічильником"
-          />
-          <Stat
-            label="Анкети на перевірці"
-            value="7"
-            note="Приклад для макета"
-          />
-          <Stat
-            label="Попередження"
-            value="12"
-            note="Демонстраційна статистика"
-          />
+          <Stat label="Учасники" value="128" note="Демонстраційне значення" />
+          <Stat label="Зараз онлайн" value="24" note="Не є реальним лічильником" />
+          <Stat label="Анкети на перевірці" value="7" note="Приклад для макета" />
+          <Stat label="Попередження" value="12" note="Демонстраційна статистика" />
         </section>
 
         <section className="grid content-grid">
