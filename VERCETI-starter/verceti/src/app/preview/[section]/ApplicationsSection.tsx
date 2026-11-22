@@ -7,7 +7,8 @@ import {
   deleteApplicationQuestion,
   submitApplication,
   editApplicationAnswers,
-  reviewApplication,
+    reviewApplication,
+  deleteApplication,
 } from "./application-actions";
 
 const statusLabels: Record<string, string> = {
