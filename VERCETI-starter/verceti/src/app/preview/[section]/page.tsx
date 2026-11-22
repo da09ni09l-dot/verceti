@@ -290,7 +290,7 @@ export default async function PreviewSection({
             <p className="muted">
               Голосове спілкування та демонстрація екрана в одному місці.
             </p>
-            <VoiceRoom />
+            <VoiceRoom isStaff={isStaff} />
           </>
         ) : section === "music" ? (
           <>
