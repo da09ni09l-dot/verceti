@@ -19,6 +19,7 @@ type DirectMessage = {
   recipient_id: string;
   content: string;
   created_at: string;
+  is_read: boolean;
 };
 
 type Player = {
@@ -169,6 +170,7 @@ export default function ChatRoom() {
     setLoading(false);
   }, [supabase]);
 
+  // Завантаження приватної переписки та позначення отриманих повідомлень прочитаними.
   const loadDirectMessages = useCallback(async () => {
     if (!selectedPlayer) {
       setDirectMessages([]);
@@ -184,7 +186,7 @@ export default function ChatRoom() {
 
     const { data, error: directError } = await supabase
       .from("direct_messages")
-      .select("id, sender_id, recipient_id, content, created_at")
+      .select("id, sender_id, recipient_id, content, created_at, is_read")
       .or(
         `and(sender_id.eq.${currentUserId},recipient_id.eq.${selectedPlayer.id}),and(sender_id.eq.${selectedPlayer.id},recipient_id.eq.${currentUserId})`
       )
@@ -197,7 +199,35 @@ export default function ChatRoom() {
       return;
     }
 
-    setDirectMessages((data ?? []) as DirectMessage[]);
+    const unreadIds = (data ?? [])
+      .filter(
+        (message) =>
+          message.recipient_id === currentUserId &&
+          message.is_read === false
+      )
+      .map((message) => message.id);
+
+    if (unreadIds.length > 0) {
+      const { error: readError } = await supabase
+        .from("direct_messages")
+        .update({ is_read: true })
+        .in("id", unreadIds);
+
+      if (readError) {
+        setError("Не вдалося позначити повідомлення прочитаними.");
+      }
+    }
+
+    setDirectMessages(
+      (data ?? []).map((message) => ({
+        ...message,
+        is_read:
+          message.recipient_id === currentUserId
+            ? true
+            : message.is_read
+      })) as DirectMessage[]
+    );
+
     setError("");
     setDirectLoading(false);
   }, [supabase, selectedPlayer]);
