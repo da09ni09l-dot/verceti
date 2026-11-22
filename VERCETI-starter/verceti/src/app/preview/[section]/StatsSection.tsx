@@ -16,7 +16,8 @@ type StatsSectionProps = {
   chatMessages7Days: number;
   loadError: boolean;
   errorDetails: string;
-  roleHistory?: RoleHistoryItem[];
+  roleHistory: RoleHistoryItem[];
+  roleHistoryError: boolean;
 };
 
 export default function StatsSection({
@@ -26,7 +27,8 @@ export default function StatsSection({
   chatMessages7Days,
   loadError,
   errorDetails,
-  roleHistory = []
+  roleHistory,
+  roleHistoryError
 }: StatsSectionProps) {
   return (
     <>
@@ -113,23 +115,47 @@ export default function StatsSection({
               Історія змін ролей учасників спільноти.
             </p>
 
-            {roleHistory.length === 0 ? (
+            {roleHistoryError ? (
+              <p className="muted" style={{ marginTop: 16 }}>
+                Не вдалося завантажити історію ролей.
+                Перевір журнал помилок Vercel.
+              </p>
+            ) : roleHistory.length === 0 ? (
               <p className="muted" style={{ marginTop: 16 }}>
                 Записів про зміну ролей поки немає.
               </p>
             ) : (
               <div style={{ overflowX: "auto", marginTop: 16 }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    minWidth: 700
+                  }}
+                >
                   <thead>
                     <tr>
-                      <th style={{ textAlign: "left", padding: 10 }}>Учасник</th>
-                      <th style={{ textAlign: "left", padding: 10 }}>Було</th>
-                      <th style={{ textAlign: "left", padding: 10 }}>Стало</th>
-                      <th style={{ textAlign: "left", padding: 10 }}>Хто змінив</th>
-                      <th style={{ textAlign: "left", padding: 10 }}>Дата</th>
-                      <th style={{ textAlign: "left", padding: 10 }}>Причина</th>
+                      <th style={{ textAlign: "left", padding: 10 }}>
+                        Учасник
+                      </th>
+                      <th style={{ textAlign: "left", padding: 10 }}>
+                        Було
+                      </th>
+                      <th style={{ textAlign: "left", padding: 10 }}>
+                        Стало
+                      </th>
+                      <th style={{ textAlign: "left", padding: 10 }}>
+                        Хто змінив
+                      </th>
+                      <th style={{ textAlign: "left", padding: 10 }}>
+                        Дата
+                      </th>
+                      <th style={{ textAlign: "left", padding: 10 }}>
+                        Причина
+                      </th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {roleHistory.map((item) => (
                       <tr key={item.id}>
@@ -145,7 +171,12 @@ export default function StatsSection({
                         <td style={{ padding: 10 }}>
                           {item.changedByNickname || "Невідомий модератор"}
                         </td>
-                        <td style={{ padding: 10, whiteSpace: "nowrap" }}>
+                        <td
+                          style={{
+                            padding: 10,
+                            whiteSpace: "nowrap"
+                          }}
+                        >
                           {new Date(item.createdAt).toLocaleString("uk-UA")}
                         </td>
                         <td style={{ padding: 10 }}>
