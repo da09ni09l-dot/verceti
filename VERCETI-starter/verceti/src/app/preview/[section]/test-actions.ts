@@ -363,7 +363,6 @@ export async function getTestForMember(testId: string) {
 }
 
 // Надсилання та перевірка відповідей
-// Учасник отримує тільки відсоток і статус
 export async function submitTestAnswers(
   testId: string,
   submittedAnswers: SubmittedAnswer[]
@@ -549,9 +548,13 @@ export async function submitTestAnswers(
 
 // Отримання всіх результатів для Staff
 export async function getAllTestResults() {
-  const { supabase } = await checkStaff();
+  // Спочатку перевіряємо користувача та його роль Staff
+  await checkStaff();
 
-  const { data, error } = await supabase
+  // Адміністративний клієнт використовується тільки після перевірки Staff
+  const admin = createAdminClient();
+
+  const { data, error } = await admin
     .from("test_results")
     .select(`
       id,
