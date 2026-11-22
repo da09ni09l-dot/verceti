@@ -1,40 +1,39 @@
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { RoomServiceClient } from "livekit-server-sdk";
 import { createClient } from "@/lib/supabase/server";
 
-export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function getLiveKitService() {
+  const url = process.env.NEXT_PUBLIC_LIVEKIT_URL;
   const apiKey = process.env.LIVEKIT_API_KEY;
   const apiSecret = process.env.LIVEKIT_API_SECRET;
-  const url = process.env.NEXT_PUBLIC_LIVEKIT_URL;
 
-  if (!apiKey || !apiSecret || !url) {
-    throw new Error("LiveKit не налаштований.");
+  if (!url || !apiKey || !apiSecret) {
+    throw new Error("LiveKit не налаштований на сервері.");
   }
 
-  const httpUrl = url
-    .replace(/^wss:/, "https:")
-    .replace(/^ws:/, "http:");
-
-  return new RoomServiceClient(httpUrl, apiKey, apiSecret);
+  return new RoomServiceClient(url, apiKey, apiSecret);
 }
 
-async function getUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+async function checkStaff(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data, error } = await supabase.rpc("is_verceti_staff");
 
-  return { supabase, user };
+  return !error && data === true;
 }
 
+// Отримати список кімнат
 export async function GET() {
   try {
-    const { supabase, user } = await getUser();
+    const supabase = await createClient();
 
-    if (!user) {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
       return NextResponse.json(
         { error: "Потрібно увійти в акаунт." },
         { status: 401 }
@@ -43,64 +42,96 @@ export async function GET() {
 
     const { data: rooms, error } = await supabase
       .from("voice_rooms")
-      .select("*")
+      .select("id, name, max_participants, created_by, created_at")
       .order("created_at", { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Voice rooms GET:", error);
+
+      return NextResponse.json(
+        { error: "Не вдалося отримати список кімнат." },
+        { status: 500 }
+      );
+    }
 
     const livekit = getLiveKitService();
 
-    const result = await Promise.all(
+    const roomsWithCounts = await Promise.all(
       (rooms || []).map(async (room) => {
-        const roomName = `verceti-voice-${room.id}`;
+        let participantCount = 0;
 
         try {
-          const participants =
-            await livekit.listParticipants(roomName);
+          const participants = await livekit.listParticipants(
+            `verceti-voice-${room.id}`
+          );
 
-          return {
-            ...room,
-            participant_count: participants.length,
-          };
-        } catch {
-          return {
-            ...room,
-            participant_count: 0,
-          };
+          participantCount = participants.length;
+        } catch (error) {
+          console.error(
+            `LiveKit participants for room ${room.id}:`,
+            error
+          );
         }
+
+        return {
+          ...room,
+          participant_count: participantCount,
+        };
       })
     );
 
-    return NextResponse.json({ rooms: result });
+    return NextResponse.json(
+      { rooms: roomsWithCounts },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (error) {
-    console.error("Voice rooms GET:", error);
+    console.error("Voice rooms GET error:", error);
 
     return NextResponse.json(
-      { error: "Не вдалося отримати список кімнат." },
+      { error: "Помилка сервера під час завантаження кімнат." },
       { status: 500 }
     );
   }
 }
 
-export async function POST(request: Request) {
+// Створити кімнату — тільки керівництво
+export async function POST(request: NextRequest) {
   try {
-    const { supabase, user } = await getUser();
+    const supabase = await createClient();
 
-    if (!user) {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
       return NextResponse.json(
         { error: "Потрібно увійти в акаунт." },
         { status: 401 }
       );
     }
 
-    const body = await request.json();
-    const name = String(body.name || "").trim();
-    const maxParticipants =
-      body.maxParticipants === null
-        ? null
-        : Number(body.maxParticipants);
+    const staff = await checkStaff(supabase);
 
-    if (name.length < 1 || name.length > 40) {
+    if (!staff) {
+      return NextResponse.json(
+        { error: "Створювати голосові кімнати може тільки керівництво." },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+
+    const name =
+      typeof body.name === "string" ? body.name.trim() : "";
+
+    const maxParticipants = body.maxParticipants;
+
+    if (!name || name.length > 40) {
       return NextResponse.json(
         { error: "Назва кімнати має містити від 1 до 40 символів." },
         { status: 400 }
@@ -109,74 +140,133 @@ export async function POST(request: Request) {
 
     if (
       maxParticipants !== null &&
+      maxParticipants !== undefined &&
       (!Number.isInteger(maxParticipants) ||
         maxParticipants < 2 ||
         maxParticipants > 100)
     ) {
       return NextResponse.json(
-        { error: "Кількість учасників має бути від 2 до 100." },
+        { error: "Ліміт учасників має бути від 2 до 100 або без обмеження." },
         { status: 400 }
       );
     }
 
-    const { data, error } = await supabase
+    const { data: room, error } = await supabase
       .from("voice_rooms")
       .insert({
         name,
-        max_participants: maxParticipants,
+        max_participants: maxParticipants ?? null,
         created_by: user.id,
       })
-      .select()
+      .select("id, name, max_participants, created_by, created_at")
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Voice rooms POST:", error);
 
-    return NextResponse.json({ room: data });
-  } catch (error) {
-    console.error("Voice rooms POST:", error);
+      return NextResponse.json(
+        { error: "Не вдалося створити кімнату." },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(
-      { error: "Не вдалося створити кімнату." },
+      {
+        room: {
+          ...room,
+          participant_count: 0,
+        },
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Voice rooms POST error:", error);
+
+    return NextResponse.json(
+      { error: "Помилка сервера під час створення кімнати." },
       { status: 500 }
     );
   }
 }
 
-export async function DELETE(request: Request) {
+// Видалити кімнату — тільки керівництво
+export async function DELETE(request: NextRequest) {
   try {
-    const { supabase, user } = await getUser();
+    const supabase = await createClient();
 
-    if (!user) {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
       return NextResponse.json(
         { error: "Потрібно увійти в акаунт." },
         { status: 401 }
       );
     }
 
+    const staff = await checkStaff(supabase);
+
+    if (!staff) {
+      return NextResponse.json(
+        { error: "Видаляти голосові кімнати може тільки керівництво." },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const id = Number(body.id);
 
-    if (!Number.isInteger(id) || id < 1) {
+    if (!Number.isSafeInteger(id) || id <= 0) {
       return NextResponse.json(
         { error: "Неправильний номер кімнати." },
         { status: 400 }
       );
     }
 
-    const { error } = await supabase
+    const { data: room, error: findError } = await supabase
+      .from("voice_rooms")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (findError) {
+      console.error("Voice rooms DELETE find:", findError);
+
+      return NextResponse.json(
+        { error: "Не вдалося перевірити кімнату." },
+        { status: 500 }
+      );
+    }
+
+    if (!room) {
+      return NextResponse.json(
+        { error: "Такої кімнати не існує." },
+        { status: 404 }
+      );
+    }
+
+    const { error: deleteError } = await supabase
       .from("voice_rooms")
       .delete()
-      .eq("id", id)
-      .eq("created_by", user.id);
+      .eq("id", id);
 
-    if (error) throw error;
+    if (deleteError) {
+      console.error("Voice rooms DELETE:", deleteError);
+
+      return NextResponse.json(
+        { error: "Не вдалося видалити кімнату." },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Voice rooms DELETE:", error);
+    console.error("Voice rooms DELETE error:", error);
 
     return NextResponse.json(
-      { error: "Не вдалося видалити кімнату." },
+      { error: "Помилка сервера під час видалення кімнати." },
       { status: 500 }
     );
   }
