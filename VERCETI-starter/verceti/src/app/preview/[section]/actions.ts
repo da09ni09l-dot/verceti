@@ -1,7 +1,10 @@
 
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import {
+  createClient,
+  createAdminClient
+} from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -114,7 +117,7 @@ export async function createDisciplinaryAction(formData: FormData) {
 
   const { data: member, error: memberError } = await supabase
     .from("profiles")
-    .select("id")
+    .select("id, nickname")
     .eq("id", memberId)
     .maybeSingle();
 
@@ -126,23 +129,99 @@ export async function createDisciplinaryAction(formData: FormData) {
     redirect("/preview/stats?status=disciplinary-invalid-member");
   }
 
-  const { error } = await supabase
+  const { data: action, error } = await supabase
     .from("disciplinary_actions")
     .insert({
       member_id: memberId,
       issued_by: user.id,
       action_type: actionType,
       reason
-    });
+    })
+    .select("id")
+    .single();
 
-  if (error) {
+  if (error || !action) {
     console.error(
       "VERCETI disciplinary action creation error:",
-      error.message
+      error?.message
     );
     redirect("/preview/stats?status=disciplinary-error");
   }
 
+  let notificationError = false;
+
+  try {
+    const adminSupabase = createAdminClient();
+
+    const title =
+      actionType === "warning"
+        ? "Тобі винесено попередження"
+        : "Щодо тебе прийнято рішення";
+
+    const { error: insertNotificationError } =
+      await adminSupabase
+        .from("notifications")
+        .insert({
+          user_id: memberId,
+          title,
+          message: reason,
+          type: "disciplinary",
+          link: "/preview/stats",
+          is_read: false
+        });
+
+    if (insertNotificationError) {
+      notificationError = true;
+      console.error(
+        "VERCETI disciplinary notification error:",
+        insertNotificationError.message
+      );
+    }
+  } catch (notificationException) {
+    notificationError = true;
+    console.error(
+      "VERCETI disciplinary notification exception:",
+      notificationException
+    );
+  }
+
   revalidatePath("/preview/stats");
+  revalidatePath("/preview/notifications");
+
+  if (notificationError) {
+    redirect("/preview/stats?status=disciplinary-notification-error");
+  }
+
   redirect("/preview/stats?status=disciplinary-created");
+}
+
+export async function deleteDisciplinaryAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "").trim();
+
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  if (!uuidRegex.test(id)) {
+    redirect("/preview/stats?status=disciplinary-delete-error");
+  }
+
+  await checkStaff();
+
+  const adminSupabase = createAdminClient();
+
+  const { error } = await adminSupabase
+    .from("disciplinary_actions")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error(
+      "VERCETI disciplinary action deletion error:",
+      error.message
+    );
+    redirect("/preview/stats?status=disciplinary-delete-error");
+  }
+
+  revalidatePath("/preview/stats");
+  redirect("/preview/stats?status=disciplinary-deleted");
 }
