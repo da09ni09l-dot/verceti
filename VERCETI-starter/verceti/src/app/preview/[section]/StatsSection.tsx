@@ -1,4 +1,14 @@
 
+type RoleHistoryItem = {
+  id: string;
+  memberNickname: string | null;
+  changedByNickname: string | null;
+  oldRole: string | null;
+  newRole: string;
+  reason: string | null;
+  createdAt: string;
+};
+
 type StatsSectionProps = {
   totalMembers: number;
   newMembers7Days: number;
@@ -6,6 +16,7 @@ type StatsSectionProps = {
   chatMessages7Days: number;
   loadError: boolean;
   errorDetails: string;
+  roleHistory?: RoleHistoryItem[];
 };
 
 export default function StatsSection({
@@ -14,7 +25,8 @@ export default function StatsSection({
   activeChatMembers7Days,
   chatMessages7Days,
   loadError,
-  errorDetails
+  errorDetails,
+  roleHistory = []
 }: StatsSectionProps) {
   return (
     <>
@@ -93,6 +105,58 @@ export default function StatsSection({
               Активним вважається учасник, який надіслав хоча б одне
               повідомлення в загальний чат протягом останніх 7 днів.
             </p>
+          </div>
+
+          <div className="panel" style={{ marginTop: 20 }}>
+            <h2>Історія ролей</h2>
+            <p className="muted">
+              Історія змін ролей учасників спільноти.
+            </p>
+
+            {roleHistory.length === 0 ? (
+              <p className="muted" style={{ marginTop: 16 }}>
+                Записів про зміну ролей поки немає.
+              </p>
+            ) : (
+              <div style={{ overflowX: "auto", marginTop: 16 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: "left", padding: 10 }}>Учасник</th>
+                      <th style={{ textAlign: "left", padding: 10 }}>Було</th>
+                      <th style={{ textAlign: "left", padding: 10 }}>Стало</th>
+                      <th style={{ textAlign: "left", padding: 10 }}>Хто змінив</th>
+                      <th style={{ textAlign: "left", padding: 10 }}>Дата</th>
+                      <th style={{ textAlign: "left", padding: 10 }}>Причина</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {roleHistory.map((item) => (
+                      <tr key={item.id}>
+                        <td style={{ padding: 10 }}>
+                          {item.memberNickname || "Невідомий учасник"}
+                        </td>
+                        <td style={{ padding: 10 }}>
+                          {item.oldRole || "—"}
+                        </td>
+                        <td style={{ padding: 10 }}>
+                          {item.newRole}
+                        </td>
+                        <td style={{ padding: 10 }}>
+                          {item.changedByNickname || "Невідомий модератор"}
+                        </td>
+                        <td style={{ padding: 10, whiteSpace: "nowrap" }}>
+                          {new Date(item.createdAt).toLocaleString("uk-UA")}
+                        </td>
+                        <td style={{ padding: 10 }}>
+                          {item.reason || "Не вказана"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </>
       )}
