@@ -96,23 +96,27 @@ export async function createMember(formData: FormData) {
 export async function banMember(formData: FormData) {
   const memberId = String(formData.get("member_id") ?? "").trim();
 
-  if (!memberId) {
+  if (!memberId || !/^[0-9a-f-]{36}$/i.test(memberId)) {
     redirect("/admin?error=member");
   }
 
-  const { supabase, user } = await requireAdmin();
+  const { user } = await requireAdmin();
 
   if (memberId === user.id) {
     redirect("/admin?error=self_ban");
   }
 
-  const { data: member, error: memberError } = await supabase
+  // Використовуємо адміністративний клієнт для роботи з profiles.
+  const admin = createAdminClient();
+
+  const { data: member, error: memberError } = await admin
     .from("profiles")
     .select("id, role, is_banned")
     .eq("id", memberId)
     .single();
 
   if (memberError || !member) {
+    console.error("Find member for ban error:", memberError?.message);
     redirect("/admin?error=member");
   }
 
@@ -124,13 +128,15 @@ export async function banMember(formData: FormData) {
     redirect("/admin?updated=1");
   }
 
-  const { error } = await supabase
+  const { data: updatedMember, error } = await admin
     .from("profiles")
     .update({ is_banned: true })
-    .eq("id", memberId);
+    .eq("id", memberId)
+    .select("id")
+    .single();
 
-  if (error) {
-    console.error("Ban member error:", error.message);
+  if (error || !updatedMember) {
+    console.error("Ban member error:", error?.message);
     redirect("/admin?error=ban");
   }
 
@@ -140,33 +146,47 @@ export async function banMember(formData: FormData) {
 export async function unbanMember(formData: FormData) {
   const memberId = String(formData.get("member_id") ?? "").trim();
 
-  if (!memberId) {
+  if (!memberId || !/^[0-9a-f-]{36}$/i.test(memberId)) {
     redirect("/admin?error=member");
   }
 
-  const { supabase } = await requireAdmin();
+  const { user } = await requireAdmin();
 
-  const { data: member, error: memberError } = await supabase
+  if (memberId === user.id) {
+    redirect("/admin?error=protected");
+  }
+
+  // Використовуємо адміністративний клієнт для роботи з profiles.
+  const admin = createAdminClient();
+
+  const { data: member, error: memberError } = await admin
     .from("profiles")
-    .select("id, is_banned")
+    .select("id, role, is_banned")
     .eq("id", memberId)
     .single();
 
   if (memberError || !member) {
+    console.error("Find member for unban error:", memberError?.message);
     redirect("/admin?error=member");
+  }
+
+  if (member.role === "admin") {
+    redirect("/admin?error=protected");
   }
 
   if (!member.is_banned) {
     redirect("/admin?updated=1");
   }
 
-  const { error } = await supabase
+  const { data: updatedMember, error } = await admin
     .from("profiles")
     .update({ is_banned: false })
-    .eq("id", memberId);
+    .eq("id", memberId)
+    .select("id")
+    .single();
 
-  if (error) {
-    console.error("Unban member error:", error.message);
+  if (error || !updatedMember) {
+    console.error("Unban member error:", error?.message);
     redirect("/admin?error=unban");
   }
 
