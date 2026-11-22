@@ -110,6 +110,9 @@ export default async function ApplicationsSection({
       {status === "reviewed" && (
         <div className="panel">Рішення щодо анкети збережено.</div>
       )}
+      {status === "application-deleted" && (
+  <div className="panel">Анкету учасника успішно видалено.</div>
+)}
       {status === "already-pending" && (
         <div className="panel">Твоя анкета вже очікує перевірки.</div>
       )}
