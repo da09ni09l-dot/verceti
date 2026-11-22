@@ -13,6 +13,14 @@ type ChatMessage = {
   role: string;
 };
 
+type DirectMessage = {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  content: string;
+  created_at: string;
+};
+
 type Player = {
   id: string;
   nickname: string | null;
@@ -56,8 +64,6 @@ const stickerGroups = [
   }
 ];
 
-const stickers = stickerGroups.flatMap((group) => group.items);
-
 function parseMessage(content: string) {
   try {
     const value = JSON.parse(content);
@@ -83,10 +89,14 @@ function parseMessage(content: string) {
 
 export default function ChatRoom() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [directMessages, setDirectMessages] = useState<DirectMessage[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+
   const [content, setContent] = useState("");
   const [userId, setUserId] = useState("");
   const [loading, setLoading] = useState(true);
+  const [directLoading, setDirectLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [showStickers, setShowStickers] = useState(false);
@@ -104,7 +114,14 @@ export default function ChatRoom() {
   const loadMessages = useCallback(async () => {
     const { data: authData } = await supabase.auth.getUser();
     const currentUserId = authData.user?.id ?? "";
+
     setUserId(currentUserId);
+
+    if (!currentUserId) {
+      setLoading(false);
+      setError("Потрібно увійти в акаунт.");
+      return;
+    }
 
     const { data: messageData, error: messagesError } = await supabase
       .from("chat_messages")
@@ -152,6 +169,39 @@ export default function ChatRoom() {
     setLoading(false);
   }, [supabase]);
 
+  const loadDirectMessages = useCallback(async () => {
+    if (!selectedPlayer) {
+      setDirectMessages([]);
+      return;
+    }
+
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUserId = authData.user?.id;
+
+    if (!currentUserId) return;
+
+    setDirectLoading(true);
+
+    const { data, error: directError } = await supabase
+      .from("direct_messages")
+      .select("id, sender_id, recipient_id, content, created_at")
+      .or(
+        `and(sender_id.eq.${currentUserId},recipient_id.eq.${selectedPlayer.id}),and(sender_id.eq.${selectedPlayer.id},recipient_id.eq.${currentUserId})`
+      )
+      .order("created_at", { ascending: true })
+      .limit(200);
+
+    if (directError) {
+      setError("Не вдалося завантажити особисті повідомлення.");
+      setDirectLoading(false);
+      return;
+    }
+
+    setDirectMessages((data ?? []) as DirectMessage[]);
+    setError("");
+    setDirectLoading(false);
+  }, [supabase, selectedPlayer]);
+
   useEffect(() => {
     void loadMessages();
 
@@ -170,11 +220,31 @@ export default function ChatRoom() {
       )
       .subscribe();
 
+    const directChannel = supabase
+      .channel("verceti-direct-chat")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "direct_messages"
+        },
+        () => {
+          void loadDirectMessages();
+        }
+      )
+      .subscribe();
+
     return () => {
       void supabase.removeChannel(channel);
+      void supabase.removeChannel(directChannel);
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
-  }, [loadMessages, supabase]);
+  }, [loadMessages, loadDirectMessages, supabase]);
+
+  useEffect(() => {
+    void loadDirectMessages();
+  }, [loadDirectMessages]);
 
   async function saveMessage(messageContent: string) {
     const { data: authData, error: authError } =
@@ -184,18 +254,34 @@ export default function ChatRoom() {
       throw new Error("Потрібно увійти в акаунт.");
     }
 
-    const { error: insertError } = await supabase
-      .from("chat_messages")
-      .insert({
-        user_id: authData.user.id,
-        content: messageContent
-      });
+    if (selectedPlayer) {
+      const { error: insertError } = await supabase
+        .from("direct_messages")
+        .insert({
+          sender_id: authData.user.id,
+          recipient_id: selectedPlayer.id,
+          content: messageContent
+        });
 
-    if (insertError) {
-      throw new Error("Не вдалося надіслати повідомлення.");
+      if (insertError) {
+        throw new Error("Не вдалося надіслати особисте повідомлення.");
+      }
+
+      await loadDirectMessages();
+    } else {
+      const { error: insertError } = await supabase
+        .from("chat_messages")
+        .insert({
+          user_id: authData.user.id,
+          content: messageContent
+        });
+
+      if (insertError) {
+        throw new Error("Не вдалося надіслати повідомлення.");
+      }
+
+      await loadMessages();
     }
-
-    await loadMessages();
   }
 
   async function uploadFile(file: File, type: "image" | "audio") {
@@ -400,17 +486,48 @@ export default function ChatRoom() {
     const confirmed = window.confirm("Точно видалити це повідомлення?");
     if (!confirmed) return;
 
-    const { error: deleteError } = await supabase
-      .from("chat_messages")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", userId);
+    if (selectedPlayer) {
+      const { error: deleteError } = await supabase
+        .from("direct_messages")
+        .delete()
+        .eq("id", id)
+        .eq("sender_id", userId);
 
-    if (deleteError) {
-      setError("Не вдалося видалити повідомлення.");
+      if (deleteError) {
+        setError("Не вдалося видалити повідомлення.");
+      } else {
+        await loadDirectMessages();
+      }
     } else {
-      await loadMessages();
+      const { error: deleteError } = await supabase
+        .from("chat_messages")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", userId);
+
+      if (deleteError) {
+        setError("Не вдалося видалити повідомлення.");
+      } else {
+        await loadMessages();
+      }
     }
+  }
+
+  function openPrivateChat(player: Player) {
+    if (player.id === userId) return;
+
+    setSelectedPlayer(player);
+    setContent("");
+    setError("");
+    setShowStickers(false);
+    setDirectMessages([]);
+  }
+
+  function openGeneralChat() {
+    setSelectedPlayer(null);
+    setContent("");
+    setError("");
+    setShowStickers(false);
   }
 
   const filteredStickerGroups = stickerGroups
@@ -423,6 +540,8 @@ export default function ChatRoom() {
       )
     }))
     .filter((group) => group.items.length > 0);
+
+  const selectedMessages = directMessages;
 
   return (
     <div
@@ -444,18 +563,20 @@ export default function ChatRoom() {
         }}
       >
         <div className="panel">
-          <div
+          <button
+            type="button"
+            onClick={openGeneralChat}
+            className="btn"
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              color: "#d5b5ff",
-              fontWeight: 700
+              width: "100%",
+              textAlign: "left",
+              background: !selectedPlayer ? "rgba(155,92,255,0.2)" : undefined,
+              borderColor: !selectedPlayer ? "#9b5cff" : undefined
             }}
           >
-            <span>📌</span>
-            <span>Загальний чат</span>
-          </div>
+            📌 Загальний чат
+          </button>
+
           <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
             Основна кімната спільноти
           </p>
@@ -463,70 +584,129 @@ export default function ChatRoom() {
 
         <div className="panel">
           <h2 style={{ marginTop: 0 }}>Учасники</h2>
+
           <div
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: 10,
-              maxHeight: 420,
+              gap: 8,
+              maxHeight: 480,
               overflowY: "auto"
             }}
           >
             {players.length === 0 ? (
               <p className="muted">Учасників поки немає.</p>
             ) : (
-              players.map((player) => (
-                <div
-                  key={player.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    minWidth: 0
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 9,
-                      height: 9,
-                      borderRadius: "50%",
-                      background: "#85818e",
-                      flexShrink: 0
-                    }}
-                  />
-                  <div style={{ minWidth: 0 }}>
-                    <div
+              players
+                .filter((player) => player.id !== userId)
+                .map((player) => {
+                  const isSelected = selectedPlayer?.id === player.id;
+
+                  return (
+                    <button
+                      type="button"
+                      key={player.id}
+                      onClick={() => openPrivateChat(player)}
                       style={{
-                        fontSize: 13,
-                        overflowWrap: "anywhere"
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 9,
+                        minWidth: 0,
+                        width: "100%",
+                        padding: 9,
+                        textAlign: "left",
+                        borderRadius: 9,
+                        cursor: "pointer",
+                        color: "inherit",
+                        background: isSelected
+                          ? "rgba(155,92,255,0.2)"
+                          : "rgba(255,255,255,0.035)",
+                        border: isSelected
+                          ? "1px solid #9b5cff"
+                          : "1px solid rgba(255,255,255,0.07)"
                       }}
                     >
-                      {player.nickname || "Без нікнейму"}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: roleColors[player.role] ?? "#b9c0cc"
-                      }}
-                    >
-                      {roleLabels[player.role] ?? player.role}
-                    </div>
-                  </div>
-                </div>
-              ))
+                      <span
+                        style={{
+                          width: 9,
+                          height: 9,
+                          borderRadius: "50%",
+                          background: "#85818e",
+                          flexShrink: 0
+                        }}
+                      />
+
+                      <span style={{ minWidth: 0, flex: 1 }}>
+                        <span
+                          style={{
+                            display: "block",
+                            fontSize: 13,
+                            overflowWrap: "anywhere"
+                          }}
+                        >
+                          {player.nickname || "Без нікнейму"}
+                        </span>
+
+                        <span
+                          style={{
+                            display: "block",
+                            fontSize: 11,
+                            color: roleColors[player.role] ?? "#b9c0cc"
+                          }}
+                        >
+                          {roleLabels[player.role] ?? player.role}
+                        </span>
+                      </span>
+
+                      <span style={{ fontSize: 12, color: "#bb8aff" }}>
+                        ✉
+                      </span>
+                    </button>
+                  );
+                })
             )}
           </div>
+
           <p className="page-note">
-            Статус онлайн поки не підключений.
+            Натисни на учасника, щоб написати йому особисто.
           </p>
         </div>
       </aside>
 
       <section className="panel" style={{ minWidth: 0 }}>
-        <h2 style={{ marginTop: 0 }}>Загальний чат</h2>
-        <p className="muted">
-          Повідомлення доступні всім авторизованим учасникам VERCETI.
-        </p>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            flexWrap: "wrap"
+          }}
+        >
+          <div>
+            <h2 style={{ marginTop: 0, marginBottom: 5 }}>
+              {selectedPlayer
+                ? `Особистий чат: ${selectedPlayer.nickname || "Учасник"}`
+                : "Загальний чат"}
+            </h2>
+
+            <p className="muted" style={{ margin: 0 }}>
+              {selectedPlayer
+                ? "Приватна переписка між двома учасниками."
+                : "Повідомлення доступні всім авторизованим учасникам VERCETI."}
+            </p>
+          </div>
+
+          {selectedPlayer && (
+            <button
+              type="button"
+              className="btn"
+              onClick={openGeneralChat}
+            >
+              ← До загального чату
+            </button>
+          )}
+        </div>
 
         <div
           style={{
@@ -542,110 +722,226 @@ export default function ChatRoom() {
             background: "rgba(0,0,0,0.18)"
           }}
         >
-          {loading ? (
-            <p className="muted">Завантаження повідомлень...</p>
-          ) : messages.length === 0 ? (
-            <p className="muted">
-              Повідомлень поки немає. Напиши першим!
-            </p>
-          ) : (
-            messages.map((message) => {
-              const attachment = parseMessage(message.content);
+          {!selectedPlayer && (
+            <>
+              {loading ? (
+                <p className="muted">Завантаження повідомлень...</p>
+              ) : messages.length === 0 ? (
+                <p className="muted">
+                  Повідомлень поки немає. Напиши першим!
+                </p>
+              ) : (
+                messages.map((message) => {
+                  const attachment = parseMessage(message.content);
 
-              return (
-                <div
-                  key={message.id}
-                  style={{
-                    padding: 12,
-                    borderRadius: 10,
-                    background: "rgba(255,255,255,0.045)",
-                    border: "1px solid rgba(255,255,255,0.07)"
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 8,
-                      flexWrap: "wrap",
-                      marginBottom: 6
-                    }}
-                  >
-                    <div>
-                      <strong>{message.nickname}</strong>
-                      <span
+                  return (
+                    <div
+                      key={message.id}
+                      style={{
+                        padding: 12,
+                        borderRadius: 10,
+                        background: "rgba(255,255,255,0.045)",
+                        border: "1px solid rgba(255,255,255,0.07)"
+                      }}
+                    >
+                      <div
                         style={{
-                          marginLeft: 8,
-                          color: roleColors[message.role] ?? "#b9c0cc",
-                          fontSize: 12
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 8,
+                          flexWrap: "wrap",
+                          marginBottom: 6
                         }}
                       >
-                        {roleLabels[message.role] ?? message.role}
-                      </span>
+                        <div>
+                          <strong>{message.nickname}</strong>
+                          <span
+                            style={{
+                              marginLeft: 8,
+                              color: roleColors[message.role] ?? "#b9c0cc",
+                              fontSize: 12
+                            }}
+                          >
+                            {roleLabels[message.role] ?? message.role}
+                          </span>
+                        </div>
+
+                        <span className="notice-time">
+                          {new Date(message.created_at).toLocaleString("uk-UA")}
+                        </span>
+                      </div>
+
+                      {attachment?.type === "image" && attachment.url ? (
+                        <a href={attachment.url} target="_blank" rel="noreferrer">
+                          <img
+                            src={attachment.url}
+                            alt="Фото з чату"
+                            style={{
+                              display: "block",
+                              maxWidth: "100%",
+                              maxHeight: 360,
+                              borderRadius: 10,
+                              objectFit: "contain"
+                            }}
+                          />
+                        </a>
+                      ) : attachment?.type === "audio" && attachment.url ? (
+                        <div style={{ width: "100%", maxWidth: 360 }}>
+                          <div style={{ marginBottom: 6 }}>
+                            🎤 Голосове повідомлення
+                          </div>
+                          <audio
+                            controls
+                            preload="metadata"
+                            src={attachment.url}
+                            style={{ width: "100%" }}
+                          />
+                        </div>
+                      ) : attachment?.type === "sticker" ? (
+                        <p style={{ fontSize: 22, margin: 0 }}>
+                          {attachment.emoji}
+                        </p>
+                      ) : (
+                        <p
+                          style={{
+                            whiteSpace: "pre-wrap",
+                            overflowWrap: "anywhere",
+                            margin: 0
+                          }}
+                        >
+                          {message.content}
+                        </p>
+                      )}
+
+                      {message.user_id === userId && (
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={() => void deleteMessage(message.id)}
+                          style={{
+                            marginTop: 8,
+                            padding: "5px 10px",
+                            fontSize: 12
+                          }}
+                        >
+                          Видалити своє повідомлення
+                        </button>
+                      )}
                     </div>
+                  );
+                })
+              )}
+            </>
+          )}
 
-                    <span className="notice-time">
-                      {new Date(message.created_at).toLocaleString("uk-UA")}
-                    </span>
-                  </div>
+          {selectedPlayer && (
+            <>
+              {directLoading ? (
+                <p className="muted">Завантаження особистої переписки...</p>
+              ) : selectedMessages.length === 0 ? (
+                <p className="muted">
+                  Особистих повідомлень ще немає. Напиши першим!
+                </p>
+              ) : (
+                selectedMessages.map((message) => {
+                  const isMine = message.sender_id === userId;
+                  const attachment = parseMessage(message.content);
 
-                  {attachment?.type === "image" && attachment.url ? (
-                    <a href={attachment.url} target="_blank" rel="noreferrer">
-                      <img
-                        src={attachment.url}
-                        alt="Фото з чату"
+                  return (
+                    <div
+                      key={message.id}
+                      style={{
+                        alignSelf: isMine ? "flex-end" : "flex-start",
+                        width: "fit-content",
+                        maxWidth: "85%",
+                        minWidth: 100,
+                        padding: 12,
+                        borderRadius: 12,
+                        background: isMine
+                          ? "rgba(155,92,255,0.17)"
+                          : "rgba(255,255,255,0.055)",
+                        border: "1px solid rgba(187,138,255,0.17)"
+                      }}
+                    >
+                      <div
                         style={{
-                          display: "block",
-                          maxWidth: "100%",
-                          maxHeight: 360,
-                          borderRadius: 10,
-                          objectFit: "contain"
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          marginBottom: 6,
+                          flexWrap: "wrap"
                         }}
-                      />
-                    </a>
-                  ) : attachment?.type === "audio" && attachment.url ? (
-                    <div style={{ width: "100%", maxWidth: 360 }}>
-                      <div style={{ marginBottom: 6 }}>🎤 Голосове повідомлення</div>
-                      <audio
-                        controls
-                        preload="metadata"
-                        src={attachment.url}
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                  ) : attachment?.type === "sticker" ? (
-                    <p style={{ fontSize: 22, margin: 0 }}>
-                      {attachment.emoji}
-                    </p>
-                  ) : (
-                    <p
-                      style={{
-                        whiteSpace: "pre-wrap",
-                        overflowWrap: "anywhere",
-                        margin: 0
-                      }}
-                    >
-                      {message.content}
-                    </p>
-                  )}
+                      >
+                        <strong style={{ fontSize: 13 }}>
+                          {isMine ? "Ти" : selectedPlayer.nickname || "Учасник"}
+                        </strong>
 
-                  {message.user_id === userId && (
-                    <button
-                      type="button"
-                      className="btn"
-                      onClick={() => void deleteMessage(message.id)}
-                      style={{
-                        marginTop: 8,
-                        padding: "5px 10px",
-                        fontSize: 12
-                      }}
-                    >
-                      Видалити своє повідомлення
-                    </button>
-                  )}
-                </div>
-              );
-            })
+                        <span className="notice-time">
+                          {new Date(message.created_at).toLocaleString("uk-UA")}
+                        </span>
+                      </div>
+
+                      {attachment?.type === "image" && attachment.url ? (
+                        <a href={attachment.url} target="_blank" rel="noreferrer">
+                          <img
+                            src={attachment.url}
+                            alt="Фото в особистому чаті"
+                            style={{
+                              display: "block",
+                              maxWidth: "100%",
+                              maxHeight: 360,
+                              borderRadius: 10,
+                              objectFit: "contain"
+                            }}
+                          />
+                        </a>
+                      ) : attachment?.type === "audio" && attachment.url ? (
+                        <div style={{ width: "100%", maxWidth: 360 }}>
+                          <div style={{ marginBottom: 6 }}>
+                            🎤 Голосове повідомлення
+                          </div>
+                          <audio
+                            controls
+                            preload="metadata"
+                            src={attachment.url}
+                            style={{ width: "100%" }}
+                          />
+                        </div>
+                      ) : attachment?.type === "sticker" ? (
+                        <p style={{ fontSize: 22, margin: 0 }}>
+                          {attachment.emoji}
+                        </p>
+                      ) : (
+                        <p
+                          style={{
+                            whiteSpace: "pre-wrap",
+                            overflowWrap: "anywhere",
+                            margin: 0
+                          }}
+                        >
+                          {message.content}
+                        </p>
+                      )}
+
+                      {isMine && (
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={() => void deleteMessage(message.id)}
+                          style={{
+                            marginTop: 8,
+                            padding: "5px 10px",
+                            fontSize: 12
+                          }}
+                        >
+                          Видалити своє повідомлення
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </>
           )}
         </div>
 
@@ -696,12 +992,7 @@ export default function ChatRoom() {
               }}
             />
 
-            <div
-              style={{
-                maxHeight: 230,
-                overflowY: "auto"
-              }}
-            >
+            <div style={{ maxHeight: 230, overflowY: "auto" }}>
               {filteredStickerGroups.length === 0 ? (
                 <p className="muted">Нічого не знайдено.</p>
               ) : (
@@ -814,7 +1105,11 @@ export default function ChatRoom() {
             ref={messageInputRef}
             value={content}
             onChange={(event) => setContent(event.target.value)}
-            placeholder="Напиши повідомлення..."
+            placeholder={
+              selectedPlayer
+                ? `Повідомлення для ${selectedPlayer.nickname || "учасника"}...`
+                : "Напиши повідомлення..."
+            }
             maxLength={2000}
             style={{ flex: 1, minWidth: 120 }}
           />
@@ -841,8 +1136,9 @@ export default function ChatRoom() {
         )}
 
         <p className="page-note">
-          Показано до 100 останніх повідомлень. Можна надсилати текст, фото,
-          голосові повідомлення та стікери. Учасник може видаляти лише власні повідомлення.
+          {selectedPlayer
+            ? "Це особиста переписка. Повідомлення доступні тільки тобі та обраному учаснику."
+            : "Показано до 100 останніх повідомлень. Можна надсилати текст, фото, голосові повідомлення та стікери."}
         </p>
       </section>
     </div>
