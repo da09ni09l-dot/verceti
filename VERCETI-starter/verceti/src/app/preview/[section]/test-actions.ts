@@ -253,6 +253,60 @@ export async function updateTestStatus(
   revalidatePath("/preview/tests");
 }
 
+// Видалення тесту — тільки Staff і лише якщо немає результатів
+export async function deleteTest(testId: string) {
+  const { supabase } = await checkStaff();
+
+  if (
+    typeof testId !== "string" ||
+    !testId.trim()
+  ) {
+    throw new Error("Некоректний ID тесту");
+  }
+
+  const { data: test, error: testError } = await supabase
+    .from("tests")
+    .select("id")
+    .eq("id", testId)
+    .maybeSingle();
+
+  if (testError) {
+    throw new Error("Не вдалося перевірити тест");
+  }
+
+  if (!test) {
+    throw new Error("Тест не знайдено");
+  }
+
+  const { data: results, error: resultsError } = await supabase
+    .from("test_results")
+    .select("id")
+    .eq("test_id", testId)
+    .limit(1);
+
+  if (resultsError) {
+    throw new Error("Не вдалося перевірити результати тесту");
+  }
+
+  if (results && results.length > 0) {
+    throw new Error(
+      "Неможливо видалити тест: є результати проходження. Деактивуйте його."
+    );
+  }
+
+  const { error } = await supabase
+    .from("tests")
+    .delete()
+    .eq("id", testId);
+
+  if (error) {
+    console.error("DELETE TEST ERROR:", error);
+    throw new Error("Не вдалося видалити тест");
+  }
+
+  revalidatePath("/preview/tests");
+}
+
 // Отримання тестів, до яких учаснику надано доступ
 export async function getAvailableTests() {
   const { user } = await getCurrentUser();
@@ -548,10 +602,8 @@ export async function submitTestAnswers(
 
 // Отримання всіх результатів для Staff
 export async function getAllTestResults() {
-  // Спочатку перевіряємо користувача та його роль Staff
   await checkStaff();
 
-  // Адміністративний клієнт використовується тільки після перевірки Staff
   const admin = createAdminClient();
 
   const { data, error } = await admin
