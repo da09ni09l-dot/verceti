@@ -1,5 +1,7 @@
 
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { menu, members, notices } from "@/lib/demo-data";
 
 function Stat({ label, value, note }: { label: string; value: string; note: string }) {
@@ -12,7 +14,43 @@ function Stat({ label, value, note }: { label: string; value: string; note: stri
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  // Якщо користувач не увійшов — відправляємо на вхід.
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Перевіряємо, чи користувач належить до керівництва.
+  const { data: staffStatus, error: staffError } =
+    await supabase.rpc("is_verceti_staff");
+
+  const isStaff = !staffError && staffStatus === true;
+
+  // Звичайному учаснику потрібна схвалена анкета.
+  if (!isStaff) {
+    const { data: applications, error: applicationError } =
+      await supabase
+        .from("applications")
+        .select("status")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+    const isApproved =
+      !applicationError &&
+      applications?.[0]?.status === "approved";
+
+    if (!isApproved) {
+      redirect("/preview/forms");
+    }
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -161,4 +199,3 @@ export default function Home() {
     </div>
   );
 }
-
