@@ -522,7 +522,19 @@ export async function submitTestAnswers(
     .single();
 
   if (insertError || !result) {
-    throw new Error("Не вдалося зберегти результат");
+    console.error("SAVE TEST RESULT ERROR:", {
+      code: insertError?.code,
+      message: insertError?.message,
+      details: insertError?.details,
+      hint: insertError?.hint,
+    });
+
+    throw new Error(
+      `Не вдалося зберегти результат: ${
+        insertError?.message ||
+        "Результат не повернувся після збереження"
+      }`
+    );
   }
 
   revalidatePath("/preview/tests");
