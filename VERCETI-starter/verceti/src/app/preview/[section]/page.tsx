@@ -70,7 +70,7 @@ const descriptions: Record<string, { title: string; text: string; items: string[
   notifications: {
     title: "Сповіщення",
     text: "Центр системних повідомлень.",
-    items: ["Звичайні, важливі та термінові", "Звукові сигнали", "Налаштування гучності"]
+    items: []
   },
   settings: {
     title: "Налаштування",
@@ -83,6 +83,16 @@ const categoryLabels: Record<string, string> = {
   announcement: "ОГОЛОШЕННЯ",
   event: "ПОДІЯ",
   important: "ВАЖЛИВО"
+};
+
+type Notification = {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  link: string | null;
+  is_read: boolean;
+  created_at: string;
 };
 
 export default async function PreviewSection({
@@ -156,6 +166,25 @@ export default async function PreviewSection({
 
   let rulesError = false;
 
+  let notificationItems: Notification[] = [];
+  let notificationsError = false;
+
+  if (section === "notifications") {
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("id, title, message, type, link, is_read, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (error) {
+      console.error("VERCETI notifications loading error:", error.message);
+      notificationsError = true;
+    } else {
+      notificationItems = data ?? [];
+    }
+  }
+
   if (section === "news") {
     const { data, error } = await supabase
       .from("news")
@@ -187,6 +216,10 @@ export default async function PreviewSection({
   const ruleTitles = Array.from(
     new Set(ruleItems.map((item) => item.title))
   );
+
+  const unreadNotifications = notificationItems.filter(
+    (item) => !item.is_read
+  ).length;
 
   return (
     <main className="login-wrap">
@@ -231,6 +264,102 @@ export default async function PreviewSection({
           </>
         ) : section === "forms" ? (
           <ApplicationsSection status={status} />
+        ) : section === "notifications" ? (
+          <>
+            <h1>Сповіщення</h1>
+            <p className="muted">
+              Усі системні та особисті повідомлення твого акаунта.
+            </p>
+
+            <div className="panel" style={{ marginTop: 20 }}>
+              <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 10
+              }}>
+                <strong>Центр сповіщень</strong>
+                <span className="tag">
+                  Непрочитаних: {unreadNotifications}
+                </span>
+              </div>
+            </div>
+
+            {notificationsError ? (
+              <div className="panel" style={{ marginTop: 16 }}>
+                <p className="muted">
+                  Не вдалося завантажити сповіщення. Перевір підключення до бази даних.
+                </p>
+              </div>
+            ) : notificationItems.length === 0 ? (
+              <div className="panel" style={{ marginTop: 16 }}>
+                <h2>Поки що сповіщень немає</h2>
+                <p className="muted">
+                  Коли з'являться нові повідомлення або системні оновлення,
+                  вони відображатимуться тут.
+                </p>
+              </div>
+            ) : (
+              <div className="member-list" style={{ marginTop: 20 }}>
+                {notificationItems.map((item) => (
+                  <div
+                    className="panel"
+                    key={item.id}
+                    style={{
+                      marginBottom: 12,
+                      border: item.is_read
+                        ? "1px solid rgba(187,138,255,.12)"
+                        : "1px solid rgba(187,138,255,.5)",
+                      background: item.is_read
+                        ? "rgba(255,255,255,.025)"
+                        : "rgba(155,92,255,.12)"
+                    }}
+                  >
+                    <div style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 10
+                    }}>
+                      <strong>
+                        {item.type === "message" ? "💬 " :
+                         item.type === "news" ? "📰 " :
+                         item.type === "application" ? "📋 " : "🔔 "}
+                        {item.title}
+                      </strong>
+
+                      {!item.is_read && (
+                        <span className="tag">НОВЕ</span>
+                      )}
+                    </div>
+
+                    <p className="muted" style={{ marginTop: 10 }}>
+                      {item.message}
+                    </p>
+
+                    <div className="notice-time">
+                      {new Date(item.created_at).toLocaleString("uk-UA")}
+                    </div>
+
+                    {item.link && (
+                      <a
+                        href={item.link}
+                        className="btn"
+                        style={{
+                          display: "inline-block",
+                          marginTop: 12,
+                          textDecoration: "none"
+                        }}
+                      >
+                        Відкрити
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         ) : section === "news" ? (
           <>
             <h1>Новини</h1>
