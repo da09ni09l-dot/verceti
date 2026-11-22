@@ -5,6 +5,7 @@ type StatsSectionProps = {
   activeChatMembers7Days: number;
   chatMessages7Days: number;
   loadError: boolean;
+  errorDetails: string;
 };
 
 export default function StatsSection({
@@ -12,7 +13,8 @@ export default function StatsSection({
   newMembers7Days,
   activeChatMembers7Days,
   chatMessages7Days,
-  loadError
+  loadError,
+  errorDetails
 }: StatsSectionProps) {
   return (
     <>
@@ -23,9 +25,23 @@ export default function StatsSection({
 
       {loadError ? (
         <div className="panel" style={{ marginTop: 20 }}>
+          <h2>Помилка завантаження статистики</h2>
           <p className="muted">
-            Не вдалося завантажити статистику. Перевір підключення до бази даних.
+            Нижче наведено технічну інформацію для діагностики.
           </p>
+          <pre
+            style={{
+              whiteSpace: "pre-wrap",
+              overflowWrap: "anywhere",
+              fontSize: 12,
+              marginTop: 14,
+              padding: 12,
+              background: "rgba(0,0,0,.2)",
+              borderRadius: 8
+            }}
+          >
+            {errorDetails || "Деталі помилки відсутні."}
+          </pre>
         </div>
       ) : (
         <>
