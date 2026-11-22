@@ -68,7 +68,8 @@ export async function createTest(formData: FormData) {
   });
 
   if (error) {
-    throw new Error("Не вдалося створити тест");
+    console.error("CREATE TEST SUPABASE ERROR:", error);
+    throw new Error(`Не вдалося створити тест: ${error.message}`);
   }
 
   revalidatePath("/preview/tests");
