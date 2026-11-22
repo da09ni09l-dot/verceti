@@ -1,5 +1,6 @@
 
 import { createServerClient } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import type { CookieOptions } from "@supabase/ssr";
 
@@ -27,9 +28,26 @@ export async function createClient() {
             cookieStore.set(name, value, options);
           });
         } catch {
-          // Cookie writes are handled by middleware during server component rendering.
+          // Cookie writes are handled by middleware.
         }
       },
+    },
+  });
+}
+
+export function createAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
+
+  if (!url || !secretKey) {
+    throw new Error("Supabase admin environment variables are missing");
+  }
+
+  return createSupabaseClient(url, secretKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
     },
   });
 }
