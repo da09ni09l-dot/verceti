@@ -382,7 +382,11 @@ export default function VoiceRoom({ isStaff }: VoiceRoomProps) {
             token={token}
             serverUrl={serverUrl}
             connect={true}
-            audio={true}
+            audio={{
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            }}
             video={false}
             onDisconnected={leaveRoom}
             onError={(err) => setError(err.message)}
@@ -523,7 +527,8 @@ function VoiceRoomContent({
       </div>
 
       <p className="page-note">
-        Мікрофон, звук та демонстрація екрана працюють через LiveKit.
+        Мікрофон використовує придушення еха, шуму та автоматичне регулювання
+        гучності. Звук учасників відтворюється через LiveKit.
       </p>
     </div>
   );
