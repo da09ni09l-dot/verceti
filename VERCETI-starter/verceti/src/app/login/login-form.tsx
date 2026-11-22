@@ -2,17 +2,28 @@
 "use client";
 
 import { useState } from "react";
-import { loginWithNickname } from "./actions";
+import {
+  loginWithNickname,
+  registerWithNickname,
+} from "./actions";
 
 export default function LoginForm() {
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
+
+    if (mode === "register" && password !== confirmPassword) {
+      setError("Паролі не збігаються.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -20,7 +31,10 @@ export default function LoginForm() {
       formData.set("nickname", nickname);
       formData.set("password", password);
 
-      const result = await loginWithNickname(formData);
+      const result =
+        mode === "login"
+          ? await loginWithNickname(formData)
+          : await registerWithNickname(formData);
 
       if (result?.error) {
         setError(result.error);
@@ -28,58 +42,129 @@ export default function LoginForm() {
       }
 
       if (result?.success) {
-        window.location.href = "/";
+        window.location.href =
+          mode === "register" ? "/preview/forms" : "/";
       }
     } catch (err) {
-      console.error("Login form error:", err);
-      setError("Не вдалося виконати вхід. Спробуй ще раз.");
+      console.error("Authentication form error:", err);
+      setError("Не вдалося виконати операцію. Спробуй ще раз.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <form onSubmit={submit} style={{ marginTop: 24 }}>
-      <label style={{ fontSize: 11, color: "#b8b0c7" }}>
-        Нікнейм
-      </label>
+    <div style={{ marginTop: 24 }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 22 }}>
+        <button
+          type="button"
+          className="btn"
+          style={{
+            flex: 1,
+            opacity: mode === "login" ? 1 : 0.5,
+          }}
+          onClick={() => {
+            setMode("login");
+            setError("");
+          }}
+        >
+          Вхід
+        </button>
 
-      <input
-        type="text"
-        required
-        value={nickname}
-        onChange={(e) => setNickname(e.target.value)}
-        placeholder="Твій нікнейм"
-        autoComplete="username"
-      />
+        <button
+          type="button"
+          className="btn"
+          style={{
+            flex: 1,
+            opacity: mode === "register" ? 1 : 0.5,
+          }}
+          onClick={() => {
+            setMode("register");
+            setError("");
+          }}
+        >
+          Реєстрація
+        </button>
+      </div>
 
-      <label style={{ fontSize: 11, color: "#b8b0c7" }}>
-        Пароль
-      </label>
+      <form onSubmit={submit}>
+        <label style={{ fontSize: 11, color: "#b8b0c7" }}>
+          Нікнейм
+        </label>
 
-      <input
-        type="password"
-        required
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Твій пароль"
-        autoComplete="current-password"
-      />
+        <input
+          type="text"
+          required
+          maxLength={50}
+          value={nickname}
+          onChange={(e) => setNickname(e.target.value)}
+          placeholder="Твій нікнейм"
+          autoComplete="username"
+        />
 
-      {error && (
-        <p style={{ color: "#ff8f9f", fontSize: 11 }}>
-          {error}
-        </p>
-      )}
+        <label style={{ fontSize: 11, color: "#b8b0c7" }}>
+          Пароль
+        </label>
 
-      <button
-        className="btn"
-        type="submit"
-        style={{ width: "100%", marginTop: 5 }}
-        disabled={loading}
-      >
-        {loading ? "Вхід..." : "Увійти"}
-      </button>
-    </form>
+        <input
+          type="password"
+          required
+          minLength={6}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Твій пароль"
+          autoComplete={
+            mode === "login" ? "current-password" : "new-password"
+          }
+        />
+
+        {mode === "register" && (
+          <>
+            <label style={{ fontSize: 11, color: "#b8b0c7" }}>
+              Повтори пароль
+            </label>
+
+            <input
+              type="password"
+              required
+              minLength={6}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Повтори пароль"
+              autoComplete="new-password"
+            />
+          </>
+        )}
+
+        {error && (
+          <p style={{ color: "#ff8f9f", fontSize: 11 }}>
+            {error}
+          </p>
+        )}
+
+        <button
+          className="btn"
+          type="submit"
+          style={{ width: "100%", marginTop: 12 }}
+          disabled={loading}
+        >
+          {loading
+            ? "Зачекай..."
+            : mode === "login"
+              ? "Увійти"
+              : "Створити акаунт"}
+        </button>
+
+        {mode === "register" && (
+          <p
+            className="muted"
+            style={{ fontSize: 11, lineHeight: 1.6, marginTop: 14 }}
+          >
+            Після реєстрації потрібно буде заповнити анкету.
+            Доступ до закритих розділів відкривається після її схвалення.
+          </p>
+        )}
+      </form>
+    </div>
   );
 }
