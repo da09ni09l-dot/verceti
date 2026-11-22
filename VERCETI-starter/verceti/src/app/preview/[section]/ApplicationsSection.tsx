@@ -43,7 +43,9 @@ export default async function ApplicationsSection({
 
   const { data: staffResult } = await supabase.rpc("is_verceti_staff");
   const isStaff = staffResult === true;
-
+  const { data: currentRole } = await supabase.rpc(
+  "current_verceti_role"
+);
   const { data: questionsData, error: questionsError } = await supabase
     .from("application_questions")
     .select("*")
