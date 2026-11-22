@@ -142,6 +142,18 @@ export default async function PreviewSection({
     redirect("/login");
   }
 
+  // Перевірка блокування акаунта
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("is_banned")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || !profile || profile.is_banned) {
+    await supabase.auth.signOut();
+    redirect("/login");
+  }
+
   const {
     data: staffStatus,
     error: staffError
