@@ -128,7 +128,7 @@ export async function createTestQuestion(formData: FormData) {
       .select("id")
       .eq("test_id", testId);
 
-  if (countError) {
+  if (countError || !existingQuestions) {
     throw new Error("Не вдалося перевірити тест");
   }
 
@@ -230,7 +230,7 @@ export async function getAvailableTests() {
       .select("test_id")
       .eq("user_id", user.id);
 
-  if (permissionError) {
+  if (permissionError || !permissions) {
     throw new Error("Не вдалося отримати доступні тести");
   }
 
@@ -399,14 +399,26 @@ export async function submitTestAnswers(
     throw new Error("Не вдалося перевірити відповіді");
   }
 
-  const validAnswerIds = new Set(
-    correctAnswers.map((item) => item.id)
+  // Перевірка належності відповіді саме відповідному запитанню
+  const answersByQuestion = new Map(
+    questionIds.map((questionId) => [
+      questionId,
+      new Set(
+        correctAnswers
+          .filter((item) => item.question_id === questionId)
+          .map((item) => item.id)
+      ),
+    ])
   );
 
   if (
-    submittedAnswers.some((item) =>
-      item.answer_ids.some((id) => !validAnswerIds.has(id))
-    )
+    submittedAnswers.some((item) => {
+      const validIds = answersByQuestion.get(item.question_id);
+
+      return item.answer_ids.some(
+        (id) => !validIds?.has(id)
+      );
+    })
   ) {
     throw new Error("Виявлено некоректний варіант відповіді");
   }
