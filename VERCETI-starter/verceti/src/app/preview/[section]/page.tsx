@@ -12,6 +12,7 @@ import ChatRoom from "./ChatRoom";
 import VoiceRoom from "./VoiceRoom";
 import MusicRoom from "./MusicRoom";
 import MediaRoom from "./MediaRoom";
+import ApplicationsSection from "./ApplicationsSection";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: {
@@ -204,6 +205,8 @@ export default async function PreviewSection({
             </p>
             <MediaRoom />
           </>
+        ) : section === "forms" ? (
+          <ApplicationsSection status={status} />
         ) : section === "news" ? (
           <>
             <h1>Новини</h1>
