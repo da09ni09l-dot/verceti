@@ -172,3 +172,116 @@ export async function unbanMember(formData: FormData) {
 
   redirect("/admin?updated=1");
 }
+
+export async function deleteMember(formData: FormData) {
+  const memberId = String(formData.get("member_id") ?? "").trim();
+  const confirmation = String(
+    formData.get("confirmation") ?? ""
+  ).trim();
+
+  if (!memberId || !/^[0-9a-f-]{36}$/i.test(memberId)) {
+    redirect("/admin?error=member");
+  }
+
+  if (confirmation !== "DELETE") {
+    redirect("/admin?error=confirmation");
+  }
+
+  const { user } = await requireAdmin();
+
+  if (memberId === user.id) {
+    redirect("/admin?error=self_delete");
+  }
+
+  const admin = createAdminClient();
+
+  // Перевіряємо цільовий акаунт
+  const { data: member, error: memberError } = await admin
+    .from("profiles")
+    .select("id, nickname, role")
+    .eq("id", memberId)
+    .single();
+
+  if (memberError || !member) {
+    console.error("Find member error:", memberError?.message);
+    redirect("/admin?error=member");
+  }
+
+  // Захист від видалення адміністраторів
+  if (member.role === "admin") {
+    redirect("/admin?error=protected");
+  }
+
+  // Від'єднуємо автора від спільних записів
+  const detachOperations = [
+    admin
+      .from("application_questions")
+      .update({ created_by: null })
+      .eq("created_by", memberId),
+
+    admin
+      .from("applications")
+      .update({ reviewed_by: null })
+      .eq("reviewed_by", memberId),
+
+    admin
+      .from("disciplinary_actions")
+      .update({ issued_by: null })
+      .eq("issued_by", memberId),
+
+    admin
+      .from("moderation_actions")
+      .update({ moderator_id: null })
+      .eq("moderator_id", memberId),
+
+    admin
+      .from("role_history")
+      .update({ changed_by: null })
+      .eq("changed_by", memberId),
+
+    admin
+      .from("test_permissions")
+      .update({ granted_by: null })
+      .eq("granted_by", memberId),
+
+    admin
+      .from("tests")
+      .update({ created_by: null })
+      .eq("created_by", memberId),
+  ];
+
+  const detachResults = await Promise.all(detachOperations);
+
+  const detachError = detachResults.find((result) => result.error);
+
+  if (detachError?.error) {
+    console.error(
+      "Detach member references error:",
+      detachError.error.message
+    );
+    redirect("/admin?error=delete_cleanup");
+  }
+
+  // Видаляємо результати тестів користувача
+  const { error: resultsError } = await admin
+    .from("test_results")
+    .delete()
+    .eq("user_id", memberId);
+
+  if (resultsError) {
+    console.error("Delete test results error:", resultsError.message);
+    redirect("/admin?error=delete_cleanup");
+  }
+
+  // Видаляємо Auth-акаунт.
+  // Профіль видалиться автоматично через ON DELETE CASCADE.
+  const { error: deleteError } =
+    await admin.auth.admin.deleteUser(memberId);
+
+  if (deleteError) {
+    console.error("Delete auth user error:", deleteError.message);
+    redirect("/admin?error=delete_auth");
+  }
+
+  redirect("/admin?deleted=1");
+}
