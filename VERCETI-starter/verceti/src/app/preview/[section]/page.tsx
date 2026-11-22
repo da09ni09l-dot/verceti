@@ -536,6 +536,7 @@ export default async function PreviewSection({
     <main className="login-wrap">
       <section className="login-card">
         <SectionNavigation />
+        <ActivityTracker />
 
         {section === "forms" && (
           <form
@@ -1095,8 +1096,6 @@ export default async function PreviewSection({
             <p className="muted">
               Облік фактичного активного часу учасників.
             </p>
-
-            <ActivityTracker />
 
             <div className="panel" style={{ marginTop: 20 }}>
               <strong>Облік активного часу</strong>
