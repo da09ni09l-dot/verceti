@@ -574,7 +574,16 @@ export async function getAllTestResults() {
     .order("created_at", { ascending: false });
 
   if (error) {
-    throw new Error("Не вдалося отримати результати тестів");
+    console.error("GET ALL TEST RESULTS ERROR:", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+
+    throw new Error(
+      `Не вдалося отримати результати тестів: ${error.message}`
+    );
   }
 
   return data || [];
