@@ -18,6 +18,7 @@ import {
   getMyTestResults,
 } from "./test-actions";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRecord = Record<string, any>;
 
 export default function TestsSection({
@@ -268,9 +269,12 @@ export default function TestsSection({
       return;
     }
 
-    if (questions.some((question: AnyRecord) =>
-      !(selectedAnswers[question.id] || []).length
-    )) {
+    if (
+      questions.some(
+        (question: AnyRecord) =>
+          !(selectedAnswers[question.id] || []).length
+      )
+    ) {
       setError("Дайте відповідь на кожне питання.");
       return;
     }
@@ -365,9 +369,7 @@ export default function TestsSection({
           {testResult && (
             <div className="panel">
               <h2>Результат тестування</h2>
-              <p>
-                **{getPercentage(testResult)}%**
-              </p>
+              <p>**{getPercentage(testResult)}%**</p>
               <p>
                 {testResult.passed ? "Складено" : "Не складено"}
               </p>
@@ -493,7 +495,10 @@ export default function TestsSection({
                 {myResults.map((item, index) => (
                   <div
                     className="member-row"
-                    key={item.id || `${item.test_id}-${item.attempt_number}-${index}`}
+                    key={
+                      item.id ||
+                      `${item.test_id}-${item.attempt_number}-${index}`
+                    }
                   >
                     <div>
                       <strong>
@@ -653,10 +658,7 @@ export default function TestsSection({
                   </select>
                 </label>
 
-                <form
-                  action={handleCreateQuestion}
-                  className="panel"
-                >
+                <form action={handleCreateQuestion} className="panel">
                   <label>
                     Текст питання
                     <textarea
@@ -820,9 +822,7 @@ export default function TestsSection({
                           {item.profile?.role || item.role || ""}
                         </p>
                         <p>
-                          {item.test?.title ||
-                            item.test_title ||
-                            "Тест"}
+                          {item.test?.title || item.test_title || "Тест"}
                         </p>
                         <p className="muted">
                           Спроба №{item.attempt_number}
@@ -893,14 +893,10 @@ export default function TestsSection({
                                     <span>{answer.answer}</span>
                                     <span>
                                       {answer.is_selected && (
-                                        <span className="tag">
-                                          Обрав
-                                        </span>
+                                        <span className="tag">Обрав</span>
                                       )}
                                       {answer.is_correct && (
-                                        <span className="tag">
-                                          Правильна
-                                        </span>
+                                        <span className="tag">Правильна</span>
                                       )}
                                     </span>
                                   </div>
