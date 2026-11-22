@@ -1,4 +1,5 @@
 
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createNews, deleteNews } from "./actions";
 import {
@@ -93,6 +94,45 @@ export default async function PreviewSection({
   const { section } = await params;
   const { status } = await searchParams;
 
+  // Перевіряємо авторизацію користувача.
+  const supabase = await createClient();
+
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Перевіряємо, чи користувач належить до керівництва.
+  const { data: staffStatus, error: staffError } =
+    await supabase.rpc("is_verceti_staff");
+
+  const isStaff = !staffError && staffStatus === true;
+
+  // Для звичайного учасника перевіряємо останню анкету.
+  let applicationApproved = false;
+
+  if (!isStaff) {
+    const { data: applications, error: applicationError } =
+      await supabase
+        .from("applications")
+        .select("status")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+    applicationApproved =
+      !applicationError &&
+      applications?.[0]?.status === "approved";
+  }
+
+  // Якщо анкета не схвалена, дозволяємо лише розділ анкет.
+  if (!isStaff && !applicationApproved && section !== "forms") {
+    redirect("/preview/forms");
+  }
+
   const data = descriptions[section] ?? {
     title: "Розділ",
     text: "Цей розділ буде реалізовано на наступному етапі.",
@@ -109,7 +149,6 @@ export default async function PreviewSection({
   }[] = [];
 
   let newsError = false;
-  let isStaff = false;
 
   let ruleItems: {
     id: string;
@@ -121,13 +160,6 @@ export default async function PreviewSection({
   let rulesError = false;
 
   if (section === "news") {
-    const supabase = await createClient();
-
-    const { data: staffStatus, error: staffError } =
-      await supabase.rpc("is_verceti_staff");
-
-    isStaff = !staffError && staffStatus === true;
-
     const { data, error } = await supabase
       .from("news")
       .select("id, title, content, category, event_date, created_at")
@@ -142,13 +174,6 @@ export default async function PreviewSection({
   }
 
   if (section === "rules") {
-    const supabase = await createClient();
-
-    const { data: staffStatus, error: staffError } =
-      await supabase.rpc("is_verceti_staff");
-
-    isStaff = !staffError && staffStatus === true;
-
     const { data, error } = await supabase
       .from("community_rules")
       .select("id, title, content, position")
