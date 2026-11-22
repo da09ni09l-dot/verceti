@@ -2,6 +2,15 @@
 "use client";
 
 import { useState } from "react";
+import {
+  LiveKitRoom,
+  RoomAudioRenderer,
+  ControlBar,
+  useParticipants,
+  useTracks,
+  VideoTrack,
+} from "@livekit/components-react";
+import { Track } from "livekit-client";
 
 type Room = {
   id: number;
@@ -10,22 +19,61 @@ type Room = {
 };
 
 const initialRooms: Room[] = [
-  { id: 1, name: "Загальна", members: ["Адміністратор", "Лідер"] },
-  { id: 2, name: "Спілкування", members: ["Модератор"] },
-  { id: 3, name: "Ігри", members: [] }
+  { id: 1, name: "Загальна", members: [] },
+  { id: 2, name: "Спілкування", members: [] },
+  { id: 3, name: "Ігри", members: [] },
 ];
 
 export default function VoiceRoom() {
   const [rooms, setRooms] = useState(initialRooms);
   const [activeRoom, setActiveRoom] = useState<number | null>(null);
-  const [muted, setMuted] = useState(false);
-  const [deafened, setDeafened] = useState(false);
-  const [sharing, setSharing] = useState(false);
+  const [token, setToken] = useState("");
+  const [serverUrl, setServerUrl] = useState("");
+  const [joining, setJoining] = useState(false);
+  const [error, setError] = useState("");
   const [isStaff, setIsStaff] = useState(false);
   const [newRoom, setNewRoom] = useState("");
   const [showCreate, setShowCreate] = useState(false);
 
   const currentRoom = rooms.find((room) => room.id === activeRoom);
+
+  async function joinRoom(id: number) {
+    setJoining(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/livekit/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ roomId: id }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Не вдалося підключитися.");
+      }
+
+      setServerUrl(data.serverUrl);
+      setToken(data.token);
+      setActiveRoom(id);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Помилка підключення до голосової кімнати."
+      );
+    } finally {
+      setJoining(false);
+    }
+  }
+
+  function leaveRoom() {
+    setToken("");
+    setActiveRoom(null);
+  }
 
   function createRoom() {
     const name = newRoom.trim();
@@ -36,8 +84,8 @@ export default function VoiceRoom() {
       {
         id: Date.now(),
         name,
-        members: []
-      }
+        members: [],
+      },
     ]);
 
     setNewRoom("");
@@ -47,12 +95,11 @@ export default function VoiceRoom() {
   function deleteRoom(id: number) {
     if (!window.confirm("Видалити цю кімнату?")) return;
 
-    setRooms((previous) => previous.filter((room) => room.id !== id));
-
     if (activeRoom === id) {
-      setActiveRoom(null);
-      setSharing(false);
+      leaveRoom();
     }
+
+    setRooms((previous) => previous.filter((room) => room.id !== id));
   }
 
   return (
@@ -62,11 +109,11 @@ export default function VoiceRoom() {
         gridTemplateColumns: "minmax(190px, 260px) minmax(0, 1fr)",
         gap: 16,
         marginTop: 24,
-        alignItems: "start"
+        alignItems: "start",
       }}
     >
       <aside className="panel">
-        <h2 style={{ marginTop: 0 }}>Голосові канали</h2>
+        <h2 style={{ marginTop: 0 }}>🎙️ Голосові канали</h2>
 
         <p className="muted" style={{ fontSize: 12 }}>
           Обери кімнату для спілкування
@@ -79,29 +126,25 @@ export default function VoiceRoom() {
               display: "flex",
               alignItems: "center",
               gap: 6,
-              marginTop: 8
+              marginTop: 8,
             }}
           >
             <button
               type="button"
               className="btn"
-              onClick={() => {
-                setActiveRoom(room.id);
-                setSharing(false);
-              }}
+              disabled={joining}
+              onClick={() => joinRoom(room.id)}
               style={{
                 flex: 1,
                 textAlign: "left",
                 background:
                   activeRoom === room.id
                     ? "rgba(187,138,255,0.2)"
-                    : "rgba(255,255,255,0.04)"
+                    : "rgba(255,255,255,0.04)",
               }}
             >
               🔊 {room.name}
-              <span style={{ opacity: 0.65, marginLeft: 8 }}>
-                {room.members.length}
-              </span>
+              {activeRoom === room.id ? " · У кімнаті" : ""}
             </button>
 
             {isStaff && (
@@ -127,6 +170,7 @@ export default function VoiceRoom() {
                   placeholder="Назва кімнати"
                   maxLength={40}
                 />
+
                 <button
                   className="btn"
                   type="button"
@@ -135,6 +179,7 @@ export default function VoiceRoom() {
                 >
                   Створити
                 </button>
+
                 <button
                   className="btn"
                   type="button"
@@ -161,7 +206,7 @@ export default function VoiceRoom() {
           style={{
             marginTop: 20,
             paddingTop: 14,
-            borderTop: "1px solid rgba(255,255,255,0.1)"
+            borderTop: "1px solid rgba(255,255,255,0.1)",
           }}
         >
           <label
@@ -169,7 +214,7 @@ export default function VoiceRoom() {
               display: "flex",
               gap: 8,
               alignItems: "center",
-              fontSize: 13
+              fontSize: 13,
             }}
           >
             <input
@@ -179,162 +224,206 @@ export default function VoiceRoom() {
             />
             Режим керівництва (демо)
           </label>
+
           <p className="page-note">
-            Перемикач лише для демонстрації. Права доступу підключимо через акаунт.
+            Демонстраційний перемикач. Реальні права керівництва підключимо
+            окремо.
           </p>
         </div>
       </aside>
 
       <section className="panel" style={{ minWidth: 0 }}>
-        {!currentRoom ? (
+        {error && (
+          <div
+            style={{
+              padding: 12,
+              marginBottom: 16,
+              borderRadius: 10,
+              background: "rgba(255,60,60,0.12)",
+              color: "#ff7777",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {joining ? (
+          <div style={{ textAlign: "center", padding: 60 }}>
+            <h2>Підключаємося...</h2>
+            <p className="muted">Готуємо голосову кімнату VERCETI.</p>
+          </div>
+        ) : !token || !currentRoom ? (
           <div style={{ textAlign: "center", padding: "70px 16px" }}>
             <div style={{ fontSize: 42 }}>🎙️</div>
             <h2>Голосові кімнати VERCETI</h2>
             <p className="muted">
               Обери голосовий канал зліва, щоб приєднатися.
             </p>
+            <p className="page-note">
+              Для роботи мікрофона дозволь браузеру доступ до нього.
+            </p>
           </div>
         ) : (
-          <>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-                flexWrap: "wrap"
-              }}
-            >
-              <div>
-                <h2 style={{ margin: 0 }}>🔊 {currentRoom.name}</h2>
-                <p className="muted" style={{ marginBottom: 0 }}>
-                  Голосовий канал
-                </p>
-              </div>
-              <span className="badge">У кімнаті</span>
-            </div>
+          <LiveKitRoom
+            key={activeRoom}
+            token={token}
+            serverUrl={serverUrl}
+            connect={true}
+            audio={true}
+            video={false}
+            onDisconnected={() => {
+              setToken("");
+              setActiveRoom(null);
+            }}
+            onError={(err) => setError(err.message)}
+            style={{ width: "100%" }}
+          >
+            <RoomAudioRenderer />
 
-            <div
-              style={{
-                marginTop: 20,
-                padding: 16,
-                borderRadius: 12,
-                background: "rgba(0,0,0,0.2)"
-              }}
-            >
-              <h3 style={{ marginTop: 0 }}>Учасники</h3>
-
-              {currentRoom.members.length === 0 ? (
-                <p className="muted">
-                  Поки що немає інших учасників.
-                </p>
-              ) : (
-                currentRoom.members.map((member) => (
-                  <div
-                    key={member}
-                    style={{
-                      padding: 10,
-                      marginTop: 8,
-                      borderRadius: 8,
-                      background: "rgba(255,255,255,0.05)"
-                    }}
-                  >
-                    🟢 {member}
-                  </div>
-                ))
-              )}
-
-              <p className="page-note">
-                Список учасників поки демонстраційний.
-              </p>
-            </div>
-
-            <div
-              style={{
-                marginTop: 18,
-                padding: 16,
-                borderRadius: 12,
-                background: "rgba(0,0,0,0.2)"
-              }}
-            >
-              <h3 style={{ marginTop: 0 }}>Демонстрація екрана</h3>
-
-              {sharing ? (
-                <div
-                  style={{
-                    padding: 28,
-                    textAlign: "center",
-                    border: "1px dashed #bb8aff",
-                    borderRadius: 10
-                  }}
-                >
-                  <div style={{ fontSize: 36 }}>🖥️</div>
-                  <strong>Демонстрацію увімкнено локально</strong>
-                  <p className="muted">
-                    Інші учасники поки не бачать цей екран.
-                  </p>
-                  <button
-                    className="btn"
-                    type="button"
-                    onClick={() => setSharing(false)}
-                  >
-                    Завершити демонстрацію
-                  </button>
-                </div>
-              ) : (
-                <button
-                  className="btn"
-                  type="button"
-                  onClick={() => setSharing(true)}
-                >
-                  🖥️ Поділитися екраном (демо)
-                </button>
-              )}
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                gap: 10,
-                flexWrap: "wrap",
-                justifyContent: "center",
-                marginTop: 20
-              }}
-            >
-              <button
-                className="btn"
-                type="button"
-                onClick={() => setMuted(!muted)}
-              >
-                {muted ? "🔇 Увімкнути мікрофон" : "🎙️ Вимкнути мікрофон"}
-              </button>
-
-              <button
-                className="btn"
-                type="button"
-                onClick={() => setDeafened(!deafened)}
-              >
-                {deafened ? "🔊 Увімкнути звук" : "🎧 Вимкнути звук"}
-              </button>
-
-              <button
-                className="btn"
-                type="button"
-                onClick={() => {
-                  setActiveRoom(null);
-                  setSharing(false);
-                }}
-              >
-                📞 Вийти з кімнати
-              </button>
-            </div>
-
-            <p className="page-note">
-              Керування мікрофоном і звуком поки демонстраційне. Справжній Голосовий зв&apos;язок та передавання екрана підключимо окремо.
-            </p>
-          </>
+            <VoiceRoomContent
+              roomName={currentRoom.name}
+              onLeave={leaveRoom}
+            />
+          </LiveKitRoom>
         )}
       </section>
+    </div>
+  );
+}
+
+function VoiceRoomContent({
+  roomName,
+  onLeave,
+}: {
+  roomName: string;
+  onLeave: () => void;
+}) {
+  const participants = useParticipants();
+
+  const screenTracks = useTracks([
+    Track.Source.ScreenShare,
+  ]);
+
+  return (
+    <div style={{ width: "100%" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <h2 style={{ margin: 0 }}>🔊 {roomName}</h2>
+          <p className="muted" style={{ marginBottom: 0 }}>
+            Справжній голосовий канал LiveKit
+          </p>
+        </div>
+
+        <span className="badge">🟢 Підключено</span>
+      </div>
+
+      <div
+        style={{
+          marginTop: 20,
+          padding: 16,
+          borderRadius: 12,
+          background: "rgba(0,0,0,0.2)",
+        }}
+      >
+        <h3 style={{ marginTop: 0 }}>
+          Учасники ({participants.length})
+        </h3>
+
+        {participants.map((participant) => (
+          <div
+            key={participant.identity}
+            style={{
+              padding: 10,
+              marginTop: 8,
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.05)",
+            }}
+          >
+            🟢 {participant.name || participant.identity}
+            {participant.isSpeaking ? " · 🎙️ Говорить" : ""}
+          </div>
+        ))}
+      </div>
+
+      <div
+        style={{
+          marginTop: 18,
+          padding: 16,
+          borderRadius: 12,
+          background: "rgba(0,0,0,0.2)",
+        }}
+      >
+        <h3 style={{ marginTop: 0 }}>🖥️ Демонстрація екрана</h3>
+
+        {screenTracks.length > 0 ? (
+          <div
+            style={{
+              display: "grid",
+              gap: 12,
+            }}
+          >
+            {screenTracks.map((track, index) => (
+              <div
+                key={track.publication.trackSid || index}
+                style={{
+                  overflow: "hidden",
+                  borderRadius: 10,
+                  background: "#111",
+                }}
+              >
+                <VideoTrack trackRef={track} />
+                <p style={{ padding: 8, margin: 0 }}>
+                  Екран: {track.participant.name || track.participant.identity}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="muted">
+            Ніхто поки не демонструє свій екран.
+          </p>
+        )}
+      </div>
+
+      <div
+        style={{
+          marginTop: 20,
+          display: "flex",
+          justifyContent: "center",
+          flexWrap: "wrap",
+          gap: 10,
+        }}
+      >
+        <ControlBar
+          controls={{
+            microphone: true,
+            camera: false,
+            screenShare: true,
+            leave: false,
+          }}
+        />
+
+        <button
+          className="btn"
+          type="button"
+          onClick={onLeave}
+        >
+          📞 Вийти з кімнати
+        </button>
+      </div>
+
+      <p className="page-note">
+        Мікрофон, звук та демонстрація екрана працюють через LiveKit.
+        Для трансляції браузер попросить вибрати екран або вікно.
+      </p>
     </div>
   );
 }
