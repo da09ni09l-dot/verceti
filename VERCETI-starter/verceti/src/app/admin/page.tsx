@@ -5,6 +5,7 @@ import {
   createMember,
   banMember,
   unbanMember,
+  deleteMember,
 } from "./actions";
 
 export default async function AdminPage({
@@ -13,6 +14,7 @@ export default async function AdminPage({
   searchParams: Promise<{
     created?: string;
     updated?: string;
+    deleted?: string;
     error?: string;
   }>;
 }) {
@@ -47,9 +49,13 @@ export default async function AdminPage({
     role_assignment: "Не вдалося призначити роль. Акаунт не створено.",
     member: "Учасника не знайдено.",
     self_ban: "Не можна заблокувати власний акаунт.",
-    protected: "Адміністратора не можна заблокувати цією дією.",
+    self_delete: "Не можна видалити власний акаунт.",
+    confirmation: "Для підтвердження видалення введи DELETE.",
+    protected: "Адміністратора не можна заблокувати або видалити.",
     ban: "Не вдалося заблокувати учасника.",
     unban: "Не вдалося розблокувати учасника.",
+    delete_cleanup: "Не вдалося підготувати дані до видалення. Акаунт не видалено.",
+    delete_auth: "Не вдалося видалити Auth-акаунт. Перевір стан даних.",
   };
 
   const roleLabels: Record<string, string> = {
@@ -89,6 +95,12 @@ export default async function AdminPage({
         {params.updated === "1" && (
           <p style={{ color: "#8ee6a5", fontSize: 13 }}>
             Статус учасника успішно змінено.
+          </p>
+        )}
+
+        {params.deleted === "1" && (
+          <p style={{ color: "#8ee6a5", fontSize: 13 }}>
+            Акаунт повністю видалено.
           </p>
         )}
 
@@ -208,40 +220,115 @@ export default async function AdminPage({
                     <p className="muted" style={{ fontSize: 12 }}>
                       Захищений акаунт адміністратора.
                     </p>
-                  ) : member.is_banned ? (
-                    <form action={unbanMember}>
-                      <input
-                        type="hidden"
-                        name="member_id"
-                        value={member.id}
-                      />
-                      <button
-                        className="btn"
-                        type="submit"
-                        style={{ width: "100%" }}
-                      >
-                        Розблокувати
-                      </button>
-                    </form>
                   ) : (
-                    <form action={banMember}>
-                      <input
-                        type="hidden"
-                        name="member_id"
-                        value={member.id}
-                      />
-                      <button
-                        className="btn"
-                        type="submit"
+                    <>
+                      {member.is_banned ? (
+                        <form action={unbanMember}>
+                          <input
+                            type="hidden"
+                            name="member_id"
+                            value={member.id}
+                          />
+                          <button
+                            className="btn"
+                            type="submit"
+                            style={{ width: "100%" }}
+                          >
+                            Розблокувати
+                          </button>
+                        </form>
+                      ) : (
+                        <form action={banMember}>
+                          <input
+                            type="hidden"
+                            name="member_id"
+                            value={member.id}
+                          />
+                          <button
+                            className="btn"
+                            type="submit"
+                            style={{
+                              width: "100%",
+                              background: "#8f303f",
+                              borderColor: "#b94b5c",
+                            }}
+                          >
+                            Заблокувати
+                          </button>
+                        </form>
+                      )}
+
+                      <div
                         style={{
-                          width: "100%",
-                          background: "#8f303f",
-                          borderColor: "#b94b5c",
+                          marginTop: 16,
+                          paddingTop: 14,
+                          borderTop: "1px solid rgba(255,255,255,0.1)",
                         }}
                       >
-                        Заблокувати
-                      </button>
-                    </form>
+                        <p
+                          style={{
+                            color: "#ff8f9f",
+                            fontSize: 13,
+                            fontWeight: 600,
+                            marginBottom: 8,
+                          }}
+                        >
+                          Повне видалення акаунта
+                        </p>
+
+                        <p
+                          className="muted"
+                          style={{
+                            fontSize: 11,
+                            lineHeight: 1.6,
+                            marginBottom: 10,
+                          }}
+                        >
+                          Будуть видалені акаунт, профіль, анкети та
+                          результати тестів. Цю дію неможливо скасувати.
+                        </p>
+
+                        <form action={deleteMember}>
+                          <input
+                            type="hidden"
+                            name="member_id"
+                            value={member.id}
+                          />
+
+                          <label
+                            style={{
+                              display: "block",
+                              fontSize: 12,
+                              marginBottom: 6,
+                            }}
+                          >
+                            Для підтвердження введи DELETE
+                          </label>
+
+                          <input
+                            name="confirmation"
+                            type="text"
+                            required
+                            pattern="DELETE"
+                            placeholder="DELETE"
+                            autoComplete="off"
+                          />
+
+                          <button
+                            className="btn"
+                            type="submit"
+                            style={{
+                              width: "100%",
+                              marginTop: 10,
+                              background: "#8f303f",
+                              borderColor: "#b94b5c",
+                            }}
+                          >
+                            Видалити акаунт назавжди
+                          </button>
+                        </form>
+                      </div>
+                    </>
                   )}
                 </div>
               ))}
