@@ -9,6 +9,15 @@ type RoleHistoryItem = {
   createdAt: string;
 };
 
+type DisciplinaryActionItem = {
+  id: string;
+  memberNickname: string | null;
+  moderatorNickname: string | null;
+  reason: string;
+  actionType: string;
+  createdAt: string;
+};
+
 type StatsSectionProps = {
   totalMembers: number;
   newMembers7Days: number;
@@ -18,6 +27,13 @@ type StatsSectionProps = {
   errorDetails: string;
   roleHistory: RoleHistoryItem[];
   roleHistoryError: boolean;
+  disciplinaryActions: DisciplinaryActionItem[];
+  disciplinaryActionsError: boolean;
+};
+
+const actionLabels: Record<string, string> = {
+  warning: "Попередження",
+  decision: "Рішення"
 };
 
 export default function StatsSection({
@@ -28,7 +44,9 @@ export default function StatsSection({
   loadError,
   errorDetails,
   roleHistory,
-  roleHistoryError
+  roleHistoryError,
+  disciplinaryActions,
+  disciplinaryActionsError
 }: StatsSectionProps) {
   return (
     <>
@@ -135,48 +153,85 @@ export default function StatsSection({
                 >
                   <thead>
                     <tr>
-                      <th style={{ textAlign: "left", padding: 10 }}>
-                        Учасник
-                      </th>
-                      <th style={{ textAlign: "left", padding: 10 }}>
-                        Було
-                      </th>
-                      <th style={{ textAlign: "left", padding: 10 }}>
-                        Стало
-                      </th>
-                      <th style={{ textAlign: "left", padding: 10 }}>
-                        Хто змінив
-                      </th>
-                      <th style={{ textAlign: "left", padding: 10 }}>
-                        Дата
-                      </th>
-                      <th style={{ textAlign: "left", padding: 10 }}>
-                        Причина
-                      </th>
+                      <th style={{ textAlign: "left", padding: 10 }}>Учасник</th>
+                      <th style={{ textAlign: "left", padding: 10 }}>Було</th>
+                      <th style={{ textAlign: "left", padding: 10 }}>Стало</th>
+                      <th style={{ textAlign: "left", padding: 10 }}>Хто змінив</th>
+                      <th style={{ textAlign: "left", padding: 10 }}>Дата</th>
+                      <th style={{ textAlign: "left", padding: 10 }}>Причина</th>
                     </tr>
                   </thead>
-
                   <tbody>
                     {roleHistory.map((item) => (
                       <tr key={item.id}>
                         <td style={{ padding: 10 }}>
                           {item.memberNickname || "Невідомий учасник"}
                         </td>
-                        <td style={{ padding: 10 }}>
-                          {item.oldRole || "—"}
-                        </td>
-                        <td style={{ padding: 10 }}>
-                          {item.newRole}
-                        </td>
+                        <td style={{ padding: 10 }}>{item.oldRole || "—"}</td>
+                        <td style={{ padding: 10 }}>{item.newRole}</td>
                         <td style={{ padding: 10 }}>
                           {item.changedByNickname || "Невідомий модератор"}
                         </td>
-                        <td
-                          style={{
-                            padding: 10,
-                            whiteSpace: "nowrap"
-                          }}
-                        >
+                        <td style={{ padding: 10, whiteSpace: "nowrap" }}>
+                          {new Date(item.createdAt).toLocaleString("uk-UA")}
+                        </td>
+                        <td style={{ padding: 10 }}>
+                          {item.reason || "Не вказана"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <div className="panel" style={{ marginTop: 20 }}>
+            <h2>Попередження та рішення</h2>
+            <p className="muted">
+              Історія дисциплінарних дій щодо учасників спільноти.
+            </p>
+
+            {disciplinaryActionsError ? (
+              <p className="muted" style={{ marginTop: 16 }}>
+                Не вдалося завантажити попередження та рішення.
+                Перевір журнал помилок Vercel.
+              </p>
+            ) : disciplinaryActions.length === 0 ? (
+              <p className="muted" style={{ marginTop: 16 }}>
+                Попереджень і рішень поки немає.
+              </p>
+            ) : (
+              <div style={{ overflowX: "auto", marginTop: 16 }}>
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    minWidth: 650
+                  }}
+                >
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: "left", padding: 10 }}>Учасник</th>
+                      <th style={{ textAlign: "left", padding: 10 }}>Дія</th>
+                      <th style={{ textAlign: "left", padding: 10 }}>Хто виніс</th>
+                      <th style={{ textAlign: "left", padding: 10 }}>Дата</th>
+                      <th style={{ textAlign: "left", padding: 10 }}>Причина</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {disciplinaryActions.map((item) => (
+                      <tr key={item.id}>
+                        <td style={{ padding: 10 }}>
+                          {item.memberNickname || "Невідомий учасник"}
+                        </td>
+                        <td style={{ padding: 10 }}>
+                          {actionLabels[item.actionType] ?? item.actionType}
+                        </td>
+                        <td style={{ padding: 10 }}>
+                          {item.moderatorNickname || "Невідомий модератор"}
+                        </td>
+                        <td style={{ padding: 10, whiteSpace: "nowrap" }}>
                           {new Date(item.createdAt).toLocaleString("uk-UA")}
                         </td>
                         <td style={{ padding: 10 }}>
