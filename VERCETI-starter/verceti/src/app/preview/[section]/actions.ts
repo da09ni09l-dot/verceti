@@ -89,3 +89,60 @@ export async function deleteNews(formData: FormData) {
   revalidatePath("/preview/news");
   redirect("/preview/news?status=deleted");
 }
+
+export async function createDisciplinaryAction(formData: FormData) {
+  const memberId = String(formData.get("member_id") ?? "").trim();
+  const actionType = String(formData.get("action_type") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  if (!uuidRegex.test(memberId)) {
+    redirect("/preview/stats?status=disciplinary-invalid-member");
+  }
+
+  if (!["warning", "decision"].includes(actionType)) {
+    redirect("/preview/stats?status=disciplinary-invalid-type");
+  }
+
+  if (!reason || reason.length > 2000) {
+    redirect("/preview/stats?status=disciplinary-invalid-reason");
+  }
+
+  const { supabase, user } = await checkStaff();
+
+  const { data: member, error: memberError } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", memberId)
+    .maybeSingle();
+
+  if (memberError || !member) {
+    console.error(
+      "VERCETI disciplinary member validation error:",
+      memberError?.message
+    );
+    redirect("/preview/stats?status=disciplinary-invalid-member");
+  }
+
+  const { error } = await supabase
+    .from("disciplinary_actions")
+    .insert({
+      member_id: memberId,
+      issued_by: user.id,
+      action_type: actionType,
+      reason
+    });
+
+  if (error) {
+    console.error(
+      "VERCETI disciplinary action creation error:",
+      error.message
+    );
+    redirect("/preview/stats?status=disciplinary-error");
+  }
+
+  revalidatePath("/preview/stats");
+  redirect("/preview/stats?status=disciplinary-created");
+}
