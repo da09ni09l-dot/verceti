@@ -393,7 +393,7 @@ export default async function ApplicationsSection({
                             >
                               <option value="">Обери відповідь</option>
                               {Array.isArray(question.options) &&
-                                question.options.map((option) => (
+                               question.options.map((option: string) => (
                                   <option key={option} value={option}>
                                     {option}
                                   </option>
