@@ -333,12 +333,23 @@ export default async function PreviewSection({
       }
     }
 
-    const { data: disciplinaryData, error: disciplinaryError } =
-      await supabase
-        .from("disciplinary_actions")
-        .select("id, member_id, issued_by, reason, action_type, created_at")
-        .order("created_at", { ascending: false })
-        .limit(100);
+    const disciplinaryResult = isStaff
+      ? await supabase
+          .from("disciplinary_actions")
+          .select("id, member_id, issued_by, reason, action_type, created_at")
+          .order("created_at", { ascending: false })
+          .limit(100)
+      : await supabase
+          .from("disciplinary_actions")
+          .select("id, member_id, issued_by, reason, action_type, created_at")
+          .eq("member_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(100);
+
+    const {
+      data: disciplinaryData,
+      error: disciplinaryError
+    } = disciplinaryResult;
 
     if (disciplinaryError) {
       console.error(
