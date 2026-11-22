@@ -180,6 +180,7 @@ export default async function PreviewSection({
   };
 
   let statsError = false;
+  let statsErrorDetails = "";
 
   if (section === "stats") {
     const sevenDaysAgo = new Date(
@@ -212,27 +213,29 @@ export default async function PreviewSection({
         .gte("created_at", sevenDaysAgo)
     ]);
 
-    if (
-      membersResult.error ||
-      newMembersResult.error ||
-      activeMembersResult.error ||
-      messagesResult.error
-    ) {
-      console.error(
-        "VERCETI stats loading error:",
-        JSON.stringify(
-          {
-            members: membersResult.error,
-            newMembers: newMembersResult.error,
-            activeMembers: activeMembersResult.error,
-            messages: messagesResult.error
-          },
-          null,
-          2
-        )
-      );
+    const errors = [
+      { name: "Учасники", error: membersResult.error },
+      { name: "Нові учасники", error: newMembersResult.error },
+      { name: "Активні учасники", error: activeMembersResult.error },
+      { name: "Повідомлення", error: messagesResult.error }
+    ].filter((item) => item.error);
 
+    if (errors.length > 0) {
       statsError = true;
+
+      statsErrorDetails = errors
+        .map(({ name, error }) => {
+          return [
+            `Запит: ${name}`,
+            `Код: ${error?.code ?? "немає"}`,
+            `Повідомлення: ${error?.message ?? "немає"}`,
+            `Деталі: ${error?.details ?? "немає"}`,
+            `Підказка: ${error?.hint ?? "немає"}`
+          ].join("\n");
+        })
+        .join("\n\n");
+
+      console.error("VERCETI stats loading error:", statsErrorDetails);
     } else {
       stats = {
         totalMembers: membersResult.count ?? 0,
@@ -391,6 +394,7 @@ export default async function PreviewSection({
             activeChatMembers7Days={stats.activeChatMembers7Days}
             chatMessages7Days={stats.chatMessages7Days}
             loadError={statsError}
+            errorDetails={statsErrorDetails}
           />
         ) : section === "notifications" ? (
           <>
