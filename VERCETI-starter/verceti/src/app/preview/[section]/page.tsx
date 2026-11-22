@@ -219,19 +219,18 @@ export default async function PreviewSection({
       messagesResult.error
     ) {
       console.error(
-  "VERCETI stats loading error:",
-  JSON.stringify({
-    members: membersResult.error,
-    newMembers: newMembersResult.error,
-    activeMembers: activeMembersResult.error,
-    messages: messagesResult.error
-  }, null, 2)
-);
-        members: membersResult.error,
-        newMembers: newMembersResult.error,
-        activeMembers: activeMembersResult.error,
-        messages: messagesResult.error
-      });
+        "VERCETI stats loading error:",
+        JSON.stringify(
+          {
+            members: membersResult.error,
+            newMembers: newMembersResult.error,
+            activeMembers: activeMembersResult.error,
+            messages: messagesResult.error
+          },
+          null,
+          2
+        )
+      );
 
       statsError = true;
     } else {
