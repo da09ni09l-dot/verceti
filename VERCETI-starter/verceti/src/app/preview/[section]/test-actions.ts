@@ -85,6 +85,7 @@ export async function getAllTests() {
     .order("created_at", { ascending: false });
 
   if (error) {
+    console.error("GET ALL TESTS ERROR:", error);
     throw new Error("Не вдалося отримати список тестів");
   }
 
@@ -100,9 +101,7 @@ export async function createTestQuestion(formData: FormData) {
     formData.get("question") || ""
   ).trim();
 
-  const answersRaw = String(
-    formData.get("answers") || ""
-  );
+  const answersRaw = String(formData.get("answers") || "");
 
   if (!testId || !question) {
     throw new Error("Заповніть запитання");
@@ -161,6 +160,7 @@ export async function createTestQuestion(formData: FormData) {
       .single();
 
   if (questionError || !questionData) {
+    console.error("CREATE QUESTION ERROR:", questionError);
     throw new Error("Не вдалося додати запитання");
   }
 
@@ -176,6 +176,7 @@ export async function createTestQuestion(formData: FormData) {
     );
 
   if (answersError) {
+    console.error("CREATE ANSWERS ERROR:", answersError);
     throw new Error("Не вдалося додати відповіді");
   }
 
@@ -247,6 +248,7 @@ export async function updateTestStatus(
     .eq("id", testId);
 
   if (error) {
+    console.error("UPDATE TEST STATUS ERROR:", error);
     throw new Error("Не вдалося змінити статус тесту");
   }
 
@@ -255,7 +257,7 @@ export async function updateTestStatus(
 
 // Видалення тесту — тільки Staff і лише якщо немає результатів
 export async function deleteTest(testId: string) {
-  const { supabase } = await checkStaff();
+  await checkStaff();
 
   if (
     typeof testId !== "string" ||
@@ -264,13 +266,25 @@ export async function deleteTest(testId: string) {
     throw new Error("Некоректний ID тесту");
   }
 
-  const { data: test, error: testError } = await supabase
+  // Адміністративний клієнт використовується лише на сервері.
+  // Перевірка Staff вище обов'язкова перед його використанням.
+  const admin = createAdminClient();
+
+  // Перевіряємо існування тесту.
+  const { data: test, error: testError } = await admin
     .from("tests")
     .select("id")
     .eq("id", testId)
     .maybeSingle();
 
   if (testError) {
+    console.error("DELETE TEST — CHECK TEST ERROR:", {
+      code: testError.code,
+      message: testError.message,
+      details: testError.details,
+      hint: testError.hint,
+    });
+
     throw new Error("Не вдалося перевірити тест");
   }
 
@@ -278,30 +292,53 @@ export async function deleteTest(testId: string) {
     throw new Error("Тест не знайдено");
   }
 
-  const { data: results, error: resultsError } = await supabase
+  // Перевіряємо результати. Історію проходження не видаляємо.
+  const { data: result, error: resultsError } = await admin
     .from("test_results")
     .select("id")
     .eq("test_id", testId)
-    .limit(1);
+    .limit(1)
+    .maybeSingle();
 
   if (resultsError) {
+    console.error("DELETE TEST — CHECK RESULTS ERROR:", {
+      code: resultsError.code,
+      message: resultsError.message,
+      details: resultsError.details,
+      hint: resultsError.hint,
+    });
+
     throw new Error("Не вдалося перевірити результати тесту");
   }
 
-  if (results && results.length > 0) {
+  if (result) {
     throw new Error(
       "Неможливо видалити тест: є результати проходження. Деактивуйте його."
     );
   }
 
-  const { error } = await supabase
+  // Видаляємо тест. Питання та доступи видаляться через ON DELETE CASCADE.
+  // Зовнішній ключ test_results із NO ACTION додатково захищає історію.
+  const { data: deletedTest, error: deleteError } = await admin
     .from("tests")
     .delete()
-    .eq("id", testId);
+    .eq("id", testId)
+    .select("id")
+    .maybeSingle();
 
-  if (error) {
-    console.error("DELETE TEST ERROR:", error);
-    throw new Error("Не вдалося видалити тест");
+  if (deleteError) {
+    console.error("DELETE TEST — SUPABASE ERROR:", {
+      code: deleteError.code,
+      message: deleteError.message,
+      details: deleteError.details,
+      hint: deleteError.hint,
+    });
+
+    throw new Error(`Не вдалося видалити тест: ${deleteError.message}`);
+  }
+
+  if (!deletedTest) {
+    throw new Error("Тест не видалено: запис не знайдено");
   }
 
   revalidatePath("/preview/tests");
