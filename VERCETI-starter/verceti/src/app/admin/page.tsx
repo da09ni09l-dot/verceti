@@ -6,7 +6,10 @@ import { createMember } from "./actions";
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ created?: string }>;
+  searchParams: Promise<{
+    created?: string;
+    error?: string;
+  }>;
 }) {
   const supabase = await createClient();
 
@@ -25,6 +28,14 @@ export default async function AdminPage({
   }
 
   const params = await searchParams;
+
+  const errorMessages: Record<string, string> = {
+    nickname: "Нікнейм має містити 3–20 символів: латинські літери, цифри або _.",
+    password: "Пароль має містити щонайменше 8 символів.",
+    role: "Вибрано неправильну роль.",
+    create: "Не вдалося створити акаунт. Можливо, такий нікнейм уже існує.",
+    role_assignment: "Не вдалося призначити роль. Акаунт не створено.",
+  };
 
   return (
     <main className="login-wrap">
@@ -48,6 +59,12 @@ export default async function AdminPage({
         {params.created === "1" && (
           <p style={{ color: "#8ee6a5", fontSize: 13 }}>
             Акаунт успішно створено!
+          </p>
+        )}
+
+        {params.error && errorMessages[params.error] && (
+          <p style={{ color: "#ff8f9f", fontSize: 13 }}>
+            {errorMessages[params.error]}
           </p>
         )}
 
@@ -77,6 +94,7 @@ export default async function AdminPage({
           <label style={{ display: "block", marginTop: 16 }}>
             Роль гравця
           </label>
+
           <select
             name="role"
             defaultValue="junior"
