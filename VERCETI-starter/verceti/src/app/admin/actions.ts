@@ -17,20 +17,17 @@ export async function createMember(formData: FormData) {
   const nickname = String(formData.get("nickname") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const role = String(formData.get("role") ?? "junior");
-  const reason = "Створення акаунта адміністратором";
 
   if (!/^[a-zA-Z0-9_]{3,20}$/.test(nickname)) {
-    return {
-      error: "Нікнейм має містити 3–20 символів: латинські літери, цифри або _.",
-    };
+    redirect("/admin?error=nickname");
   }
 
   if (password.length < 8) {
-    return { error: "Пароль має містити щонайменше 8 символів." };
+    redirect("/admin?error=password");
   }
 
   if (!allowedRoles.includes(role as (typeof allowedRoles)[number])) {
-    return { error: "Вибрано неправильну роль." };
+    redirect("/admin?error=role");
   }
 
   const supabase = await createClient();
@@ -41,14 +38,14 @@ export async function createMember(formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return { error: "Потрібно увійти в адміністративний акаунт." };
+    redirect("/login");
   }
 
   const { data: currentRole, error: roleError } =
     await supabase.rpc("current_verceti_role");
 
   if (roleError || currentRole !== "admin") {
-    return { error: "Створювати акаунти може лише адміністратор." };
+    redirect("/");
   }
 
   const admin = createAdminClient();
@@ -66,9 +63,7 @@ export async function createMember(formData: FormData) {
 
   if (error || !data.user) {
     console.error("Create member error:", error?.message);
-    return {
-      error: "Не вдалося створити акаунт. Можливо, такий нікнейм уже існує.",
-    };
+    redirect("/admin?error=create");
   }
 
   if (role !== "junior") {
@@ -77,7 +72,7 @@ export async function createMember(formData: FormData) {
       {
         p_member_id: data.user.id,
         p_new_role: role,
-        p_reason: reason,
+        p_reason: "Створення акаунта адміністратором",
       }
     );
 
@@ -86,9 +81,7 @@ export async function createMember(formData: FormData) {
 
       await admin.auth.admin.deleteUser(data.user.id);
 
-      return {
-        error: "Акаунт не створено: не вдалося призначити вибрану роль.",
-      };
+      redirect("/admin?error=role_assignment");
     }
   }
 
