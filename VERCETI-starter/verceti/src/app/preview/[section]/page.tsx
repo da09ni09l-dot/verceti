@@ -106,6 +106,15 @@ type RoleHistoryItem = {
   createdAt: string;
 };
 
+type DisciplinaryActionItem = {
+  id: string;
+  memberNickname: string | null;
+  moderatorNickname: string | null;
+  reason: string;
+  actionType: string;
+  createdAt: string;
+};
+
 export default async function PreviewSection({
   params,
   searchParams
@@ -194,6 +203,9 @@ export default async function PreviewSection({
 
   let roleHistory: RoleHistoryItem[] = [];
   let roleHistoryError = false;
+
+  let disciplinaryActions: DisciplinaryActionItem[] = [];
+  let disciplinaryActionsError = false;
 
   if (section === "stats") {
     const sevenDaysAgo = new Date(
@@ -308,6 +320,59 @@ export default async function PreviewSection({
           oldRole: item.old_role,
           newRole: item.new_role,
           reason: item.reason,
+          createdAt: item.created_at
+        }));
+      }
+    }
+
+    const { data: disciplinaryData, error: disciplinaryError } =
+      await supabase
+        .from("disciplinary_actions")
+        .select("id, member_id, issued_by, reason, action_type, created_at")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+    if (disciplinaryError) {
+      console.error(
+        "VERCETI disciplinary actions loading error:",
+        disciplinaryError.message
+      );
+      disciplinaryActionsError = true;
+    } else if (disciplinaryData && disciplinaryData.length > 0) {
+      const profileIds = Array.from(
+        new Set(
+          disciplinaryData.flatMap((item) => [
+            item.member_id,
+            item.issued_by
+          ])
+        )
+      );
+
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, nickname")
+        .in("id", profileIds);
+
+      if (profilesError) {
+        console.error(
+          "VERCETI disciplinary profiles loading error:",
+          profilesError.message
+        );
+        disciplinaryActionsError = true;
+      } else {
+        const profilesMap = new Map(
+          (profilesData ?? []).map((profile) => [
+            profile.id,
+            profile.nickname
+          ])
+        );
+
+        disciplinaryActions = disciplinaryData.map((item) => ({
+          id: item.id,
+          memberNickname: profilesMap.get(item.member_id) ?? null,
+          moderatorNickname: profilesMap.get(item.issued_by) ?? null,
+          reason: item.reason,
+          actionType: item.action_type,
           createdAt: item.created_at
         }));
       }
@@ -463,6 +528,8 @@ export default async function PreviewSection({
             errorDetails={statsErrorDetails}
             roleHistory={roleHistory}
             roleHistoryError={roleHistoryError}
+            disciplinaryActions={disciplinaryActions}
+            disciplinaryActionsError={disciplinaryActionsError}
           />
         ) : section === "notifications" ? (
           <>
