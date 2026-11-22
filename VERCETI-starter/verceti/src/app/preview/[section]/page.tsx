@@ -195,11 +195,11 @@ export default async function PreviewSection({
     ] = await Promise.all([
       supabase
         .from("profiles")
-        .select("*", { count: "exact", head: true }),
+        .select("id"),
 
       supabase
         .from("profiles")
-        .select("*", { count: "exact", head: true })
+        .select("id")
         .gte("created_at", sevenDaysAgo),
 
       supabase
@@ -238,8 +238,8 @@ export default async function PreviewSection({
       console.error("VERCETI stats loading error:", statsErrorDetails);
     } else {
       stats = {
-        totalMembers: membersResult.count ?? 0,
-        newMembers7Days: newMembersResult.count ?? 0,
+        totalMembers: membersResult.data?.length ?? 0,
+        newMembers7Days: newMembersResult.data?.length ?? 0,
         activeChatMembers7Days: new Set(
           (activeMembersResult.data ?? []).map((item) => item.user_id)
         ).size,
