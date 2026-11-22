@@ -146,7 +146,7 @@ export async function updateApplicationQuestion(formData: FormData) {
   redirect(`${formsPath}?status=question-updated`);
 }
 
-// Видалення запитання
+// Видалення запитання анкети
 export async function deleteApplicationQuestion(formData: FormData) {
   const id = String(formData.get("id") ?? "").trim();
 
@@ -339,4 +339,35 @@ export async function reviewApplication(formData: FormData) {
 
   revalidatePath(formsPath);
   redirect(`${formsPath}?status=reviewed`);
+}
+
+// Видалення анкети учасника (тільки адміністратор)
+export async function deleteApplication(formData: FormData) {
+  const id = String(formData.get("id") ?? "").trim();
+
+  if (!validId(id)) {
+    redirect(`${formsPath}?status=application-invalid`);
+  }
+
+  const { supabase } = await getUserAndClient();
+
+  const { data: role, error: roleError } = await supabase.rpc(
+    "current_verceti_role"
+  );
+
+  if (roleError || role !== "admin") {
+    redirect(`${formsPath}?status=forbidden`);
+  }
+
+  const { error } = await supabase.rpc("delete_application", {
+    p_application_id: id,
+  });
+
+  if (error) {
+    console.error("Delete application:", error.message);
+    redirect(`${formsPath}?status=application-error`);
+  }
+
+  revalidatePath(formsPath);
+  redirect(`${formsPath}?status=application-deleted`);
 }
