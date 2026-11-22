@@ -37,12 +37,26 @@ const roleColors: Record<string, string> = {
   junior: "#b9c0cc"
 };
 
-const stickers = [
-  "😀", "😂", "😍", "🥰", "😎", "🤩",
-  "😭", "😡", "🤔", "😴", "🥳", "🤗",
-  "❤️", "💜", "🔥", "✨", "👍", "👎",
-  "👏", "🙏", "💯", "🎉", "🐱", "🐼"
+const stickerGroups = [
+  {
+    title: "Емоції",
+    items: ["😀", "😃", "😄", "😁", "😆", "😂", "🤣", "🥹", "😊", "😍", "🥰", "😘", "😎", "🤩", "🥳", "😭", "😡", "🤔", "😴", "🤗"]
+  },
+  {
+    title: "Реакції",
+    items: ["👍", "👎", "👏", "🙌", "🙏", "🤝", "💪", "🫶", "👌", "✌️", "🤌", "🫡"]
+  },
+  {
+    title: "Символи",
+    items: ["❤️", "💜", "💙", "💚", "💛", "🖤", "🤍", "💔", "🔥", "✨", "⭐", "💯", "🎉", "🎊", "💫", "🌈"]
+  },
+  {
+    title: "Тварини",
+    items: ["🐱", "🐶", "🐼", "🐸", "🐻", "🐰", "🦊", "🐵", "🐧", "🐥", "🦋", "🐢"]
+  }
 ];
+
+const stickers = stickerGroups.flatMap((group) => group.items);
 
 function parseMessage(content: string) {
   try {
@@ -78,9 +92,11 @@ export default function ChatRoom() {
   const [showStickers, setShowStickers] = useState(false);
   const [recording, setRecording] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [stickerSearch, setStickerSearch] = useState("");
 
   const supabase = useMemo(() => createClient(), []);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -244,6 +260,21 @@ export default function ChatRoom() {
     }
   }
 
+  function insertSticker(emoji: string) {
+    setContent((current) => {
+      const separator =
+        current.length > 0 && !current.endsWith(" ") ? " " : "";
+
+      return current + separator + emoji + " ";
+    });
+
+    setShowStickers(false);
+
+    requestAnimationFrame(() => {
+      messageInputRef.current?.focus();
+    });
+  }
+
   async function handleImage(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -269,25 +300,6 @@ export default function ChatRoom() {
       setError(err instanceof Error ? err.message : "Помилка завантаження фото.");
     } finally {
       setUploading(false);
-    }
-  }
-
-  async function sendSticker(emoji: string) {
-    setSending(true);
-    setError("");
-    setShowStickers(false);
-
-    try {
-      await saveMessage(
-        JSON.stringify({
-          type: "sticker",
-          emoji
-        })
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Не вдалося надіслати стікер.");
-    } finally {
-      setSending(false);
     }
   }
 
@@ -400,6 +412,17 @@ export default function ChatRoom() {
       await loadMessages();
     }
   }
+
+  const filteredStickerGroups = stickerGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((sticker) =>
+        stickerSearch.trim()
+          ? sticker.includes(stickerSearch.trim())
+          : true
+      )
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <div
@@ -591,14 +614,9 @@ export default function ChatRoom() {
                       />
                     </div>
                   ) : attachment?.type === "sticker" ? (
-                    <div
-                      style={{
-                        fontSize: 64,
-                        lineHeight: 1.3
-                      }}
-                    >
+                    <p style={{ fontSize: 22, margin: 0 }}>
                       {attachment.emoji}
-                    </div>
+                    </p>
                   ) : (
                     <p
                       style={{
@@ -642,29 +660,95 @@ export default function ChatRoom() {
             className="panel"
             style={{
               marginTop: 14,
-              display: "grid",
-              gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
-              gap: 8
+              padding: 12,
+              background: "rgba(20,16,38,0.96)",
+              border: "1px solid rgba(187,138,255,0.25)"
             }}
           >
-            {stickers.map((sticker) => (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                marginBottom: 10
+              }}
+            >
+              <strong>Стікери та емодзі</strong>
               <button
                 type="button"
-                key={sticker}
-                onClick={() => void sendSticker(sticker)}
-                disabled={sending || uploading}
-                style={{
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  background: "rgba(255,255,255,0.06)",
-                  borderRadius: 10,
-                  padding: 8,
-                  fontSize: 25,
-                  cursor: "pointer"
-                }}
+                onClick={() => setShowStickers(false)}
+                className="btn"
+                style={{ padding: "4px 9px" }}
               >
-                {sticker}
+                ✕
               </button>
-            ))}
+            </div>
+
+            <input
+              value={stickerSearch}
+              onChange={(event) => setStickerSearch(event.target.value)}
+              placeholder="Пошук стікера..."
+              style={{
+                width: "100%",
+                marginBottom: 12,
+                boxSizing: "border-box"
+              }}
+            />
+
+            <div
+              style={{
+                maxHeight: 230,
+                overflowY: "auto"
+              }}
+            >
+              {filteredStickerGroups.length === 0 ? (
+                <p className="muted">Нічого не знайдено.</p>
+              ) : (
+                filteredStickerGroups.map((group) => (
+                  <div key={group.title} style={{ marginBottom: 12 }}>
+                    <div
+                      className="muted"
+                      style={{
+                        fontSize: 12,
+                        marginBottom: 7,
+                        fontWeight: 700
+                      }}
+                    >
+                      {group.title}
+                    </div>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(8, minmax(0, 1fr))",
+                        gap: 4
+                      }}
+                    >
+                      {group.items.map((sticker) => (
+                        <button
+                          type="button"
+                          key={sticker}
+                          onClick={() => insertSticker(sticker)}
+                          disabled={sending || uploading}
+                          title={`Вставити ${sticker}`}
+                          style={{
+                            border: "1px solid transparent",
+                            background: "transparent",
+                            borderRadius: 7,
+                            padding: 5,
+                            fontSize: 23,
+                            cursor: "pointer"
+                          }}
+                        >
+                          {sticker}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         )}
 
@@ -727,6 +811,7 @@ export default function ChatRoom() {
           </button>
 
           <input
+            ref={messageInputRef}
             value={content}
             onChange={(event) => setContent(event.target.value)}
             placeholder="Напиши повідомлення..."
