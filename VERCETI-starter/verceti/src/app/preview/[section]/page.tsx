@@ -9,6 +9,7 @@ import {
 } from "./rule-actions";
 
 import SectionNavigation from "./SectionNavigation";
+import NotificationBell from "./NotificationBell";
 import ChatRoom from "./ChatRoom";
 import VoiceRoom from "./VoiceRoom";
 import MusicRoom from "./MusicRoom";
@@ -94,7 +95,6 @@ export default async function PreviewSection({
   const { section } = await params;
   const { status } = await searchParams;
 
-  // Перевіряємо авторизацію користувача.
   const supabase = await createClient();
 
   const {
@@ -105,13 +105,11 @@ export default async function PreviewSection({
     redirect("/login");
   }
 
-  // Перевіряємо, чи користувач належить до керівництва.
   const { data: staffStatus, error: staffError } =
     await supabase.rpc("is_verceti_staff");
 
   const isStaff = !staffError && staffStatus === true;
 
-  // Для звичайного учасника перевіряємо останню анкету.
   let applicationApproved = false;
 
   if (!isStaff) {
@@ -128,7 +126,6 @@ export default async function PreviewSection({
       applications?.[0]?.status === "approved";
   }
 
-  // Якщо анкета не схвалена, дозволяємо лише розділ анкет.
   if (!isStaff && !applicationApproved && section !== "forms") {
     redirect("/preview/forms");
   }
@@ -195,6 +192,8 @@ export default async function PreviewSection({
     <main className="login-wrap">
       <section className="login-card">
         <SectionNavigation />
+
+        <NotificationBell />
 
         <div className="eyebrow">VERCETI · ПОПЕРЕДНІЙ ПЕРЕГЛЯД</div>
 
