@@ -10,6 +10,7 @@ import {
   getTestMembers,
   grantTestPermission,
   updateTestStatus,
+  deleteTest,
   getAvailableTests,
   getTestForMember,
   submitTestAnswers,
@@ -210,6 +211,27 @@ export default function TestsSection({
       setMessage(
         !test.is_active ? "Тест активовано." : "Тест деактивовано."
       );
+      await loadData();
+    } catch (err) {
+      showError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDeleteTest(test: AnyRecord) {
+    const confirmed = window.confirm(
+      `Видалити тест "${test.title}"?\n\nПитання та видані доступи також будуть видалені. Результати проходження збережені, тому тест із результатами видалити не можна.`
+    );
+
+    if (!confirmed) return;
+
+    clearNotices();
+    setBusy(true);
+
+    try {
+      await deleteTest(test.id);
+      setMessage(`Тест "${test.title}" видалено.`);
       await loadData();
     } catch (err) {
       showError(err);
@@ -627,14 +649,35 @@ export default function TestsSection({
                         </p>
                       </div>
 
-                      <button
-                        type="button"
-                        className="btn"
-                        disabled={busy}
-                        onClick={() => handleToggleTest(test)}
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 8,
+                        }}
                       >
-                        {test.is_active ? "Деактивувати" : "Активувати"}
-                      </button>
+                        <button
+                          type="button"
+                          className="btn"
+                          disabled={busy}
+                          onClick={() => handleToggleTest(test)}
+                        >
+                          {test.is_active ? "Деактивувати" : "Активувати"}
+                        </button>
+
+                        <button
+                          type="button"
+                          className="btn"
+                          disabled={busy}
+                          style={{
+                            borderColor: "#d9534f",
+                            color: "#d9534f",
+                          }}
+                          onClick={() => handleDeleteTest(test)}
+                        >
+                          Видалити
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
