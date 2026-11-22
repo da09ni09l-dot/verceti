@@ -96,6 +96,16 @@ type Notification = {
   created_at: string;
 };
 
+type RoleHistoryItem = {
+  id: string;
+  memberNickname: string | null;
+  changedByNickname: string | null;
+  oldRole: string | null;
+  newRole: string;
+  reason: string | null;
+  createdAt: string;
+};
+
 export default async function PreviewSection({
   params,
   searchParams
@@ -182,6 +192,9 @@ export default async function PreviewSection({
   let statsError = false;
   let statsErrorDetails = "";
 
+  let roleHistory: RoleHistoryItem[] = [];
+  let roleHistoryError = false;
+
   if (section === "stats") {
     const sevenDaysAgo = new Date(
       Date.now() - 7 * 24 * 60 * 60 * 1000
@@ -245,6 +258,59 @@ export default async function PreviewSection({
         ).size,
         chatMessages7Days: messagesResult.count ?? 0
       };
+    }
+
+    const { data: historyData, error: historyError } = await supabase
+      .from("role_history")
+      .select("id, member_id, changed_by, old_role, new_role, reason, created_at")
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (historyError) {
+      console.error(
+        "VERCETI role history loading error:",
+        historyError.message
+      );
+      roleHistoryError = true;
+    } else if (historyData && historyData.length > 0) {
+      const profileIds = Array.from(
+        new Set(
+          historyData.flatMap((item) => [
+            item.member_id,
+            item.changed_by
+          ])
+        )
+      );
+
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, nickname")
+        .in("id", profileIds);
+
+      if (profilesError) {
+        console.error(
+          "VERCETI role history profiles loading error:",
+          profilesError.message
+        );
+        roleHistoryError = true;
+      } else {
+        const profilesMap = new Map(
+          (profilesData ?? []).map((profile) => [
+            profile.id,
+            profile.nickname
+          ])
+        );
+
+        roleHistory = historyData.map((item) => ({
+          id: item.id,
+          memberNickname: profilesMap.get(item.member_id) ?? null,
+          changedByNickname: profilesMap.get(item.changed_by) ?? null,
+          oldRole: item.old_role,
+          newRole: item.new_role,
+          reason: item.reason,
+          createdAt: item.created_at
+        }));
+      }
     }
   }
 
@@ -395,6 +461,8 @@ export default async function PreviewSection({
             chatMessages7Days={stats.chatMessages7Days}
             loadError={statsError}
             errorDetails={statsErrorDetails}
+            roleHistory={roleHistory}
+            roleHistoryError={roleHistoryError}
           />
         ) : section === "notifications" ? (
           <>
