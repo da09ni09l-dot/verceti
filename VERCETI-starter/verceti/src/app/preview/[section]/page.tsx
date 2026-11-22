@@ -218,7 +218,15 @@ export default async function PreviewSection({
       activeMembersResult.error ||
       messagesResult.error
     ) {
-      console.error("VERCETI stats loading error:", {
+      console.error(
+  "VERCETI stats loading error:",
+  JSON.stringify({
+    members: membersResult.error,
+    newMembers: newMembersResult.error,
+    activeMembers: activeMembersResult.error,
+    messages: messagesResult.error
+  }, null, 2)
+);
         members: membersResult.error,
         newMembers: newMembersResult.error,
         activeMembers: activeMembersResult.error,
