@@ -1,3 +1,4 @@
+
 import TestsSection from "./TestsSection";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -1057,6 +1058,8 @@ export default async function PreviewSection({
               Правила зберігаються в базі даних VERCETI.
             </p>
           </>
+        ) : section === "tests" ? (
+          <TestsSection isStaff={isStaff} />
         ) : (
           <>
             <h1>{data.title}</h1>
