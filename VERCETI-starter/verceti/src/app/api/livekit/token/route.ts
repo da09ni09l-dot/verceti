@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Перевірка існування кімнати
+    // Перевірка існування кімнати в Supabase
     const { data: room, error: roomError } = await supabase
       .from("voice_rooms")
       .select("id, name, max_participants")
@@ -81,15 +81,43 @@ export async function POST(request: NextRequest) {
 
     const livekitRoomName = `verceti-voice-${room.id}`;
 
-    // Перевірка кількості учасників на сервері
-    const participants = await livekit.listParticipants(
-      livekitRoomName
-    );
+    // Перевірка учасників LiveKit
+    let participants: Awaited<
+      ReturnType<typeof livekit.listParticipants>
+    > = [];
 
+    try {
+      participants = await livekit.listParticipants(
+        livekitRoomName
+      );
+    } catch (error) {
+      const livekitError = error as {
+        status?: number;
+        code?: string;
+        message?: string;
+      };
+
+      const roomDoesNotExist =
+        livekitError.status === 404 ||
+        livekitError.code === "not_found" ||
+        livekitError.message?.toLowerCase().includes(
+          "room does not exist"
+        );
+
+      if (!roomDoesNotExist) {
+        throw error;
+      }
+
+      // Кімната ще не створена — перший учасник створить її автоматично.
+      participants = [];
+    }
+
+    // Перевірка, чи користувач уже підключений
     const alreadyConnected = participants.some(
       (participant) => participant.identity === user.id
     );
 
+    // Перевірка ліміту учасників
     if (
       !alreadyConnected &&
       room.max_participants !== null &&
