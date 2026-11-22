@@ -115,8 +115,10 @@ export default async function PreviewSection({
     redirect("/login");
   }
 
-  const { data: staffStatus, error: staffError } =
-    await supabase.rpc("is_verceti_staff");
+  const {
+    data: staffStatus,
+    error: staffError
+  } = await supabase.rpc("is_verceti_staff");
 
   const isStaff = !staffError && staffStatus === true;
 
@@ -221,6 +223,50 @@ export default async function PreviewSection({
     (item) => !item.is_read
   ).length;
 
+  async function markNotificationRead(formData: FormData) {
+    "use server";
+
+    const notificationId = String(formData.get("id") ?? "");
+
+    if (!notificationId) return;
+
+    const serverSupabase = await createClient();
+
+    const {
+      data: { user: currentUser }
+    } = await serverSupabase.auth.getUser();
+
+    if (!currentUser) return;
+
+    await serverSupabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("id", notificationId)
+      .eq("user_id", currentUser.id);
+
+    redirect("/preview/notifications");
+  }
+
+  async function markAllNotificationsRead() {
+    "use server";
+
+    const serverSupabase = await createClient();
+
+    const {
+      data: { user: currentUser }
+    } = await serverSupabase.auth.getUser();
+
+    if (!currentUser) return;
+
+    await serverSupabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("user_id", currentUser.id)
+      .eq("is_read", false);
+
+    redirect("/preview/notifications");
+  }
+
   return (
     <main className="login-wrap">
       <section className="login-card">
@@ -284,6 +330,14 @@ export default async function PreviewSection({
                   Непрочитаних: {unreadNotifications}
                 </span>
               </div>
+
+              {unreadNotifications > 0 && (
+                <form action={markAllNotificationsRead} style={{ marginTop: 14 }}>
+                  <button className="btn" type="submit">
+                    Позначити всі як прочитані
+                  </button>
+                </form>
+              )}
             </div>
 
             {notificationsError ? (
@@ -296,7 +350,7 @@ export default async function PreviewSection({
               <div className="panel" style={{ marginTop: 16 }}>
                 <h2>Поки що сповіщень немає</h2>
                 <p className="muted">
-                  Коли з'являться нові повідомлення або системні оновлення,
+                  Коли з&apos;являться нові повідомлення або системні оновлення,
                   вони відображатимуться тут.
                 </p>
               </div>
@@ -341,6 +395,22 @@ export default async function PreviewSection({
                     <div className="notice-time">
                       {new Date(item.created_at).toLocaleString("uk-UA")}
                     </div>
+
+                    {!item.is_read && (
+                      <form
+                        action={markNotificationRead}
+                        style={{ marginTop: 12 }}
+                      >
+                        <input
+                          type="hidden"
+                          name="id"
+                          value={item.id}
+                        />
+                        <button className="btn" type="submit">
+                          Позначити як прочитане
+                        </button>
+                      </form>
+                    )}
 
                     {item.link && (
                       <a
