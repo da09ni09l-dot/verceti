@@ -40,6 +40,41 @@ export async function GET() {
       );
     }
 
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("is_banned")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError || !profile || profile.is_banned) {
+      return NextResponse.json(
+        { error: "Немає доступу до спільноти." },
+        { status: 403 }
+      );
+    }
+
+    const staff = await checkStaff(supabase);
+    let hasCommunityAccess = staff;
+
+    if (!hasCommunityAccess) {
+      const { data: applications, error: applicationError } = await supabase
+        .from("applications")
+        .select("status")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      hasCommunityAccess =
+        !applicationError && applications?.[0]?.status === "approved";
+    }
+
+    if (!hasCommunityAccess) {
+      return NextResponse.json(
+        { error: "Голосові кімнати доступні після схвалення анкети." },
+        { status: 403 }
+      );
+    }
+
     const { data: rooms, error } = await supabase
       .from("voice_rooms")
       .select("id, name, max_participants, created_by, created_at")
