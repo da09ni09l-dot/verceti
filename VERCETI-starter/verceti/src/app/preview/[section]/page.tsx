@@ -87,7 +87,8 @@ const descriptions: Record<string, { title: string; text: string; items: string[
 const categoryLabels: Record<string, string> = {
   announcement: "ОГОЛОШЕННЯ",
   event: "ПОДІЯ",
-  important: "ВАЖЛИВО"
+  important: "ВАЖЛИВО",
+  update: "ОНОВЛЕННЯ"
 };
 
 type Notification = {
