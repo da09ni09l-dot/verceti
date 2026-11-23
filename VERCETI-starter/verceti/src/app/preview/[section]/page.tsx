@@ -18,7 +18,6 @@ import VoiceRoom from "./VoiceRoom";
 import MediaRoom from "./MediaRoom";
 import ApplicationsSection from "./ApplicationsSection";
 import StatsSection from "./StatsSection";
-import ActivityTracker from "./ActivityTracker";
 import { createRewardPrize, deleteRewardPrize, spinRewards } from "./rewards-actions";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
@@ -655,7 +654,6 @@ export default async function PreviewSection({
     <main className={`login-wrap workspace-wrap ${section === "tests" ? "tests-page-wrap" : ""}`}>
       <section className={`login-card workspace-card ${section === "chat" ? "chat-page-card" : ""} ${section === "tests" ? "tests-page-card" : ""}`}>
         <SectionNavigation />
-        <ActivityTracker />
 
         {section === "forms" && (
           <form
