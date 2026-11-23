@@ -1,6 +1,6 @@
 -- =========================================================
 -- VERCETI | Missing application feature tables and policies
--- Run AFTER schema.sql, profile_access_patch.sql and rewards.sql.
+-- Run AFTER schema.sql, profile_access_patch.sql, rewards.sql, voice_rooms.sql and support.sql.
 -- Safe to re-run on an existing installation.
 -- =========================================================
 
@@ -564,7 +564,10 @@ begin
     'member_activity',
     'moderation_actions',
     'rewards_prizes',
-    'rewards_spins'
+    'rewards_spins',
+    'voice_rooms',
+    'support_requests',
+    'support_messages'
   ]
   loop
     execute format(
@@ -704,6 +707,12 @@ using (
   bucket_id = 'verceti-media'
   and public.is_verceti_staff()
 );
+
+drop policy if exists active_account_guard on storage.objects;
+create policy active_account_guard on storage.objects
+as restrictive for all to authenticated
+using (public.is_verceti_account_active())
+with check (public.is_verceti_account_active());
 
 -- Realtime publication for live chat and live unread counters.
 do $$
