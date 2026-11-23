@@ -25,6 +25,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("is_banned")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError || !profile || profile.is_banned) {
+      return NextResponse.json(
+        { error: "Немає доступу до спільноти." },
+        { status: 403 }
+      );
+    }
+
+    const { data: staffStatus, error: staffError } =
+      await supabase.rpc("is_verceti_staff");
+
+    let hasCommunityAccess = !staffError && staffStatus === true;
+
+    if (!hasCommunityAccess) {
+      const { data: applications, error: applicationError } = await supabase
+        .from("applications")
+        .select("status")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      hasCommunityAccess =
+        !applicationError && applications?.[0]?.status === "approved";
+    }
+
+    if (!hasCommunityAccess) {
+      return NextResponse.json(
+        { error: "Голосові кімнати доступні після схвалення анкети." },
+        { status: 403 }
+      );
+    }
+
     // Отримання ID кімнати
     const body = await request.json();
     const roomId = Number(body.roomId);
