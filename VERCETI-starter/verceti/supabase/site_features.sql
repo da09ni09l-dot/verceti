@@ -372,7 +372,7 @@ begin
       updated_at = clock_timestamp()
   where user_id = v_user;
 end;
-$;
+$$;
 revoke all on function public.add_activity_seconds(integer) from public;
 grant execute on function public.add_activity_seconds(integer) to authenticated;
 
@@ -394,7 +394,7 @@ as $
   where coalesce(p.is_banned, false) = false
   order by a.total_seconds desc, p.nickname asc
   limit 10;
-$;
+$$;
 revoke all on function public.get_verceti_top_members() from public;
 grant execute on function public.get_verceti_top_members() to authenticated;
 
@@ -626,7 +626,7 @@ exception when duplicate_object then
 when undefined_object then
   null;
 end;
-$;
+$$;
 do $
 begin
   alter publication supabase_realtime add table public.notifications;
@@ -635,7 +635,7 @@ exception when duplicate_object then
 when undefined_object then
   null;
 end;
-$;
+$$;
 
 -- Realtime publication for live chat (ignore if already registered).
 do $$
