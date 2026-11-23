@@ -469,14 +469,17 @@ export default async function PreviewSection({
   let rewardPrizes: { id: string; title: string; description: string; weight: number }[] = [];
   let rewardError = false;
   let canManageRewards = false;
+  let lastRewardSpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
   if (section === "rewards") {
     const { data: role } = await supabase.rpc("current_verceti_role");
     canManageRewards = role === "admin" || role === "leader";
-    const { data, error } = await supabase.from("rewards_prizes")
-      .select("id, title, description, weight")
-      .order("created_at", { ascending: true });
+    const [{ data, error }, { data: spinData }] = await Promise.all([
+      supabase.from("rewards_prizes").select("id, title, description, weight").order("created_at", { ascending: true }),
+      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).order("spun_at", { ascending: false }).limit(1).maybeSingle()
+    ]);
     rewardError = !!error;
     rewardPrizes = data ?? [];
+    lastRewardSpin = spinData as typeof lastRewardSpin;
   }
 
   if (section === "rules") {
@@ -1107,7 +1110,7 @@ export default async function PreviewSection({
             <p className="muted">Спільна рулетка VERCETI — призи доступні всім учасникам.</p>
             {status === "created" && <div className="panel" style={{ marginTop: 14 }}>Приз додано до загальної рулетки.</div>}
             {status === "deleted" && <div className="panel" style={{ marginTop: 14 }}>Приз видалено.</div>}
-            {status === "won" && <div className="panel" style={{ marginTop: 14 }}>Оберт успішно зафіксовано в системі.</div>}
+            {status === "won" && <div className="panel" style={{ marginTop: 14 }}><strong>🎉 Твій результат</strong><p style={{ marginTop: 8 }}>{lastRewardSpin?.prize?.title ?? "Оберт успішно зафіксовано."}</p>{lastRewardSpin?.prize?.description && <p className="muted" style={{ marginTop: 6 }}>{lastRewardSpin.prize.description}</p>}</div>}
             {status === "used" && <div className="panel" style={{ marginTop: 14 }}>Ти вже використав(ла) безкоштовний оберт сьогодні. Повертайся завтра!</div>}
             {status === "empty" && <div className="panel" style={{ marginTop: 14 }}>Активних призів поки немає.</div>}
             {status === "forbidden" && <div className="panel" style={{ marginTop: 14 }}>Керувати призами можуть лише адміністратор і лідер.</div>}
