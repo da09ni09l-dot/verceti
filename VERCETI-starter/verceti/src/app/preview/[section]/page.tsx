@@ -870,9 +870,10 @@ export default async function PreviewSection({
                       >
                         <input
                           type="hidden"
-                          name="id"
+                          name="news_id"
                           value={item.id}
                         />
+                        <input type="hidden" name="return_to" value="/preview/news" />
                         <button className="btn" type="submit">
                           Позначити як прочитане
                         </button>
@@ -907,6 +908,7 @@ export default async function PreviewSection({
                 <h2>Створити новину</h2>
 
                 <form action={createNews} className="member-list">
+                  <input type="hidden" name="return_to" value="/preview/news" />
                   <label htmlFor="news-title">Заголовок</label>
                   <input
                     id="news-title"
@@ -1018,11 +1020,7 @@ export default async function PreviewSection({
                     <h2>{item.title}</h2>
                     <p className="muted">{item.content}</p>
                     <div className="notice-time">
-                      Дата: {new Date(
-                        item.event_date
-                          ? `${item.event_date}T12:00:00`
-                          : item.created_at
-                      ).toLocaleDateString("uk-UA")}
+                      Дата: {new Date(item.event_date ?? item.created_at).toLocaleDateString("uk-UA")}
                     </div>
 
                     {isStaff && (
