@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect } from "react";
@@ -10,6 +9,8 @@ export default function ActivityTracker() {
 
     let seconds = 0;
     let saving = false;
+    let cancelled = false;
+    let interval: number | undefined;
 
     const saveActivity = async () => {
       if (saving || seconds === 0) return;
@@ -31,16 +32,6 @@ export default function ActivityTracker() {
       saving = false;
     };
 
-    const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") {
-        seconds += 1;
-
-        if (seconds >= 30) {
-          void saveActivity();
-        }
-      }
-    }, 1000);
-
     const handleVisibility = () => {
       if (document.visibilityState === "hidden") {
         void saveActivity();
@@ -51,11 +42,33 @@ export default function ActivityTracker() {
       void saveActivity();
     };
 
-    document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("beforeunload", handleBeforeUnload);
+    async function startTracking() {
+      const {
+        data: { user },
+        error
+      } = await supabase.auth.getUser();
+
+      if (cancelled || error || !user) return;
+
+      interval = window.setInterval(() => {
+        if (document.visibilityState === "visible") {
+          seconds += 1;
+
+          if (seconds >= 30) {
+            void saveActivity();
+          }
+        }
+      }, 1000);
+
+      document.addEventListener("visibilitychange", handleVisibility);
+      window.addEventListener("beforeunload", handleBeforeUnload);
+    }
+
+    void startTracking();
 
     return () => {
-      window.clearInterval(interval);
+      cancelled = true;
+      if (interval !== undefined) window.clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("beforeunload", handleBeforeUnload);
       void saveActivity();
