@@ -539,13 +539,15 @@ grant select on public.member_activity to authenticated;
 grant usage, select on all sequences in schema public to authenticated;
 
 -- Storage buckets used by chat and community media.
-insert into storage.buckets (id, name, public)
-values ('chat-media', 'chat-media', false)
-on conflict (id) do update set public = false;
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('chat-media', 'chat-media', false, 15728640)
+on conflict (id) do update
+  set public = false, file_size_limit = 15728640;
 
-insert into storage.buckets (id, name, public)
-values ('verceti-media', 'verceti-media', false)
-on conflict (id) do update set public = false;
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('verceti-media', 'verceti-media', false, 52428800)
+on conflict (id) do update
+  set public = false, file_size_limit = 52428800;
 
 drop policy if exists "Members read media referenced by accessible messages" on storage.objects;
 create policy "Members read media referenced by accessible messages" on storage.objects
