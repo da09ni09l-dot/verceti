@@ -225,29 +225,49 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="grid stats-grid">
-          <div className="stat-card">
-            <div className="stat-label">
-              Учасники
+        {/* PREMIUM STATISTICS */}
+
+        <section className="grid stats-grid vercetti-stats">
+          <div className="stat-card vercetti-stat-card stat-members">
+            <div className="stat-card-top">
+              <div className="stat-label">
+                УЧАСНИКИ СПІЛЬНОТИ
+              </div>
+
+              <div className="stat-icon">♟</div>
             </div>
+
             <div className="stat-value">
               {activeMembers.length}
             </div>
+
             <div className="stat-note">
+              <span className="stat-indicator" />
               Зареєстровані учасники VERCETTI
             </div>
+
+            <div className="stat-decoration">01</div>
           </div>
 
-          <div className="stat-card">
-            <div className="stat-label">
-              Анкети на перевірці
+          <div className="stat-card vercetti-stat-card stat-applications">
+            <div className="stat-card-top">
+              <div className="stat-label">
+                АНКЕТИ НА ПЕРЕВІРЦІ
+              </div>
+
+              <div className="stat-icon">✦</div>
             </div>
+
             <div className="stat-value">
               {pendingApplications ?? 0}
             </div>
+
             <div className="stat-note">
-              Очікують розгляду
+              <span className="stat-indicator pending" />
+              Очікують розгляду адміністрацією
             </div>
+
+            <div className="stat-decoration">02</div>
           </div>
         </section>
 
