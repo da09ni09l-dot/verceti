@@ -109,7 +109,7 @@ export default async function AdminPage({
   return (
     <main className="login-wrap">
       <section
-        className="login-card"
+        className="login-card workspace-card"
         style={{ width: "100%", maxWidth: 760 }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
