@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 type NewsItem = {
   id: string;
@@ -42,68 +43,78 @@ export default function PinnedNewsCarousel({
   }
 
   return (
-    <div style={{ marginTop: 20 }}>
-      <div className="eyebrow">ЗАКРІПЛЕНІ НОВИНИ</div>
+    <div className="hero-news">
+      <div className="hero-news-top">
+        <div>
+          <div className="eyebrow">VERCETTI · PRIVATE COMMUNITY</div>
+          <div className="hero-news-label">
+            <span className="hero-live-dot" />
+            ЗАКРІПЛЕНІ НОВИНИ
+          </div>
+        </div>
 
-      <article
-        key={current.id}
-        style={{
-          padding: "18px 0",
-          minHeight: 150
-        }}
-      >
+        <div className="hero-symbol">V</div>
+      </div>
+
+      <article key={current.id} className="hero-news-content">
+        <span className="hero-category">
+          {current.category || "ОГОЛОШЕННЯ"}
+        </span>
+
         <h1>{current.title}</h1>
 
-        <p
-          style={{
-            whiteSpace: "pre-wrap",
-            lineHeight: 1.7,
-            overflowWrap: "anywhere"
-          }}
-        >
-          {current.content}
-        </p>
+        <p>{current.content}</p>
       </article>
 
+      <div className="hero-news-bottom">
+        <div className="hero-news-actions">
+          {news.length > 1 && (
+            <>
+              <button
+                type="button"
+                className="hero-arrow"
+                onClick={previous}
+                aria-label="Попередня новина"
+              >
+                ←
+              </button>
+
+              <button
+                type="button"
+                className="hero-arrow"
+                onClick={next}
+                aria-label="Наступна новина"
+              >
+                →
+              </button>
+
+              <span className="hero-counter">
+                {activeIndex + 1} / {news.length}
+              </span>
+            </>
+          )}
+        </div>
+
+        <Link href="/preview/news" className="hero-all-news">
+          Усі новини <span>→</span>
+        </Link>
+      </div>
+
       {news.length > 1 && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            marginTop: 12
-          }}
-        >
-          <button
-            type="button"
-            className="btn secondary"
-            onClick={previous}
-            aria-label="Попередня новина"
-          >
-            ←
-          </button>
-
-          <span className="muted" style={{ fontSize: 12 }}>
-            {activeIndex + 1} / {news.length}
-          </span>
-
-          <button
-            type="button"
-            className="btn secondary"
-            onClick={next}
-            aria-label="Наступна новина"
-          >
-            →
-          </button>
+        <div className="hero-progress">
+          {news.map((item, index) => (
+            <button
+              key={item.id}
+              type="button"
+              aria-label={`Перейти до новини ${index + 1}`}
+              className={`hero-progress-item ${
+                index === activeIndex ? "active" : ""
+              }`}
+              onClick={() => setActiveIndex(index)}
+            />
+          ))}
         </div>
       )}
-
-      <div className="welcome-actions">
-        <a className="btn" href="/news">
-          Усі новини
-        </a>
-      </div>
     </div>
   );
 }
