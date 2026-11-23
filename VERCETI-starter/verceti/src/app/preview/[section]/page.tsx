@@ -199,7 +199,7 @@ export default async function PreviewSection({
 
   let newsError = false;
 
-  let memberItems: { id: string; nickname: string; role: string; created_at: string }[] = [];
+  let memberItems: { id: string; nickname: string; role: string; created_at: string; is_banned: boolean }[] = [];
   let membersError = false;
   let eventItems: { id: string; title: string; content: string; event_date: string | null; created_at: string }[] = [];
   let eventsError = false;
@@ -444,7 +444,8 @@ export default async function PreviewSection({
   if (section === "members") {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, nickname, role, created_at")
+      .select("id, nickname, role, created_at, is_banned")
+      .eq("is_banned", false)
       .order("nickname", { ascending: true })
       .limit(500);
 
