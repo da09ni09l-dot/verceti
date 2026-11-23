@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { members, notices } from "@/lib/demo-data";
 import MenuBadges from "./MenuBadges";
 import NewsBell from "./NewsBell";
+import PinnedNewsCarousel from "./PinnedNewsCarousel";
 import { logout } from "./logout/actions";
 
 function Stat({
@@ -63,7 +64,7 @@ export default async function Home() {
 
   const { data: pinnedNews } = await supabase
     .from("news")
-    .select("id, title, content, category, show_from, show_until")
+    .select("id, title, content, category")
     .eq("is_pinned", true)
     .or(`show_from.is.null,show_from.lte.${now}`)
     .or(`show_until.is.null,show_until.gt.${now}`)
@@ -129,30 +130,7 @@ export default async function Home() {
           <div className="eyebrow">Ласкаво просимо до VERCETI</div>
 
           {pinnedNews && pinnedNews.length > 0 ? (
-            <div style={{ marginTop: 20 }}>
-              <div className="eyebrow">ЗАКРІПЛЕНІ НОВИНИ</div>
-
-              {pinnedNews.map((news) => (
-                <article
-                  key={news.id}
-                  style={{
-                    padding: "18px 0",
-                    borderBottom: "1px solid rgba(255,255,255,0.08)"
-                  }}
-                >
-                  <h1>{news.title}</h1>
-                  <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.7 }}>
-                    {news.content}
-                  </p>
-                </article>
-              ))}
-
-              <div className="welcome-actions">
-                <Link className="btn" href="/news">
-                  Усі новини
-                </Link>
-              </div>
-            </div>
+            <PinnedNewsCarousel news={pinnedNews} />
           ) : (
             <>
               <h1>Твоя спільнота. Твої правила.</h1>
@@ -258,3 +236,4 @@ export default async function Home() {
     </div>
   );
 }
+
