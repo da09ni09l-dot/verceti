@@ -12,6 +12,8 @@ create table if not exists public.support_requests (
 );
 alter table public.support_requests add column if not exists access_token uuid not null default gen_random_uuid();
 alter table public.support_requests enable row level security;
+create index if not exists support_requests_email_created_idx
+  on public.support_requests (lower(sender_email), created_at desc);
 
 drop policy if exists "Anyone can submit support requests" on public.support_requests;
 create policy "Anyone can submit support requests" on public.support_requests for insert to anon, authenticated with check (true);
