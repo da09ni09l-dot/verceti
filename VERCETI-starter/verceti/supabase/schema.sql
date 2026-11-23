@@ -347,7 +347,7 @@ revoke all on public.disciplinary_actions from anon, authenticated;
 revoke all on public.role_history from anon, authenticated;
 
 -- Профілі: читання лише дозволених колонок
-grant select (id, nickname, role, created_at)
+grant select (id, nickname, game_id, role, created_at)
 on public.profiles to authenticated;
 
 grant update (nickname)
