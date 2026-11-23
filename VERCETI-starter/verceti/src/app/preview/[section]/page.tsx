@@ -228,6 +228,8 @@ export default async function PreviewSection({
 
   let statsError = false;
   let statsErrorDetails = "";
+  let activityRanking: { user_id: string; nickname: string; role: string; total_seconds: number }[] = [];
+  let activityRankingError = false;
 
   let roleHistory: RoleHistoryItem[] = [];
   let roleHistoryError = false;
@@ -444,6 +446,48 @@ export default async function PreviewSection({
             id: profile.id,
             nickname: profile.nickname
           }));
+      }
+    }
+  }
+
+  if (section === "stats") {
+    const { data: activityData, error: activityError } = await supabase
+      .from("member_activity")
+      .select("user_id, total_seconds")
+      .order("total_seconds", { ascending: false })
+      .limit(isStaff ? 100 : 1);
+
+    if (activityError) {
+      console.error("VERCETI ranking loading error:", activityError.message);
+      activityRankingError = true;
+    } else if (activityData && activityData.length > 0) {
+      const userIds = activityData.map((item) => item.user_id);
+      const { data: rankingProfiles, error: rankingProfilesError } = await supabase
+        .from("profiles")
+        .select("id, nickname, role, is_banned")
+        .in("id", userIds);
+
+      if (rankingProfilesError) {
+        console.error("VERCETI ranking profiles error:", rankingProfilesError.message);
+        activityRankingError = true;
+      } else {
+        const profileMap = new Map(
+          (rankingProfiles ?? [])
+            .filter((item) => !item.is_banned)
+            .map((item) => [item.id, item])
+        );
+
+        activityRanking = activityData
+          .filter((item) => profileMap.has(item.user_id))
+          .map((item) => {
+            const member = profileMap.get(item.user_id)!;
+            return {
+              user_id: item.user_id,
+              nickname: member.nickname,
+              role: member.role,
+              total_seconds: Number(item.total_seconds)
+            };
+          });
       }
     }
   }
@@ -760,6 +804,8 @@ export default async function PreviewSection({
             disciplinaryActionsError={disciplinaryActionsError}
             disciplinaryMembers={disciplinaryMembers}
             disciplinaryMembersError={disciplinaryMembersError}
+            activityRanking={activityRanking}
+            activityRankingError={activityRankingError}
             isStaff={isStaff}
             status={status}
           />
