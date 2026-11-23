@@ -46,10 +46,6 @@ export default async function Home() {
     redirect("/login");
   }
 
-  const { data: staffStatus, error: staffError } =
-    await supabase.rpc("is_verceti_staff");
-  const isStaff = !staffError && staffStatus === true;
-
   const { data: membershipStatus, error: membershipError } =
     await supabase.rpc("is_verceti_member");
   if (membershipError || membershipStatus !== true) {
