@@ -38,3 +38,6 @@ begin
   return new;
 end;
 $$;
+
+-- Public profile game IDs are displayed on member profile pages.
+grant select (game_id) on public.profiles to authenticated;
