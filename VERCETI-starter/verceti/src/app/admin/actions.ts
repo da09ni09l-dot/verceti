@@ -394,6 +394,31 @@ export async function deleteMember(formData: FormData) {
     redirect("/admin?error=delete_cleanup");
   }
 
+  // Remove the account's private chat uploads before deleting its Auth identity.
+  const chatMediaPaths: string[] = [];
+  for (let offset = 0; ; offset += 100) {
+    const { data: files, error: listError } = await admin.storage
+      .from("chat-media")
+      .list(memberId, { limit: 100, offset });
+    if (listError) {
+      console.error("List member chat media error:", listError.message);
+      redirect("/admin?error=delete_cleanup");
+    }
+    const page = (files ?? []).filter((file) => !!file.id);
+    chatMediaPaths.push(...page.map((file) => `${memberId}/${file.name}`));
+    if (!files || files.length < 100) break;
+  }
+
+  for (let offset = 0; offset < chatMediaPaths.length; offset += 100) {
+    const { error: mediaError } = await admin.storage
+      .from("chat-media")
+      .remove(chatMediaPaths.slice(offset, offset + 100));
+    if (mediaError) {
+      console.error("Delete member chat media error:", mediaError.message);
+      redirect("/admin?error=delete_cleanup");
+    }
+  }
+
   const { error: resultsError } = await admin
     .from("test_results")
     .delete()
