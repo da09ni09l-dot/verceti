@@ -2108,3 +2108,178 @@ td {
     font-size: 7px;
   }
 }
+
+/* =========================================
+   VERCETTI — TOP 3 PODIUM DESIGN
+========================================= */
+
+.top-ranking-list {
+  gap: 12px;
+}
+
+.top-ranking-row {
+  position: relative;
+  overflow: hidden;
+  min-height: 76px;
+  padding: 15px 16px;
+  border-radius: 17px;
+  transition: transform .25s ease, border-color .25s ease,
+    box-shadow .25s ease;
+}
+
+.top-ranking-row::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  opacity: .8;
+  background: #a855f7;
+}
+
+.top-ranking-row:hover {
+  transform: translateY(-2px);
+}
+
+/* 1 PLACE — GOLD */
+.ranking-place-1 {
+  min-height: 91px;
+  border: 1px solid rgba(255, 202, 92, .42);
+  background:
+    radial-gradient(ellipse at 0% 50%, rgba(255, 190, 55, .16), transparent 65%),
+    linear-gradient(110deg, rgba(110, 76, 25, .25), rgba(255,255,255,.035));
+  box-shadow: 0 0 25px rgba(255, 190, 55, .09),
+    inset 0 0 22px rgba(255, 190, 55, .035);
+}
+
+.ranking-place-1::before {
+  width: 4px;
+  background: linear-gradient(180deg, #fff0ad, #e5a52d);
+}
+
+.ranking-place-1 .ranking-position {
+  width: 54px;
+  height: 54px;
+  min-width: 54px;
+  border: 1px solid rgba(255, 211, 105, .65);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #74501c, #342512);
+  box-shadow: 0 0 20px rgba(255, 190, 55, .2);
+}
+
+.ranking-place-1 .ranking-medal {
+  font-size: 29px;
+  filter: drop-shadow(0 2px 5px rgba(255, 190, 55, .35));
+}
+
+.ranking-place-1 .ranking-member-name {
+  color: #ffe3a0;
+  font-size: 14px;
+}
+
+.ranking-place-1 .ranking-member-role {
+  color: #e6b957;
+}
+
+.ranking-place-1 .ranking-member-activity strong {
+  color: #ffdc88;
+}
+
+/* 2 PLACE — SILVER */
+.ranking-place-2 {
+  border: 1px solid rgba(205, 215, 235, .3);
+  background:
+    radial-gradient(ellipse at 0% 50%, rgba(190, 205, 230, .12), transparent 65%),
+    linear-gradient(110deg, rgba(105, 115, 135, .16), rgba(255,255,255,.025));
+}
+
+.ranking-place-2::before {
+  background: linear-gradient(180deg, #f3f5ff, #8995ad);
+}
+
+.ranking-place-2 .ranking-position {
+  border: 1px solid rgba(205, 215, 235, .45);
+  border-radius: 15px;
+  background: linear-gradient(145deg, #515b70, #242a38);
+  box-shadow: 0 0 17px rgba(190, 205, 230, .1);
+}
+
+.ranking-place-2 .ranking-medal {
+  font-size: 25px;
+}
+
+.ranking-place-2 .ranking-member-name {
+  color: #e3e9f5;
+}
+
+.ranking-place-2 .ranking-member-role {
+  color: #aebbd1;
+}
+
+/* 3 PLACE — BRONZE */
+.ranking-place-3 {
+  border: 1px solid rgba(205, 139, 91, .32);
+  background:
+    radial-gradient(ellipse at 0% 50%, rgba(190, 112, 63, .12), transparent 65%),
+    linear-gradient(110deg, rgba(105, 57, 35, .16), rgba(255,255,255,.025));
+}
+
+.ranking-place-3::before {
+  background: linear-gradient(180deg, #f2bd91, #9b5935);
+}
+
+.ranking-place-3 .ranking-position {
+  border: 1px solid rgba(205, 139, 91, .45);
+  border-radius: 15px;
+  background: linear-gradient(145deg, #70452f, #302019);
+  box-shadow: 0 0 17px rgba(190, 112, 63, .1);
+}
+
+.ranking-place-3 .ranking-medal {
+  font-size: 25px;
+}
+
+.ranking-place-3 .ranking-member-name {
+  color: #f0c3a3;
+}
+
+.ranking-place-3 .ranking-member-role {
+  color: #c28d6c;
+}
+
+/* Activity and spacing */
+.top-ranking-row .ranking-member-info {
+  padding-left: 2px;
+}
+
+.top-ranking-row .ranking-member-activity strong {
+  font-size: 13px;
+}
+
+.top-ranking-row .ranking-arrow {
+  opacity: .65;
+}
+
+@media (max-width: 480px) {
+  .top-ranking-row {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .ranking-place-1 {
+    min-height: 82px;
+  }
+
+  .ranking-place-1 .ranking-position {
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+  }
+
+  .ranking-place-1 .ranking-medal {
+    font-size: 25px;
+  }
+
+  .ranking-place-1 .ranking-member-name {
+    font-size: 12px;
+  }
+}
