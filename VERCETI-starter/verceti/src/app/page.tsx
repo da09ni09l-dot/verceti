@@ -317,43 +317,37 @@ export default async function Home() {
           {recentNotifications && recentNotifications.length > 0 ? (
             <div className="premium-notices-list">
               {recentNotifications.map((n, index) => {
-                const kind = n.type === "warning" || n.type === "danger"
-                  ? "warning"
-                  : n.type === "success"
-                    ? "success"
-                    : "info";
+                const kind =
+                  n.type === "warning" || n.type === "danger"
+                    ? "warning"
+                    : n.type === "success"
+                      ? "success"
+                      : "info";
                 const time = new Date(n.created_at).toLocaleString("uk-UA");
                 return (
-                <div
-                  className={`premium-notice notice-type-${n.kind}`}
-                  key={`${n.title}-${index}`}
-                >
-                  <div className="premium-notice-icon">
-                    {noticeIcons[n.kind] ?? "✦"}
-                  </div>
-
-                  <div className="premium-notice-content">
-                    <div className="premium-notice-title">
-                      {n.title}
+                  <div
+                    className={`premium-notice notice-type-${kind}`}
+                    key={n.id}
+                  >
+                    <div className="premium-notice-icon">
+                      {noticeIcons[kind] ?? "✦"}
                     </div>
 
-                    <div className="premium-notice-detail">
-                      {n.message}
+                    <div className="premium-notice-content">
+                      <div className="premium-notice-title">{n.title}</div>
+                      <div className="premium-notice-detail">{n.message}</div>
+                      <div className="premium-notice-time">
+                        <span className="premium-notice-time-icon">◷</span>
+                        {time}
+                      </div>
                     </div>
 
-                    <div className="premium-notice-time">
-                      <span className="premium-notice-time-icon">
-                        ◷
-                      </span>
-                      {time}
+                    <div className="premium-notice-number">
+                      {String(index + 1).padStart(2, "0")}
                     </div>
                   </div>
-
-                  <div className="premium-notice-number">
-                    {String(index + 1).padStart(2, "0")}
-                  </div>
-                </div>
-              ))}
+                );
+              })}}
             </div>
           ) : (
             <div className="premium-notices-empty">
