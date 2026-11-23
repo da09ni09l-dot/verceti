@@ -2155,3 +2155,506 @@ video {
     flex-direction: column;
   }
 }
+
+/* =========================================
+   VERCETTI — RESPONSIVE DESIGN UPGRADE
+========================================= */
+
+/* ЗАГАЛЬНІ ВИПРАВЛЕННЯ */
+
+html {
+  width: 100%;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+body {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.app-shell,
+.main,
+.panel,
+.stat-card,
+.welcome {
+  min-width: 0;
+}
+
+img,
+video,
+iframe {
+  max-width: 100%;
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+/* ВЕЛИКІ ЕКРАНИ */
+
+@media (min-width: 1500px) {
+  .app-shell {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+
+  .sidebar {
+    padding: 30px 20px;
+  }
+
+  .main {
+    padding-left: 45px;
+    padding-right: 45px;
+  }
+
+  .stats-grid,
+  .vercetti-stats {
+    gap: 20px;
+  }
+
+  .panel {
+    padding: 24px;
+  }
+}
+
+/* ПЛАНШЕТИ */
+
+@media (max-width: 1050px) {
+  .app-shell {
+    grid-template-columns: 205px minmax(0, 1fr);
+  }
+
+  .sidebar {
+    padding: 20px 12px;
+  }
+
+  .brand {
+    font-size: 23px;
+  }
+
+  .main {
+    padding: 22px 17px 40px;
+  }
+
+  .content-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stats-grid,
+  .vercetti-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .topbar {
+    gap: 12px;
+  }
+
+  .topbar-heading h1 {
+    font-size: 22px;
+  }
+
+  .top-ranking-row {
+    min-width: 0;
+  }
+}
+
+/* МОБІЛЬНІ ПРИСТРОЇ */
+
+@media (max-width: 760px) {
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    position: relative;
+    top: auto;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    padding: 16px;
+    gap: 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    background: rgba(9, 7, 16, .97);
+  }
+
+  .brand {
+    padding: 4px 7px;
+    font-size: 25px;
+  }
+
+  .brand small {
+    font-size: 8px;
+  }
+
+  .menu {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .menu-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .menu-group-title {
+    grid-column: 1 / -1;
+    padding: 0 8px;
+    margin-bottom: 3px;
+  }
+
+  .menu a,
+  .menu .menu-link {
+    min-width: 0;
+    min-height: 42px;
+    padding: 9px;
+    font-size: 11px;
+    gap: 8px;
+  }
+
+  .menu-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 15px;
+  }
+
+  .menu-bottom {
+    grid-column: 1 / -1;
+    margin-top: 0;
+    padding-top: 10px;
+  }
+
+  .sidebar-foot {
+    display: none;
+  }
+
+  .main {
+    width: 100%;
+    padding: 18px 14px 35px;
+  }
+
+  .topbar {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 13px;
+    min-height: auto;
+    padding: 5px 0 17px;
+    margin-bottom: 20px;
+  }
+
+  .topbar-heading h1 {
+    font-size: 23px;
+  }
+
+  .topbar nav {
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .topbar-user {
+    width: 100%;
+  }
+
+  .welcome {
+    min-height: 280px;
+    padding: 22px;
+  }
+
+  .welcome::before {
+    width: 180px;
+    height: 180px;
+    right: -35px;
+  }
+
+  .welcome::after {
+    right: 0;
+    top: 10px;
+    font-size: 180px;
+  }
+
+  .hero-news-content {
+    min-height: 0;
+  }
+
+  .stats-grid,
+  .vercetti-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .vercetti-stat-card {
+    min-height: 145px;
+    padding: 15px;
+  }
+
+  .vercetti-stat-card .stat-value {
+    font-size: 32px;
+  }
+
+  .content-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 13px;
+  }
+
+  .panel {
+    padding: 16px;
+  }
+
+  .top-ranking-row,
+  .online-member-row,
+  .premium-notice {
+    max-width: 100%;
+  }
+}
+
+/* МАЛЕНЬКІ ТЕЛЕФОНИ */
+
+@media (max-width: 480px) {
+  .main {
+    padding: 15px 11px 28px;
+  }
+
+  .sidebar {
+    padding: 13px 11px;
+  }
+
+  .brand {
+    font-size: 23px;
+  }
+
+  .menu {
+    gap: 12px;
+  }
+
+  .menu-group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .menu a,
+  .menu .menu-link {
+    padding: 8px 7px;
+    font-size: 10px;
+    gap: 6px;
+  }
+
+  .menu-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 14px;
+  }
+
+  .topbar-heading h1 {
+    font-size: 21px;
+  }
+
+  .topbar-user .user-pill {
+    padding: 7px;
+  }
+
+  .topbar-user .user-pill strong {
+    max-width: 130px;
+  }
+
+  .welcome {
+    min-height: 260px;
+    padding: 18px;
+    border-radius: 17px;
+  }
+
+  .hero-news-content h1 {
+    font-size: 22px;
+  }
+
+  .hero-news-content p {
+    font-size: 10px;
+  }
+
+  .hero-symbol {
+    font-size: 35px;
+  }
+
+  .stats-grid,
+  .vercetti-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .vercetti-stat-card {
+    min-height: 135px;
+    padding: 12px;
+  }
+
+  .vercetti-stat-card .stat-value {
+    font-size: 28px;
+  }
+
+  .vercetti-stat-card .stat-label {
+    font-size: 8px;
+    letter-spacing: .8px;
+  }
+
+  .stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .stat-note {
+    font-size: 9px;
+  }
+
+  .panel {
+    padding: 13px;
+    border-radius: 15px;
+  }
+
+  .panel-head {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 9px;
+  }
+
+  .panel h2 {
+    font-size: 13px;
+  }
+
+  .top-ranking-row {
+    padding: 9px;
+    gap: 7px;
+  }
+
+  .ranking-member-name {
+    font-size: 11px;
+  }
+
+  .ranking-member-activity strong {
+    font-size: 9px;
+  }
+
+  .premium-notice {
+    padding: 9px;
+    gap: 8px;
+  }
+
+  .premium-notice-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .premium-notice-number {
+    font-size: 13px;
+  }
+
+  .member-row {
+    gap: 7px;
+  }
+
+  .member-name {
+    font-size: 11px;
+  }
+
+  .role {
+    font-size: 8px;
+  }
+
+  .btn {
+    padding: 10px 12px;
+    font-size: 10px;
+  }
+
+  th,
+  td {
+    padding: 9px 7px;
+    font-size: 10px;
+  }
+}
+
+/* ДУЖЕ ВУЗЬКІ ЕКРАНИ */
+
+@media (max-width: 360px) {
+  .main {
+    padding-left: 9px;
+    padding-right: 9px;
+  }
+
+  .menu a {
+    font-size: 9px;
+    gap: 5px;
+  }
+
+  .menu-icon {
+    width: 16px;
+    font-size: 12px;
+  }
+
+  .vercetti-stat-card .stat-value {
+    font-size: 25px;
+  }
+
+  .stat-icon {
+    width: 29px;
+    height: 29px;
+  }
+
+  .topbar-user .btn {
+    padding: 8px;
+    font-size: 9px;
+  }
+
+  .ranking-position {
+    width: 31px;
+    height: 31px;
+  }
+
+  .ranking-medal {
+    font-size: 18px;
+  }
+}
+
+/* ЗАХИСТ ВІД ДОВГОГО ТЕКСТУ */
+
+.member-name,
+.online-member-name,
+.ranking-member-name,
+.premium-notice-title,
+.premium-notice-detail,
+.notice-detail {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .online-members-list {
+    max-height: 350px;
+  }
+
+  .topbar-action,
+  .topbar nav {
+    max-width: 100%;
+  }
+
+  .welcome-actions {
+    gap: 8px;
+  }
+}
+
+/* ПРИСТРОЇ З ОБМЕЖЕНОЮ АНІМАЦІЄЮ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
