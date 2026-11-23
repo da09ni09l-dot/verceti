@@ -1030,9 +1030,10 @@ export default async function PreviewSection({
                       >
                         <input
                           type="hidden"
-                          name="id"
+                          name="news_id"
                           value={item.id}
                         />
+                        <input type="hidden" name="return_to" value="/preview/news" />
                         <button
                           className="btn"
                           type="submit"
