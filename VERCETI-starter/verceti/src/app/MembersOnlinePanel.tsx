@@ -33,6 +33,11 @@ export default function MembersOnlinePanel({
   const activeMembers = members
     .filter((member) => !member.is_banned)
     .sort((a, b) => {
+      const onlineA = onlineIds.includes(a.id) ? 0 : 1;
+      const onlineB = onlineIds.includes(b.id) ? 0 : 1;
+
+      if (onlineA !== onlineB) return onlineA - onlineB;
+
       const orderA = roleInfo[a.role]?.order ?? 99;
       const orderB = roleInfo[b.role]?.order ?? 99;
 
@@ -49,21 +54,22 @@ export default function MembersOnlinePanel({
   ).length;
 
   return (
-    <div className="panel">
+    <section className="panel online-members-panel">
       <div className="panel-head">
         <div>
-          <h2>Учасники спільноти</h2>
+          <h2>УЧАСНИКИ СПІЛЬНОТИ</h2>
           <div className="panel-sub">
-            Усі учасники VERCETI
+            Учасники VERCETTI в реальному часі
           </div>
         </div>
 
-        <span className="tag">
-          {activeMembers.length} УЧАСНИКІВ
+        <span className="tag online-members-tag">
+          <span className="online-tag-dot" />
+          {onlineCount} ОНЛАЙН
         </span>
       </div>
 
-      <div className="member-list">
+      <div className="online-members-list">
         {activeMembers.map((member) => {
           const isOnline = onlineIds.includes(member.id);
 
@@ -78,55 +84,69 @@ export default function MembersOnlinePanel({
           return (
             <Link
               href={`/preview/members/${member.id}`}
-              className="member-row"
+              className={`online-member-row ${
+                isOnline ? "is-online" : ""
+              }`}
               key={member.id}
-              style={{
-                textDecoration: "none",
-                color: "inherit"
-              }}
             >
-              <div className="member-left">
-                <div className="member-avatar">
+              <div className="online-member-left">
+                <div className="online-member-avatar">
                   {nickname.slice(0, 1).toUpperCase()}
+
+                  <span
+                    className={`online-avatar-status ${
+                      isOnline ? "active" : ""
+                    }`}
+                  />
                 </div>
 
-                <div>
-                  <div className="member-name">
+                <div className="online-member-info">
+                  <div className="online-member-name">
                     {nickname}
                   </div>
 
-                  <div className="member-meta">
+                  <div className="online-member-status">
                     {isOnline ? (
                       <>
-                        <span className="status-dot" />
-                        Онлайн
+                        <span className="online-status-indicator" />
+                        <span>Зараз онлайн</span>
                       </>
                     ) : (
-                      "Офлайн"
+                      <>
+                        <span className="offline-status-indicator" />
+                        <span>Офлайн</span>
+                      </>
                     )}
                   </div>
                 </div>
               </div>
 
-              <span className={`role ${role.color}`}>
+              <div className={`online-member-role ${role.color}`}>
                 {role.label}
-              </span>
+              </div>
             </Link>
           );
         })}
 
         {activeMembers.length === 0 && (
-          <div className="panel-sub">
-            Поки що учасників немає.
+          <div className="online-members-empty">
+            <span>✦</span>
+            <p>Поки що учасників немає</p>
           </div>
         )}
       </div>
 
-      <div className="panel-sub" style={{ marginTop: 18 }}>
-        <span className="status-dot" />
-        Зараз онлайн: <strong>{onlineCount}</strong> із{" "}
-        <strong>{activeMembers.length}</strong> учасників
+      <div className="online-members-footer">
+        <div className="online-footer-status">
+          <span className="online-status-indicator" />
+          <span>АКТИВНІ ЗАРАЗ</span>
+        </div>
+
+        <div className="online-footer-count">
+          <strong>{onlineCount}</strong>
+          <span>/ {activeMembers.length}</span>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
