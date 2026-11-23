@@ -15,6 +15,7 @@ async function sendVisitorMessage(formData: FormData) {
   if (!ticket) redirect("/support");
   const { error } = await admin.from("support_messages").insert({ request_id: id, sender_type: "visitor", message });
   if (error) redirect("/support/chat?ticket=" + id + "&key=" + key + "&error=1");
+  await admin.from("support_requests").update({ status: "new" }).eq("id", id);
   redirect("/support/chat?ticket=" + id + "&key=" + key);
 }
 
