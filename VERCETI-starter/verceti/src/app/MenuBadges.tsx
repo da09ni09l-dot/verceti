@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -42,6 +43,7 @@ const menuGroups = [
 
 export default function MenuBadges({ userId }: MenuBadgesProps) {
   const supabase = useMemo(() => createClient(), []);
+  const pathname = usePathname();
 
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -138,7 +140,7 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
         key={id}
         href={href}
         onClick={() => setMobileOpen(false)}
-        className={`menu-link ${id === "home" ? "active" : ""}`}
+        className={`menu-link ${pathname === href || (href !== "/" && pathname.startsWith(`${href}/`)) ? "active" : ""}`}
         style={{
           display: "flex",
           alignItems: "center",
