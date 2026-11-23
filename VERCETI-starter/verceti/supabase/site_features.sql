@@ -350,10 +350,14 @@ begin
     raise exception 'authentication_required';
   end if;
   if not exists (
-    select 1 from public.profiles
-    where id = v_user and is_banned = false
+    select 1 from public.profiles p
+    where p.id = v_user and p.is_banned = false
+      and (p.role in ('admin', 'leader', 'moderator') or exists (
+        select 1 from public.applications a
+        where a.user_id = p.id and a.status = 'approved'
+      ))
   ) then
-    raise exception 'account_inactive';
+    raise exception 'account_not_approved';
   end if;
   if seconds_to_add is null or seconds_to_add < 1 or seconds_to_add > 60 then
     raise exception 'invalid_activity_increment';
@@ -411,6 +415,14 @@ as $$
       select 1 from public.profiles current_profile
       where current_profile.id = auth.uid()
         and current_profile.is_banned = false
+        and (
+          current_profile.role in ('admin', 'leader', 'moderator')
+          or exists (
+            select 1 from public.applications current_application
+            where current_application.user_id = current_profile.id
+              and current_application.status = 'approved'
+          )
+        )
     )
   order by a.total_seconds desc, p.nickname asc
   limit 10;
