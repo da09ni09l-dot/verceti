@@ -278,6 +278,15 @@ export default async function AdminPage({
               <option value="important">Важливе</option>
             </select>
 
+            <label style={{ display: "block", marginTop: 16 }}>
+              Дата та час події (для категорії «Подія»)
+            </label>
+            <input
+              name="event_date"
+              type="datetime-local"
+              style={{ width: "100%" }}
+            />
+
             <label style={{ display: "block", marginTop: 8 }}>
               Показувати з
             </label>
