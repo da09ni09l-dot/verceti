@@ -339,6 +339,28 @@ $$;
 revoke all on function public.add_activity_seconds(integer) from public;
 grant execute on function public.add_activity_seconds(integer) to authenticated;
 
+create or replace function public.get_verceti_top_members()
+returns table (
+  user_id uuid,
+  nickname text,
+  role public.verceti_role,
+  total_seconds bigint
+)
+language sql
+stable
+security definer
+set search_path = public
+as $
+  select p.id, p.nickname, p.role, a.total_seconds
+  from public.member_activity a
+  join public.profiles p on p.id = a.user_id
+  where coalesce(p.is_banned, false) = false
+  order by a.total_seconds desc, p.nickname asc
+  limit 10;
+$;
+revoke all on function public.get_verceti_top_members() from public;
+grant execute on function public.get_verceti_top_members() to authenticated;
+
 -- Legacy moderation reference used by the admin account-deletion cleanup.
 create table if not exists public.moderation_actions (
   id uuid primary key default gen_random_uuid(),
