@@ -70,6 +70,13 @@ export default async function Home() {
     }
   }
 
+  // Перевірка ролі адміністратора
+  const { data: adminRole, error: adminRoleError } =
+    await supabase.rpc("current_verceti_role");
+
+  const showAdminButton =
+    !adminRoleError && adminRole === "admin";
+
   const now = new Date().toISOString();
 
   const { data: pinnedNews } = await supabase
@@ -200,7 +207,7 @@ export default async function Home() {
 
         <section className="panel welcome">
           <div className="eyebrow">
-            Ласкаво просимо до VERCETTI
+            Ласкаво просимо до VERCETI
           </div>
 
           {pinnedNews && pinnedNews.length > 0 ? (
@@ -209,7 +216,7 @@ export default async function Home() {
             <>
               <h1>ТВОЯ СПІЛЬНОТА. ТВОЇ ПРАВИЛА.</h1>
               <p>
-                Розвивайся. Спілкуйся. Будь частиною VERCETTI.
+                Розвивайся. Спілкуйся. Будь частиною VERCETI.
                 Тут з&apos;являтимуться важливі новини,
                 оголошення та події спільноти.
               </p>
@@ -251,7 +258,7 @@ export default async function Home() {
 
             <div className="stat-note">
               <span className="stat-indicator" />
-              Зареєстровані учасники VERCETTI
+              Зареєстровані учасники VERCETI
             </div>
 
             <div className="stat-decoration">01</div>
@@ -298,7 +305,7 @@ export default async function Home() {
               <h2>ОСТАННІ СПОВІЩЕННЯ</h2>
 
               <div className="panel-sub">
-                Важливі події та оновлення VERCETTI
+                Важливі події та оновлення VERCETI
               </div>
             </div>
 
@@ -352,11 +359,24 @@ export default async function Home() {
           )}
 
           <div className="premium-notices-footer">
-            <span>VERCETTI PRIVATE COMMUNITY</span>
+            <span>VERCETI PRIVATE COMMUNITY</span>
             <span>БУДЬ У КУРСІ ПОДІЙ</span>
           </div>
         </section>
       </main>
+
+      {/* Плаваюча кнопка адміністратора */}
+      {showAdminButton && (
+        <Link
+          href="/admin"
+          className="admin-floating-button"
+          aria-label="Відкрити панель адміністратора"
+        >
+          <span className="admin-floating-icon">⚙</span>
+          <span>АДМІН-ПАНЕЛЬ</span>
+          <span className="admin-floating-arrow">↗</span>
+        </Link>
+      )}
     </div>
   );
 }
