@@ -243,6 +243,7 @@ export default async function AdminPage({
           </p>
 
           <form action={createNews} style={{ marginTop: 16 }}>
+            <input type="hidden" name="return_to" value="/admin" />
             <label>Назва новини</label>
             <input
               name="title"
