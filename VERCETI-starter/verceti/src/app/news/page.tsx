@@ -21,6 +21,13 @@ export default async function NewsPage() {
     redirect("/login");
   }
 
+  await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("user_id", user.id)
+    .eq("type", "news")
+    .eq("is_read", false);
+
   const { data: news, error } = await supabase
     .from("news")
     .select(
@@ -31,8 +38,11 @@ export default async function NewsPage() {
   const now = Date.now();
 
   const visibleNews = (news ?? []).filter((item) => {
-    const starts = !item.show_from || new Date(item.show_from).getTime() <= now;
-    const ends = !item.show_until || new Date(item.show_until).getTime() > now;
+    const starts =
+      !item.show_from || new Date(item.show_from).getTime() <= now;
+
+    const ends =
+      !item.show_until || new Date(item.show_until).getTime() > now;
 
     return starts && ends;
   });
