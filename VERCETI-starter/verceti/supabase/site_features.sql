@@ -352,10 +352,12 @@ begin
   if not exists (
     select 1 from public.profiles p
     where p.id = v_user and p.is_banned = false
-      and (p.role in ('admin', 'leader', 'moderator') or exists (
-        select 1 from public.applications a
-        where a.user_id = p.id and a.status = 'approved'
-      ))
+      and (p.role in ('admin', 'leader', 'moderator') or (
+        select a.status from public.applications a
+        where a.user_id = p.id
+        order by a.created_at desc
+        limit 1
+      ) = 'approved')
   ) then
     raise exception 'account_not_approved';
   end if;
@@ -417,11 +419,13 @@ as $$
         and current_profile.is_banned = false
         and (
           current_profile.role in ('admin', 'leader', 'moderator')
-          or exists (
-            select 1 from public.applications current_application
+          or (
+            select current_application.status
+            from public.applications current_application
             where current_application.user_id = current_profile.id
-              and current_application.status = 'approved'
-          )
+            order by current_application.created_at desc
+            limit 1
+          ) = 'approved'
         )
     )
   order by a.total_seconds desc, p.nickname asc
@@ -754,10 +758,12 @@ returns boolean language sql stable security definer set search_path = public as
   select exists (
     select 1 from public.profiles p
     where p.id = (select auth.uid()) and p.is_banned = false
-      and (p.role in ('admin','leader','moderator') or exists (
-        select 1 from public.applications a
-        where a.user_id = p.id and a.status = 'approved'
-      ))
+      and (p.role in ('admin','leader','moderator') or (
+        select a.status from public.applications a
+        where a.user_id = p.id
+        order by a.created_at desc
+        limit 1
+      ) = 'approved')
   );
 $verceti_member$;
 revoke all on function public.is_verceti_member() from public;

@@ -47,9 +47,12 @@ begin
   if not exists (
     select 1 from public.profiles p
     where p.id = v_user and p.is_banned = false
-      and (p.role in ('admin', 'leader', 'moderator') or exists (
-        select 1 from public.applications a where a.user_id = p.id and a.status = 'approved'
-      ))
+      and (p.role in ('admin', 'leader', 'moderator') or (
+        select a.status from public.applications a
+        where a.user_id = p.id
+        order by a.created_at desc
+        limit 1
+      ) = 'approved')
   ) then
     raise exception 'account_not_approved';
   end if;
@@ -87,9 +90,12 @@ begin
   if not exists (
     select 1 from public.profiles p
     where p.id = v_user and p.is_banned = false
-      and (p.role in ('admin', 'leader', 'moderator') or exists (
-        select 1 from public.applications a where a.user_id = p.id and a.status = 'approved'
-      ))
+      and (p.role in ('admin', 'leader', 'moderator') or (
+        select a.status from public.applications a
+        where a.user_id = p.id
+        order by a.created_at desc
+        limit 1
+      ) = 'approved')
   ) then raise exception 'account_not_approved'; end if;
 
   perform pg_advisory_xact_lock(hashtextextended(v_user::text, 0));
