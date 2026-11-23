@@ -347,7 +347,7 @@ export default async function Home() {
                     </div>
                   </div>
                 );
-              })}}
+              })}
             </div>
           ) : (
             <div className="premium-notices-empty">
