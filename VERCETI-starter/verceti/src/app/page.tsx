@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { notices } from "@/lib/demo-data";
 import MenuBadges from "./MenuBadges";
 import NewsBell from "./NewsBell";
 import PinnedNewsCarousel from "./PinnedNewsCarousel";
@@ -96,6 +95,13 @@ export default async function Home() {
     .select("nickname, role")
     .eq("id", user.id)
     .maybeSingle();
+
+  const { data: recentNotifications } = await supabase
+    .from("notifications")
+    .select("id, title, message, type, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(3);
 
   const nickname =
     currentProfile?.nickname ||
@@ -308,9 +314,16 @@ export default async function Home() {
             </Link>
           </div>
 
-          {notices.length > 0 ? (
+          {recentNotifications && recentNotifications.length > 0 ? (
             <div className="premium-notices-list">
-              {notices.map((n, index) => (
+              {recentNotifications.map((n, index) => {
+                const kind = n.type === "warning" || n.type === "danger"
+                  ? "warning"
+                  : n.type === "success"
+                    ? "success"
+                    : "info";
+                const time = new Date(n.created_at).toLocaleString("uk-UA");
+                return (
                 <div
                   className={`premium-notice notice-type-${n.kind}`}
                   key={`${n.title}-${index}`}
@@ -325,14 +338,14 @@ export default async function Home() {
                     </div>
 
                     <div className="premium-notice-detail">
-                      {n.detail}
+                      {n.message}
                     </div>
 
                     <div className="premium-notice-time">
                       <span className="premium-notice-time-icon">
                         ◷
                       </span>
-                      {n.time}
+                      {time}
                     </div>
                   </div>
 
