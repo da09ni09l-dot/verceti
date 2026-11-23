@@ -18,6 +18,7 @@ import MediaRoom from "./MediaRoom";
 import ApplicationsSection from "./ApplicationsSection";
 import StatsSection from "./StatsSection";
 import ActivityTracker from "./ActivityTracker";
+import { createRewardPrize, deleteRewardPrize, spinRewards } from "./rewards-actions";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: {
@@ -463,6 +464,19 @@ export default async function PreviewSection({
     } else {
       newsItems = data ?? [];
     }
+  }
+
+  let rewardPrizes: { id: string; title: string; description: string; weight: number }[] = [];
+  let rewardError = false;
+  let canManageRewards = false;
+  if (section === "rewards") {
+    const { data: role } = await supabase.rpc("current_verceti_role");
+    canManageRewards = role === "admin" || role === "leader";
+    const { data, error } = await supabase.from("rewards_prizes")
+      .select("id, title, description, weight")
+      .order("created_at", { ascending: true });
+    rewardError = !!error;
+    rewardPrizes = data ?? [];
   }
 
   if (section === "rules") {
@@ -1086,6 +1100,63 @@ export default async function PreviewSection({
             <p className="page-note">
               Правила зберігаються в базі даних VERCETI.
             </p>
+          </>
+        ) : section === "rewards" ? (
+          <>
+            <h1>🎡 Рулетка та бонуси</h1>
+            <p className="muted">Спільна рулетка VERCETI — призи доступні всім учасникам.</p>
+            {status === "created" && <div className="panel" style={{ marginTop: 14 }}>Приз додано до загальної рулетки.</div>}
+            {status === "deleted" && <div className="panel" style={{ marginTop: 14 }}>Приз видалено.</div>}
+            {status === "won" && <div className="panel" style={{ marginTop: 14 }}>Оберт успішно зафіксовано в системі.</div>}
+            {status === "used" && <div className="panel" style={{ marginTop: 14 }}>Ти вже використав(ла) безкоштовний оберт сьогодні. Повертайся завтра!</div>}
+            {status === "empty" && <div className="panel" style={{ marginTop: 14 }}>Активних призів поки немає.</div>}
+            {status === "forbidden" && <div className="panel" style={{ marginTop: 14 }}>Керувати призами можуть лише адміністратор і лідер.</div>}
+            {(status === "invalid" || status === "error" || status === "spin-error") && <div className="panel" style={{ marginTop: 14 }}>Не вдалося виконати дію. Перевір дані та налаштування бази.</div>}
+            <div className="panel" style={{ marginTop: 20 }}>
+              <h2>Щоденний безкоштовний оберт</h2>
+              <p className="muted">Один оберт на день. Вибір призу та перевірка повторного оберту виконуються на сервері.</p>
+              <form action={spinRewards} style={{ marginTop: 14 }}>
+                <button className="btn" type="submit" disabled={rewardPrizes.length === 0} style={{ width: "100%" }}>🎡 Крутити рулетку</button>
+              </form>
+              <p className="page-note">Додаткові оберти за бали й тижневі нагороди підключимо після створення безпечного балансу балів.</p>
+            </div>
+            <div className="panel" style={{ marginTop: 20 }}>
+              <h2>Загальні призи</h2>
+              {rewardError ? <p className="muted">Не вдалося завантажити призи. Переконайся, що SQL-скрипт rewards.sql виконаний у Supabase.</p> : rewardPrizes.length === 0 ? <p className="muted">Призів поки немає.</p> : (
+                <div className="member-list" style={{ marginTop: 14 }}>
+                  {rewardPrizes.map((prize) => (
+                    <div className="member-row" key={prize.id} style={{ alignItems: "flex-start", flexWrap: "wrap" }}>
+                      <div style={{ flex: "1 1 220px" }}>
+                        <strong>{prize.title}</strong>
+                        {prize.description && <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>{prize.description}</p>}
+                        <p className="notice-time">Вага випадіння: {prize.weight}</p>
+                      </div>
+                      {canManageRewards && (
+                        <form action={deleteRewardPrize}>
+                          <input type="hidden" name="id" value={prize.id} />
+                          <button className="btn" type="submit" style={{ background: "#8f303f", borderColor: "#b94b5c" }}>Видалити</button>
+                        </form>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {canManageRewards && (
+              <div className="panel" style={{ marginTop: 20 }}>
+                <h2>Додати приз до загальної рулетки</h2>
+                <p className="muted">Доданий приз зможуть виграти всі користувачі. Вага визначає відносну ймовірність випадіння.</p>
+                <form action={createRewardPrize} className="member-list" style={{ marginTop: 14, gap: 10 }}>
+                  <label htmlFor="reward-title">Назва призу</label>
+                  <input id="reward-title" name="title" required maxLength={100} placeholder="Наприклад: 100 бонусних балів" />
+                  <label htmlFor="reward-description">Опис призу</label>
+                  <textarea id="reward-description" name="description" maxLength={500} rows={3} placeholder="Що отримує переможець?" />
+                  <label htmlFor="reward-weight">Вага випадіння (1–10000)</label>
+                  <input id="reward-weight" name="weight" type="number" min="1" max="10000" step="1" defaultValue="1" required />
+                  <button className="btn" type="submit">Додати приз</button>
+                </form>
+              </div>
+            )}
           </>
         ) : section === "tests" ? (
           <TestsSection isStaff={isStaff} />
