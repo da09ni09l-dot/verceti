@@ -128,10 +128,10 @@ export default async function PreviewSection({
   searchParams
 }: {
   params: Promise<{ section: string }>;
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   const { section } = await params;
-  const { status } = await searchParams;
+  const { status, q = "" } = await searchParams;
 
   const supabase = await createClient();
 
@@ -198,6 +198,11 @@ export default async function PreviewSection({
   }[] = [];
 
   let newsError = false;
+
+  let memberItems: { id: string; nickname: string; role: string; created_at: string }[] = [];
+  let membersError = false;
+  let eventItems: { id: string; title: string; content: string; event_date: string | null; created_at: string }[] = [];
+  let eventsError = false;
 
   let ruleItems: {
     id: string;
@@ -436,6 +441,42 @@ export default async function PreviewSection({
     }
   }
 
+  if (section === "members") {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, nickname, role, created_at")
+      .order("nickname", { ascending: true })
+      .limit(500);
+
+    if (error) {
+      console.error("VERCETI members loading error:", error.message);
+      membersError = true;
+    } else {
+      const normalizedQuery = q.trim().toLocaleLowerCase("uk-UA");
+      memberItems = (data ?? []).filter((member) =>
+        !normalizedQuery ||
+        member.nickname.toLocaleLowerCase("uk-UA").includes(normalizedQuery) ||
+        member.role.toLocaleLowerCase("uk-UA").includes(normalizedQuery)
+      );
+    }
+  }
+
+  if (section === "events") {
+    const { data, error } = await supabase
+      .from("news")
+      .select("id, title, content, event_date, created_at")
+      .eq("category", "event")
+      .order("event_date", { ascending: true, nullsFirst: false })
+      .limit(100);
+
+    if (error) {
+      console.error("VERCETI events loading error:", error.message);
+      eventsError = true;
+    } else {
+      eventItems = data ?? [];
+    }
+  }
+
   if (section === "notifications") {
     const { data, error } = await supabase
       .from("notifications")
@@ -610,6 +651,37 @@ export default async function PreviewSection({
           </>
         ) : section === "forms" ? (
           <ApplicationsSection status={status} />
+        ) : section === "members" ? (
+          <>
+            <h1>Учасники VERCETI</h1>
+            <p className="muted">Список активних профілів спільноти та їхні ролі.</p>
+            <form method="get" className="member-search-form" style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
+              <input name="q" type="search" defaultValue={q} placeholder="Пошук за нікнеймом або роллю" aria-label="Пошук учасників" style={{ flex: "1 1 240px" }} />
+              <button className="btn" type="submit">Знайти</button>
+              {q && <Link className="btn secondary" href="/preview/members">Скинути</Link>}
+            </form>
+            {membersError ? (
+              <div className="panel" style={{ marginTop: 16 }}>Не вдалося завантажити список учасників. Перевір доступ до профілів у Supabase.</div>
+            ) : (
+              <div className="member-list" style={{ marginTop: 18 }}>
+                <div className="panel" style={{ marginBottom: 12 }}>
+                  <strong>Усього у списку: {memberItems.length}</strong>
+                </div>
+                {memberItems.length === 0 ? (
+                  <div className="panel"><p className="muted">За цим запитом учасників не знайдено.</p></div>
+                ) : memberItems.map((member) => (
+                  <div className="member-row" key={member.id} style={{ gap: 12 }}>
+                    <div className="avatar">{member.nickname.slice(0, 1).toUpperCase()}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <strong style={{ overflowWrap: "anywhere" }}>{member.nickname}</strong>
+                      <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>У спільноті з {new Date(member.created_at).toLocaleDateString("uk-UA")}</div>
+                    </div>
+                    <span className={`role ${member.role === "admin" || member.role === "leader" ? "orange" : member.role === "moderator" ? "purple" : member.role === "senior" ? "blue" : member.role === "local" ? "green" : "muted"}`}>{({ admin: "АДМІН", leader: "ЗАСНОВНИК", moderator: "МОДЕРАТОР", senior: "СТАРШИЙ", local: "УЧАСНИК", junior: "МОЛОДШИЙ" } as Record<string, string>)[member.role] ?? member.role}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         ) : section === "stats" ? (
           <StatsSection
             totalMembers={stats.totalMembers}
@@ -627,6 +699,29 @@ export default async function PreviewSection({
             isStaff={isStaff}
             status={status}
           />
+        ) : section === "events" ? (
+          <>
+            <h1>Події VERCETI</h1>
+            <p className="muted">Календар оголошених подій спільноти. Події публікуються адміністрацією у новинах з категорією «Подія».</p>
+            {eventsError ? (
+              <div className="panel" style={{ marginTop: 20 }}>Не вдалося завантажити події. Перевір підключення до таблиці новин.</div>
+            ) : eventItems.length === 0 ? (
+              <div className="panel" style={{ marginTop: 20 }}>
+                <h2>Запланованих подій поки немає</h2>
+                <p className="muted">Коли адміністрація опублікує новину з категорією «Подія», вона з’явиться тут.</p>
+              </div>
+            ) : (
+              <div className="member-list" style={{ marginTop: 20 }}>
+                {eventItems.map((event) => (
+                  <article className="panel" key={event.id} style={{ marginBottom: 14 }}>
+                    <div className="eyebrow">{event.event_date ? new Date(event.event_date).toLocaleString("uk-UA", { dateStyle: "long", timeStyle: "short" }) : "ДАТУ НЕ ВКАЗАНО"}</div>
+                    <h2 style={{ marginTop: 8 }}>{event.title}</h2>
+                    <p className="muted" style={{ marginTop: 10, whiteSpace: "pre-wrap" }}>{event.content}</p>
+                  </article>
+                ))}
+              </div>
+            )}
+          </>
         ) : section === "notifications" ? (
           <>
             <h1>Сповіщення</h1>
@@ -905,6 +1000,63 @@ export default async function PreviewSection({
             <p className="page-note">
               Новини завантажуються з бази даних VERCETI.
             </p>
+          </>
+        ) : section === "settings" ? (
+          <>
+            <h1>Налаштування профілю</h1>
+            <p className="muted">Керуй власним нікнеймом і паролем облікового запису.</p>
+            <div className="panel" style={{ marginTop: 20 }}>
+              <h2>Особисті дані</h2>
+              <form action={async (formData: FormData) => {
+                "use server";
+                const nickname = String(formData.get("nickname") ?? "").trim();
+                if (!/^[a-zA-Z0-9_]{3,20}$/.test(nickname)) redirect("/preview/settings?status=nickname_error");
+                const client = await createClient();
+                const { data: { user: currentUser } } = await client.auth.getUser();
+                if (!currentUser) redirect("/login");
+                const { error } = await client.from("profiles").update({ nickname }).eq("id", currentUser.id);
+                if (error) {
+                  console.error("VERCETI nickname update error:", error.message);
+                  redirect("/preview/settings?status=save_error");
+                }
+                redirect("/preview/settings?status=saved");
+              }} className="member-list" style={{ marginTop: 14, gap: 10 }}>
+                <label htmlFor="settings-nickname">Нікнейм</label>
+                <input id="settings-nickname" name="nickname" required minLength={3} maxLength={20} pattern="[A-Za-z0-9_]+" defaultValue={profile?.nickname ?? ""} />
+                <p className="page-note">3–20 символів: латинські літери, цифри та _</p>
+                <button className="btn" type="submit">Зберегти нікнейм</button>
+              </form>
+              {status === "saved" && <p className="page-note">Нікнейм успішно оновлено.</p>}
+              {status === "nickname_error" && <p className="page-note">Перевір формат нікнейму: 3–20 дозволених символів.</p>}
+              {status === "save_error" && <p className="page-note">Не вдалося зберегти нікнейм. Можливо, він уже зайнятий.</p>}
+            </div>
+            <div className="panel" style={{ marginTop: 18 }}>
+              <h2>Безпека акаунта</h2>
+              <form action={async (formData: FormData) => {
+                "use server";
+                const password = String(formData.get("password") ?? "");
+                const confirmation = String(formData.get("password_confirmation") ?? "");
+                if (password.length < 8 || password !== confirmation) redirect("/preview/settings?status=password_error");
+                const client = await createClient();
+                const { data: { user: currentUser } } = await client.auth.getUser();
+                if (!currentUser) redirect("/login");
+                const { error } = await client.auth.updateUser({ password });
+                if (error) {
+                  console.error("VERCETI password update error:", error.message);
+                  redirect("/preview/settings?status=password_save_error");
+                }
+                redirect("/preview/settings?status=password_saved");
+              }} className="member-list" style={{ marginTop: 14, gap: 10 }}>
+                <label htmlFor="settings-password">Новий пароль</label>
+                <input id="settings-password" name="password" type="password" required minLength={8} autoComplete="new-password" />
+                <label htmlFor="settings-password-confirmation">Повторити новий пароль</label>
+                <input id="settings-password-confirmation" name="password_confirmation" type="password" required minLength={8} autoComplete="new-password" />
+                <button className="btn" type="submit">Оновити пароль</button>
+              </form>
+              {status === "password_saved" && <p className="page-note">Пароль успішно оновлено.</p>}
+              {status === "password_error" && <p className="page-note">Паролі мають збігатися та містити щонайменше 8 символів.</p>}
+              {status === "password_save_error" && <p className="page-note">Не вдалося оновити пароль. Спробуй ще раз.</p>}
+            </div>
           </>
         ) : section === "rules" ? (
           <>
