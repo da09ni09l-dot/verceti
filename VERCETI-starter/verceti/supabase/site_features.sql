@@ -311,6 +311,9 @@ alter table public.member_activity enable row level security;
 drop policy if exists "Members read own activity" on public.member_activity;
 create policy "Members read own activity" on public.member_activity
 for select to authenticated using (user_id = (select auth.uid()));
+drop policy if exists "Staff read all member activity" on public.member_activity;
+create policy "Staff read all member activity" on public.member_activity
+for select to authenticated using (public.is_verceti_staff());
 
 create or replace function public.add_activity_seconds(seconds_to_add integer)
 returns void
@@ -529,6 +532,26 @@ using (
   bucket_id = 'verceti-media'
   and public.is_verceti_staff()
 );
+
+-- Realtime publication for live chat and live unread counters.
+do $
+begin
+  alter publication supabase_realtime add table public.direct_messages;
+exception when duplicate_object then
+  null;
+when undefined_object then
+  null;
+end;
+$;
+do $
+begin
+  alter publication supabase_realtime add table public.notifications;
+exception when duplicate_object then
+  null;
+when undefined_object then
+  null;
+end;
+$;
 
 -- Realtime publication for live chat (ignore if already registered).
 do $$
