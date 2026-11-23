@@ -4,7 +4,7 @@ import TestsSection from "./TestsSection";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "../../logout/actions";
-import { createNews, deleteNews } from "./actions";
+import { createNews, deleteNews } from "../../admin/actions";
 import {
   createRule,
   updateRule,
