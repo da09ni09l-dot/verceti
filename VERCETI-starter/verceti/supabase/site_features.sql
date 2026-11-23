@@ -1,6 +1,6 @@
 -- =========================================================
 -- VERCETI | Missing application feature tables and policies
--- Run AFTER schema.sql and profile_access_patch.sql.
+-- Run AFTER schema.sql, profile_access_patch.sql and rewards.sql.
 -- Safe to re-run on an existing installation.
 -- =========================================================
 
