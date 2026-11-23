@@ -14,7 +14,6 @@ import SectionNavigation from "./SectionNavigation";
 import NotificationBell from "./NotificationBell";
 import ChatRoom from "./ChatRoom";
 import VoiceRoom from "./VoiceRoom";
-import MusicRoom from "./MusicRoom";
 import MediaRoom from "./MediaRoom";
 import ApplicationsSection from "./ApplicationsSection";
 import StatsSection from "./StatsSection";
