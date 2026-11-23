@@ -31,6 +31,12 @@ export default function PinnedNewsCarousel({
   if (news.length === 0) return null;
 
   const current = news[activeIndex];
+  const categoryLabels: Record<string, string> = {
+    announcement: "ОГОЛОШЕННЯ",
+    event: "ПОДІЯ",
+    update: "ОНОВЛЕННЯ",
+    important: "ВАЖЛИВО"
+  };
 
   function previous() {
     setActiveIndex((current) =>
@@ -58,7 +64,7 @@ export default function PinnedNewsCarousel({
 
       <article key={current.id} className="hero-news-content">
         <span className="hero-category">
-          {current.category || "ОГОЛОШЕННЯ"}
+          {categoryLabels[current.category] ?? current.category.toUpperCase()}
         </span>
 
         <h1>{current.title}</h1>
