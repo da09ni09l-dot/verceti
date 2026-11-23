@@ -47,7 +47,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isLogin = request.nextUrl.pathname === "/login";
-  const isPublicSupport = request.nextUrl.pathname === "/support";
+  const isPublicSupport = request.nextUrl.pathname === "/support" || request.nextUrl.pathname.startsWith("/support/chat");
 
   if (!user && !isLogin && !isPublicSupport && request.nextUrl.pathname !== "/setup") {
     return NextResponse.redirect(new URL("/login", request.url));
