@@ -114,7 +114,7 @@ export default function ChatRoom() {
 
   const resolveMediaContent = useCallback(async (content: string) => {
     const media = parseMessage(content);
-    if (!media?.url) return content;
+    if (!media?.url || typeof media.url !== "string") return content;
 
     let objectPath = media.url;
     const publicPrefix = "/storage/v1/object/public/chat-media/";
