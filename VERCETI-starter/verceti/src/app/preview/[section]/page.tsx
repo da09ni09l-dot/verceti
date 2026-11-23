@@ -993,6 +993,7 @@ export default async function PreviewSection({
                   >
                     <option value="announcement">Оголошення</option>
                     <option value="event">Подія</option>
+                    <option value="update">Оновлення</option>
                     <option value="important">Важливо</option>
                   </select>
 
