@@ -1417,17 +1417,6 @@ export default async function PreviewSection({
                 </div>
               </div>
             )}
-          </> : null
-            <p className="muted">
-              Облік фактичного активного часу учасників.
-            </p>
-
-            <div className="panel" style={{ marginTop: 20 }}>
-              <strong>Облік активного часу</strong>
-              <p className="muted">
-                Час зараховується, поки сторінка відкрита й активна.
-              </p>
-            </div>
           </>
         ) : (
           <>
