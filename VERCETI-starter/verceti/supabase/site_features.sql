@@ -331,7 +331,7 @@ returns void
 language plpgsql
 security definer
 set search_path = public
-as $
+as $$
 declare
   v_user uuid := auth.uid();
   v_last_update timestamptz;
@@ -387,7 +387,7 @@ language sql
 stable
 security definer
 set search_path = public
-as $
+as $$
   select p.id, p.nickname, p.role, a.total_seconds
   from public.member_activity a
   join public.profiles p on p.id = a.user_id
@@ -618,7 +618,7 @@ using (
 );
 
 -- Realtime publication for live chat and live unread counters.
-do $
+do $$
 begin
   alter publication supabase_realtime add table public.direct_messages;
 exception when duplicate_object then
@@ -627,7 +627,7 @@ when undefined_object then
   null;
 end;
 $$;
-do $
+do $$
 begin
   alter publication supabase_realtime add table public.notifications;
 exception when duplicate_object then
