@@ -2283,3 +2283,131 @@ td {
     font-size: 12px;
   }
 }
+
+
+/* DESIGN PREVIEW — TOP 3 PODIUM */
+.ranking-member.ranking-place-1,
+.ranking-member.ranking-place-2,
+.ranking-member.ranking-place-3 {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 78px;
+  margin: 11px 0;
+  padding: 13px 15px;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.ranking-member.ranking-place-1::before,
+.ranking-member.ranking-place-2::before,
+.ranking-member.ranking-place-3::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ranking-member.ranking-place-1 {
+  border-color: rgba(255, 205, 93, .55);
+  background: linear-gradient(105deg, rgba(130, 88, 25, .34), rgba(255, 255, 255, .025));
+  box-shadow: 0 0 24px rgba(255, 190, 55, .10), inset 0 0 20px rgba(255, 190, 55, .045);
+}
+.ranking-member.ranking-place-1::before {
+  background: radial-gradient(ellipse at 0% 50%, rgba(255, 193, 65, .20), transparent 68%);
+}
+.ranking-member.ranking-place-1 .ranking-position {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border: 1px solid rgba(255, 211, 105, .75);
+  border-radius: 14px;
+  color: #ffe3a0;
+  font-size: 20px;
+  font-weight: 900;
+  background: linear-gradient(145deg, #79551d, #342512);
+  box-shadow: 0 0 18px rgba(255, 190, 55, .20);
+}
+.ranking-member.ranking-place-1 .avatar {
+  border: 1px solid rgba(255, 211, 105, .65);
+  background: linear-gradient(135deg, #d9a83e, #694516);
+  color: #fff3ce;
+  box-shadow: 0 0 16px rgba(255, 190, 55, .20);
+}
+.ranking-member.ranking-place-1 .member-name { color: #ffe3a0; font-size: 13px; }
+.ranking-member.ranking-place-1 .role { color: #e6b957; }
+
+.ranking-member.ranking-place-2 {
+  border-color: rgba(205, 215, 235, .42);
+  background: linear-gradient(105deg, rgba(105, 115, 135, .27), rgba(255, 255, 255, .025));
+  box-shadow: 0 0 20px rgba(190, 205, 230, .07);
+}
+.ranking-member.ranking-place-2::before {
+  background: radial-gradient(ellipse at 0% 50%, rgba(190, 205, 230, .16), transparent 68%);
+}
+.ranking-member.ranking-place-2 .ranking-position {
+  width: 45px;
+  height: 45px;
+  min-width: 45px;
+  border: 1px solid rgba(205, 215, 235, .6);
+  border-radius: 13px;
+  color: #e3eaf7;
+  font-size: 19px;
+  font-weight: 900;
+  background: linear-gradient(145deg, #596477, #252c3b);
+}
+.ranking-member.ranking-place-2 .avatar {
+  border: 1px solid rgba(205, 215, 235, .5);
+  background: linear-gradient(135deg, #9aa8bf, #465267);
+  color: #f3f6fc;
+}
+.ranking-member.ranking-place-2 .member-name { color: #e3e9f5; }
+.ranking-member.ranking-place-2 .role { color: #b9c5d9; }
+
+.ranking-member.ranking-place-3 {
+  border-color: rgba(205, 139, 91, .42);
+  background: linear-gradient(105deg, rgba(105, 57, 35, .27), rgba(255, 255, 255, .025));
+  box-shadow: 0 0 20px rgba(190, 112, 63, .07);
+}
+.ranking-member.ranking-place-3::before {
+  background: radial-gradient(ellipse at 0% 50%, rgba(190, 112, 63, .16), transparent 68%);
+}
+.ranking-member.ranking-place-3 .ranking-position {
+  width: 45px;
+  height: 45px;
+  min-width: 45px;
+  border: 1px solid rgba(205, 139, 91, .6);
+  border-radius: 13px;
+  color: #f0c3a3;
+  font-size: 19px;
+  font-weight: 900;
+  background: linear-gradient(145deg, #70452f, #302019);
+}
+.ranking-member.ranking-place-3 .avatar {
+  border: 1px solid rgba(205, 139, 91, .5);
+  background: linear-gradient(135deg, #c78358, #653b28);
+  color: #fff0e5;
+}
+.ranking-member.ranking-place-3 .member-name { color: #f0c3a3; }
+.ranking-member.ranking-place-3 .role { color: #d6a486; }
+
+.ranking-member.ranking-place-1:hover,
+.ranking-member.ranking-place-2:hover,
+.ranking-member.ranking-place-3:hover {
+  transform: translateY(-2px);
+}
+
+@media (max-width: 480px) {
+  .ranking-member.ranking-place-1,
+  .ranking-member.ranking-place-2,
+  .ranking-member.ranking-place-3 {
+    gap: 10px;
+    min-height: 70px;
+    padding: 11px;
+  }
+}
