@@ -579,7 +579,7 @@ export default async function PreviewSection({
             <p className="muted">
               Музичний простір спільноти та список відтворення.
             </p>
-            <MusicRoom />
+            {/* MusicRoom is mounted globally in the root layout to preserve playback. */}
           </>
         ) : section === "media" ? (
           <>
