@@ -2557,3 +2557,21 @@ td {
     font-size: 13px;
   }
 }
+
+
+/* Wide desktop workspace layout shared by all internal sections */
+@media (min-width: 761px) {
+  .login-wrap:has(.workspace-card) {
+    width: 100%;
+    min-height: 100vh;
+    padding: 32px clamp(24px, 4vw, 72px);
+    place-items: start center;
+  }
+
+  .login-card.workspace-card {
+    width: 100%;
+    max-width: min(1600px, 100%);
+    min-width: 0;
+    padding: clamp(26px, 3vw, 46px);
+  }
+}
