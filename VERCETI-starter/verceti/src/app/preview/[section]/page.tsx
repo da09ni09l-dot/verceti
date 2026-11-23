@@ -1,3 +1,4 @@
+import Link from "next/link";
 
 import TestsSection from "./TestsSection";
 import { redirect } from "next/navigation";
