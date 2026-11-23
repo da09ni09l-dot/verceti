@@ -19,12 +19,12 @@ const statusLabels: Record<string, string> = {
 };
 
 const roleLabels: Record<string, string> = {
-  junior: "Junior",
-  local: "Local",
-  senior: "Senior",
-  moderator: "Moderator",
-  leader: "Leader",
-  admin: "Admin",
+  junior: "Молодший учасник",
+  local: "Учасник",
+  senior: "Старший учасник",
+  moderator: "Модератор",
+  leader: "Лідер",
+  admin: "Адміністратор",
 };
 
 export default async function ApplicationsSection({
@@ -591,11 +591,11 @@ export default async function ApplicationsSection({
                         <label>Роль після схвалення</label>
                         <select name="assigned_role" defaultValue="">
                           <option value="">Не змінювати роль</option>
-                          <option value="junior">Junior</option>
-                          <option value="local">Local</option>
-                          <option value="senior">Senior</option>
-                          <option value="moderator">Moderator</option>
-                          <option value="leader">Leader</option>
+                          <option value="junior">Молодший учасник</option>
+                          <option value="local">Учасник</option>
+                          <option value="senior">Старший учасник</option>
+                          <option value="moderator">Модератор</option>
+                          <option value="leader">Лідер</option>
                         </select>
 
                         <button className="btn" type="submit">
