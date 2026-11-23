@@ -39,6 +39,13 @@ type StatsSectionProps = {
   disciplinaryActionsError: boolean;
   disciplinaryMembers: DisciplinaryMember[];
   disciplinaryMembersError: boolean;
+  activityRanking: {
+    user_id: string;
+    nickname: string;
+    role: string;
+    total_seconds: number;
+  }[];
+  activityRankingError: boolean;
   isStaff: boolean;
   status?: string;
 };
@@ -66,6 +73,8 @@ export default function StatsSection({
   disciplinaryActionsError,
   disciplinaryMembers,
   disciplinaryMembersError,
+  activityRanking,
+  activityRankingError,
   isStaff,
   status
 }: StatsSectionProps) {
@@ -120,6 +129,34 @@ export default function StatsSection({
           <div className="muted">Повідомлення за 7 днів</div>
           <h2>{chatMessages7Days}</h2>
         </div>
+      </div>
+
+      <div className="panel" style={{ marginTop: 24 }}>
+        <h2>{isStaff ? "Рейтинг активності" : "Твоя активність"}</h2>
+        {activityRankingError ? (
+          <p className="muted">Не вдалося завантажити рейтинг активності.</p>
+        ) : activityRanking.length === 0 ? (
+          <p className="muted">Рейтинг почне формуватися після накопичення активного часу.</p>
+        ) : (
+          <div className="member-list" style={{ marginTop: 14 }}>
+            {activityRanking.map((member, index) => {
+              const hours = Math.floor(member.total_seconds / 3600);
+              const minutes = Math.floor((member.total_seconds % 3600) / 60);
+              return (
+                <div className="member-row" key={member.user_id}>
+                  <span className="tag">{isStaff ? `#${index + 1}` : "ЧАС"}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <strong>{member.nickname}</strong>
+                    <p className="muted" style={{ fontSize: 11 }}>{roleLabels[member.role] ?? member.role}</p>
+                  </div>
+                  <strong style={{ whiteSpace: "nowrap" }}>
+                    {hours > 0 ? `${hours} год ` : ""}{minutes} хв
+                  </strong>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="panel" style={{ marginTop: 24 }}>
