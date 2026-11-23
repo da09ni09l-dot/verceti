@@ -331,22 +331,48 @@ returns void
 language plpgsql
 security definer
 set search_path = public
-as $$
+as $
+declare
+  v_user uuid := auth.uid();
+  v_last_update timestamptz;
+  v_elapsed integer;
 begin
-  if auth.uid() is null then
+  if v_user is null then
     raise exception 'authentication_required';
   end if;
   if seconds_to_add is null or seconds_to_add < 1 or seconds_to_add > 60 then
     raise exception 'invalid_activity_increment';
   end if;
 
-  insert into public.member_activity(user_id, total_seconds, updated_at)
-  values (auth.uid(), seconds_to_add, now())
-  on conflict (user_id) do update
-    set total_seconds = public.member_activity.total_seconds + excluded.total_seconds,
-        updated_at = now();
+  -- Serialize updates and calculate time on the server, not from client input.
+  perform pg_advisory_xact_lock(hashtextextended(v_user::text, 0));
+
+  select updated_at
+  into v_last_update
+  from public.member_activity
+  where user_id = v_user
+  for update;
+
+  if not found then
+    insert into public.member_activity(user_id, total_seconds, updated_at)
+    values (v_user, 0, clock_timestamp())
+    on conflict (user_id) do nothing;
+    return;
+  end if;
+
+  v_elapsed := floor(extract(epoch from (clock_timestamp() - v_last_update)))::integer;
+
+  -- Ignore rapid/replayed calls and cap long idle gaps.
+  if v_elapsed < 20 then
+    return;
+  end if;
+
+  update public.member_activity
+  set total_seconds = total_seconds + least(v_elapsed, 60),
+      updated_at = clock_timestamp()
+  where user_id = v_user;
 end;
-$$;
+$;
 revoke all on function public.add_activity_seconds(integer) from public;
 grant execute on function public.add_activity_seconds(integer) to authenticated;
 
