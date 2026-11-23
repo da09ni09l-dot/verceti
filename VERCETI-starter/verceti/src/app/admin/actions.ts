@@ -332,6 +332,11 @@ export async function deleteMember(formData: FormData) {
       .from("tests")
       .update({ created_by: null })
       .eq("created_by", memberId),
+
+    admin
+      .from("rewards_prizes")
+      .update({ created_by: null })
+      .eq("created_by", memberId),
   ];
 
   const detachResults = await Promise.all(detachOperations);
