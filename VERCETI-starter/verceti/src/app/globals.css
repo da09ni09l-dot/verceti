@@ -2647,3 +2647,19 @@ td {
     padding-left: 22px;
   }
 }
+
+
+/* Voice room layout collapses to a single column on tablets and phones. */
+.voice-room-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .voice-room-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
