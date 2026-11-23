@@ -202,6 +202,8 @@ export default async function PreviewSection({
 
   let memberItems: { id: string; nickname: string; role: string; created_at: string; is_banned: boolean }[] = [];
   let membersError = false;
+  let activityItems: { user_id: string; nickname: string; role: string; total_seconds: number }[] = [];
+  let activityError = false;
   let eventItems: { id: string; title: string; content: string; event_date: string | null; created_at: string }[] = [];
   let eventsError = false;
 
@@ -460,6 +462,47 @@ export default async function PreviewSection({
         member.nickname.toLocaleLowerCase("uk-UA").includes(normalizedQuery) ||
         member.role.toLocaleLowerCase("uk-UA").includes(normalizedQuery)
       );
+    }
+  }
+
+  if (section === "activity") {
+    const { data, error } = await supabase
+      .from("member_activity")
+      .select("user_id, total_seconds")
+      .order("total_seconds", { ascending: false })
+      .limit(isStaff ? 100 : 1);
+
+    if (error) {
+      console.error("VERCETI activity loading error:", error.message);
+      activityError = true;
+    } else if (data && data.length > 0) {
+      const userIds = data.map((item) => item.user_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, nickname, role, is_banned")
+        .in("id", userIds);
+
+      if (profilesError) {
+        console.error("VERCETI activity profiles loading error:", profilesError.message);
+        activityError = true;
+      } else {
+        const profilesById = new Map(
+          (profilesData ?? [])
+            .filter((item) => !item.is_banned)
+            .map((item) => [item.id, item])
+        );
+        activityItems = data
+          .filter((item) => profilesById.has(item.user_id))
+          .map((item) => {
+            const member = profilesById.get(item.user_id)!;
+            return {
+              user_id: item.user_id,
+              nickname: member.nickname,
+              role: member.role,
+              total_seconds: Number(item.total_seconds)
+            };
+          });
+      }
     }
   }
 
@@ -1336,6 +1379,45 @@ export default async function PreviewSection({
         ) : section === "activity" ? (
           <>
             <h1>Онлайн-активність</h1>
+            <p className="muted">
+              Облік часу, коли сторінка VERCETI відкрита та активна.
+            </p>
+            {activityError ? (
+              <div className="panel" style={{ marginTop: 20 }}>
+                Не вдалося завантажити статистику активності. Перевір, чи виконана міграція site_features.sql у Supabase.
+              </div>
+            ) : activityItems.length === 0 ? (
+              <div className="panel" style={{ marginTop: 20 }}>
+                Поки немає накопичених даних. Час почне рахуватися під час активного перебування на сторінках спільноти.
+              </div>
+            ) : (
+              <div className="panel" style={{ marginTop: 20 }}>
+                <h2>{isStaff ? "Рейтинг активності учасників" : "Твоя активність"}</h2>
+                <p className="muted" style={{ fontSize: 12 }}>
+                  {isStaff ? "Топ учасників за сумарним активним часом." : "Твій накопичений активний час."}
+                </p>
+                <div className="member-list" style={{ marginTop: 14 }}>
+                  {activityItems.map((item, index) => {
+                    const hours = Math.floor(item.total_seconds / 3600);
+                    const minutes = Math.floor((item.total_seconds % 3600) / 60);
+                    const seconds = item.total_seconds % 60;
+                    return (
+                      <div className="member-row" key={item.user_id}>
+                        <span className="tag">{isStaff ? `#${index + 1}` : "ЧАС"}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <strong>{item.nickname}</strong>
+                          <p className="muted" style={{ fontSize: 11 }}>{item.role}</p>
+                        </div>
+                        <strong style={{ whiteSpace: "nowrap" }}>
+                          {hours > 0 ? `${hours} год ` : ""}{minutes} хв {seconds} с
+                        </strong>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </> : null
             <p className="muted">
               Облік фактичного активного часу учасників.
             </p>
