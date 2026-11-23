@@ -1356,6 +1356,33 @@ textarea::placeholder {
   box-shadow: 0 20px 70px #0008;
 }
 
+/* Desktop layout for the testing workspace */
+@media (min-width: 900px) {
+  .login-wrap.tests-page-wrap {
+    place-items: start center;
+    padding: 32px clamp(24px, 4vw, 64px);
+  }
+
+  .login-card.tests-page-card {
+    width: 100%;
+    max-width: min(1480px, 100%);
+    padding: clamp(28px, 3vw, 44px);
+  }
+
+  .tests-page-card > .panel {
+    width: 100%;
+  }
+
+  .tests-page-card .member-row {
+    padding: 16px 18px;
+    gap: 18px;
+  }
+
+  .tests-page-card .panel {
+    padding: 24px;
+  }
+}
+
 /* =========================================================
    TABLES
 ========================================================= */
