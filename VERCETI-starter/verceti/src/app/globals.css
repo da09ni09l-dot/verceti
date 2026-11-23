@@ -2026,3 +2026,85 @@ td {
     transform: none;
   }
 }
+
+/* FIX: prevent member icons and avatars from being squeezed */
+.ranking-position {
+  flex: 0 0 46px;
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+}
+
+.ranking-medal {
+  display: block;
+  flex: none;
+  font-size: 23px;
+  line-height: 1;
+}
+
+.ranking-member-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ranking-member-activity,
+.ranking-arrow {
+  flex: 0 0 auto;
+}
+
+.online-member-left {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.online-member-avatar {
+  flex: 0 0 44px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  font-size: 16px;
+}
+
+.online-avatar-status {
+  width: 12px;
+  height: 12px;
+  flex: none;
+}
+
+.online-member-role {
+  flex: 0 0 auto;
+  max-width: 125px;
+  white-space: normal;
+}
+
+@media (min-width: 761px) {
+  .top-ranking-row {
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .online-member-row {
+    gap: 14px;
+    padding: 12px;
+  }
+}
+
+@media (max-width: 1100px) and (min-width: 761px) {
+  .ranking-position {
+    flex-basis: 42px;
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+  }
+
+  .ranking-member-activity span {
+    font-size: 7px;
+  }
+
+  .online-member-role {
+    max-width: 95px;
+    font-size: 7px;
+  }
+}
