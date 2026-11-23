@@ -2,29 +2,30 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { members, notices } from "@/lib/demo-data";
+import { notices } from "@/lib/demo-data";
 import MenuBadges from "./MenuBadges";
 import NewsBell from "./NewsBell";
 import PinnedNewsCarousel from "./PinnedNewsCarousel";
+import MembersOnlinePanel from "./MembersOnlinePanel";
 import { logout } from "./logout/actions";
 
-function Stat({
-  label,
-  value,
-  note
-}: {
-  label: string;
-  value: string;
-  note: string;
-}) {
-  return (
-    <div className="stat-card">
-      <div className="stat-label">{label}</div>
-      <div className="stat-value">{value}</div>
-      <div className="stat-note">{note}</div>
-    </div>
-  );
-}
+const roleLabels: Record<string, string> = {
+  leader: "ЗАСНОВНИК",
+  admin: "АДМІНІСТРАТОР",
+  moderator: "МОДЕРАТОР",
+  senior: "СТАРШИЙ УЧАСНИК",
+  local: "УЧАСНИК",
+  junior: "МОЛОДШИЙ УЧАСНИК"
+};
+
+const roleColors: Record<string, string> = {
+  leader: "orange",
+  admin: "orange",
+  moderator: "purple",
+  senior: "blue",
+  local: "green",
+  junior: "muted"
+};
 
 export default async function Home() {
   const supabase = await createClient();
@@ -70,6 +71,36 @@ export default async function Home() {
     .or(`show_until.is.null,show_until.gt.${now}`)
     .order("created_at", { ascending: false });
 
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, nickname, role, is_banned")
+    .order("created_at", { ascending: true });
+
+  const { data: currentProfile } = await supabase
+    .from("profiles")
+    .select("nickname, role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const nickname =
+    currentProfile?.nickname ||
+    user.email?.split("@")[0] ||
+    "Учасник";
+
+  const currentRole = currentProfile?.role ?? "local";
+  const roleLabel =
+    roleLabels[currentRole] ?? currentRole.toUpperCase();
+  const roleColor = roleColors[currentRole] ?? "muted";
+
+  const activeMembers = (profiles ?? []).filter(
+    (member) => !member.is_banned
+  );
+
+  const { count: pendingApplications } = await supabase
+    .from("applications")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "pending");
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -98,7 +129,7 @@ export default async function Home() {
           <br />
           Доступ лише за запрошенням.
           <br />
-          Демо-макет · версія 0.1
+          VERCETI · PRIVATE COMMUNITY
         </div>
       </aside>
 
@@ -111,10 +142,14 @@ export default async function Home() {
 
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div className="user-pill">
-              <div className="avatar">A</div>
+              <div className="avatar">
+                {nickname.slice(0, 1).toUpperCase()}
+              </div>
               <div>
-                <strong>Засновник</strong>
-                <div className="role orange">АДМІН</div>
+                <strong>{nickname}</strong>
+                <div className={`role ${roleColor}`}>
+                  {roleLabel}
+                </div>
               </div>
             </div>
 
@@ -152,64 +187,31 @@ export default async function Home() {
         </section>
 
         <section className="grid stats-grid">
-          <Stat label="Учасники" value="128" note="Демонстраційне значення" />
-          <Stat label="Зараз онлайн" value="24" note="Не є реальним лічильником" />
-          <Stat label="Анкети на перевірці" value="7" note="Приклад для макета" />
-          <Stat label="Попередження" value="12" note="Демонстраційна статистика" />
+          <div className="stat-card">
+            <div className="stat-label">Учасники</div>
+            <div className="stat-value">{activeMembers.length}</div>
+            <div className="stat-note">Зареєстровані учасники</div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-label">Анкети на перевірці</div>
+            <div className="stat-value">{pendingApplications ?? 0}</div>
+            <div className="stat-note">Очікують розгляду</div>
+          </div>
         </section>
 
         <section className="grid content-grid">
-          <div className="panel">
-            <div className="panel-head">
-              <div>
-                <h2>Учасники спільноти</h2>
-                <div className="panel-sub">
-                  Приклад списку та кольорів ролей
-                </div>
-              </div>
-              <span className="tag">КОМАНДА</span>
-            </div>
-
-            <div className="member-list">
-              {members.map((m) => (
-                <div className="member-row" key={m.name}>
-                  <div className="member-left">
-                    <div className="member-avatar">
-                      {m.name.slice(0, 1)}
-                    </div>
-                    <div>
-                      <div className="member-name">{m.name}</div>
-                      <div className="member-meta">
-                        {m.status === "online" ? (
-                          <>
-                            <span className="status-dot" />
-                            Онлайн
-                          </>
-                        ) : m.status === "away" ? (
-                          "Неактивний"
-                        ) : (
-                          "Офлайн"
-                        )}
-                        {" · "}
-                        {m.hours}
-                      </div>
-                    </div>
-                  </div>
-                  <span className={`role ${m.color}`}>{m.role}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <MembersOnlinePanel members={profiles ?? []} />
 
           <div className="panel">
             <div className="panel-head">
               <div>
                 <h2>Останні сповіщення</h2>
                 <div className="panel-sub">
-                  Приклад центру сповіщень
+                  Останні події спільноти
                 </div>
               </div>
-              <span className="tag">3 НОВІ</span>
+              <span className="tag">СПОВІЩЕННЯ</span>
             </div>
 
             <div className="notice-list">
@@ -226,12 +228,6 @@ export default async function Home() {
             </div>
           </div>
         </section>
-
-        <p className="page-note">
-          Увага: імена, цифри, онлайн-статуси та сповіщення на цій сторінці
-          вигадані для демонстрації. Реальні дані з&apos;являться після
-          підключення відповідних функцій.
-        </p>
       </main>
     </div>
   );
