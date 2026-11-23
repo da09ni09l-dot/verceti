@@ -22,6 +22,15 @@ function formatTime(totalSeconds: number) {
 
 const medals = ["🥇", "🥈", "🥉"];
 
+const roleLabels: Record<string, string> = {
+  admin: "АДМІНІСТРАТОР",
+  leader: "ЛІДЕР",
+  moderator: "МОДЕРАТОР",
+  senior: "СТАРШИЙ УЧАСНИК",
+  local: "УЧАСНИК",
+  junior: "МОЛОДШИЙ УЧАСНИК"
+};
+
 export default async function TopMembersPanel() {
   const supabase = await createClient();
 
@@ -77,7 +86,7 @@ export default async function TopMembersPanel() {
                 </div>
 
                 <div className="ranking-member-role">
-                  {member.role.toUpperCase()}
+                  {roleLabels[member.role] ?? "УЧАСНИК"}
                 </div>
               </div>
 
