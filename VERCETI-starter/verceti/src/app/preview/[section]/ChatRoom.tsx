@@ -577,10 +577,12 @@ export default function ChatRoom() {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "minmax(180px, 230px) minmax(0, 1fr)",
+        gridTemplateColumns: "minmax(200px, 260px) minmax(0, 1fr)",
+        width: "100%",
+        minWidth: 0,
         gap: 16,
         marginTop: 24,
-        alignItems: "start"
+        alignItems: "stretch"
       }}
     >
       <aside
