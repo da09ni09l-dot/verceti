@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { members, notices } from "@/lib/demo-data";
 import MenuBadges from "./MenuBadges";
+import NewsBell from "./NewsBell";
 import { logout } from "./logout/actions";
 
 function Stat({
@@ -58,12 +59,33 @@ export default async function Home() {
     }
   }
 
+  const now = new Date().toISOString();
+
+  const { data: pinnedNews } = await supabase
+    .from("news")
+    .select("id, title, content, category, show_from, show_until")
+    .eq("is_pinned", true)
+    .or(`show_from.is.null,show_from.lte.${now}`)
+    .or(`show_until.is.null,show_until.gt.${now}`)
+    .order("created_at", { ascending: false });
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand">
-          VERCETI
-          <small>PRIVATE COMMUNITY</small>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 10
+          }}
+        >
+          <div className="brand">
+            VERCETI
+            <small>PRIVATE COMMUNITY</small>
+          </div>
+
+          <NewsBell userId={user.id} />
         </div>
 
         <MenuBadges userId={user.id} />
@@ -105,15 +127,44 @@ export default async function Home() {
 
         <section className="panel welcome">
           <div className="eyebrow">Ласкаво просимо до VERCETI</div>
-          <h1>Твоя спільнота. Твої правила.</h1>
-          <p>
-            Це перша демонстраційна основа сайту. Тут ми перевіряємо стиль,
-            структуру меню та розташування основних блоків перед підключенням
-            реальних акаунтів і функцій.
-          </p>
+
+          {pinnedNews && pinnedNews.length > 0 ? (
+            <div style={{ marginTop: 20 }}>
+              <div className="eyebrow">ЗАКРІПЛЕНІ НОВИНИ</div>
+
+              {pinnedNews.map((news) => (
+                <article
+                  key={news.id}
+                  style={{
+                    padding: "18px 0",
+                    borderBottom: "1px solid rgba(255,255,255,0.08)"
+                  }}
+                >
+                  <h1>{news.title}</h1>
+                  <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.7 }}>
+                    {news.content}
+                  </p>
+                </article>
+              ))}
+
+              <div className="welcome-actions">
+                <Link className="btn" href="/news">
+                  Усі новини
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <>
+              <h1>Твоя спільнота. Твої правила.</h1>
+              <p>
+                Тут з'являтимуться важливі новини, оголошення та події
+                спільноти VERCETI.
+              </p>
+            </>
+          )}
 
           <div className="welcome-actions">
-            <Link className="btn" href="/preview/members">
+            <Link className="btn secondary" href="/preview/members">
               Переглянути учасників
             </Link>
             <Link className="btn secondary" href="/preview/forms">
@@ -200,8 +251,8 @@ export default async function Home() {
 
         <p className="page-note">
           Увага: імена, цифри, онлайн-статуси та сповіщення на цій сторінці
-          вигадані для демонстрації. Реальні дані з&apos;являться після
-          підключення бази даних і системи авторизації.
+          вигадані для демонстрації. Реальні дані з'являться після
+          підключення відповідних функцій.
         </p>
       </main>
     </div>
