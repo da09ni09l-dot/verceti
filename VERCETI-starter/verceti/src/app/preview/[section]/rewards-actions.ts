@@ -8,7 +8,7 @@ async function requireRewardsManager() {
   if (!user) redirect("/login");
   const { data: role, error } = await supabase.rpc("current_verceti_role");
   if (error || !["admin", "leader"].includes(String(role))) redirect("/preview/rewards?status=forbidden");
-  return { supabase, user };
+  return { supabase, user, role };
 }
 export async function createRewardPrize(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
@@ -23,8 +23,10 @@ export async function createRewardPrize(formData: FormData) {
 export async function deleteRewardPrize(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!/^[0-9a-f-]{36}$/i.test(id)) redirect("/preview/rewards?status=invalid");
-  const { supabase } = await requireRewardsManager();
-  const { error } = await supabase.from("rewards_prizes").delete().eq("id", id);
+  const { supabase, user, role } = await requireRewardsManager();
+  let deletion = supabase.from("rewards_prizes").delete().eq("id", id);
+  if (role === "leader") deletion = deletion.eq("created_by", user.id);
+  const { error } = await deletion;
   if (error) { console.error("Delete rewards prize:", error.message); redirect("/preview/rewards?status=error"); }
   redirect("/preview/rewards?status=deleted");
 }
