@@ -36,60 +36,68 @@ export default async function TopMembersPanel() {
   const members = (data ?? []) as TopMember[];
 
   return (
-    <div className="panel">
+    <section className="panel top-ranking-panel">
       <div className="panel-head">
         <div>
-          <h2>ТОП-3 активності</h2>
+          <h2>ТОП-3 АКТИВНОСТІ</h2>
           <div className="panel-sub">
-            Рейтинг за весь час VERCETI
+            Найактивніші учасники VERCETTI
           </div>
         </div>
 
-        <span className="tag">РЕЙТИНГ</span>
+        <span className="tag top-ranking-tag">
+          <span className="ranking-live-dot" />
+          РЕЙТИНГ
+        </span>
       </div>
 
       {members.length === 0 ? (
-        <div className="panel-sub">
-          Поки що немає даних для рейтингу.
+        <div className="ranking-empty">
+          <span className="ranking-empty-icon">✦</span>
+          <div>Рейтинг поки формується</div>
+          <p>Будь активним, щоб потрапити до ТОП-3!</p>
         </div>
       ) : (
-        <div className="member-list">
-          {members.map((member, index) => (
+        <div className="top-ranking-list">
+          {members.slice(0, 3).map((member, index) => (
             <Link
               href={`/preview/members/${member.user_id}`}
               key={member.user_id}
-              className="member-row"
-              style={{
-                textDecoration: "none",
-                color: "inherit"
-              }}
+              className={`top-ranking-row ranking-place-${index + 1}`}
             >
-              <div className="member-left">
-                <div
-                  className="member-avatar"
-                  style={{ fontSize: 22 }}
-                >
-                  {medals[index]}
+              <div className="ranking-position">
+                <span className="ranking-medal">
+                  {medals[index] || `${index + 1}`}
+                </span>
+              </div>
+
+              <div className="ranking-member-info">
+                <div className="ranking-member-name">
+                  {member.nickname || "Без нікнейму"}
                 </div>
 
-                <div>
-                  <div className="member-name">
-                    {member.nickname || "Без нікнейму"}
-                  </div>
-
-                  <div className="member-meta">
-                    {member.role.toUpperCase()}
-                  </div>
+                <div className="ranking-member-role">
+                  {member.role.toUpperCase()}
                 </div>
               </div>
 
-              <strong style={{ color: "#d8baff", fontSize: 13 }}>
-                {formatTime(Number(member.total_seconds))}
-              </strong>
+              <div className="ranking-member-activity">
+                <strong>
+                  {formatTime(Number(member.total_seconds))}
+                </strong>
+                <span>АКТИВНІСТЬ</span>
+              </div>
+
+              <span className="ranking-arrow">↗</span>
             </Link>
           ))}
         </div>
       )}
-    </div>
+
+      <div className="ranking-footer">
+        <span>VERCETTI COMMUNITY</span>
+        <span>АКТИВНІСТЬ ЗА ВЕСЬ ЧАС</span>
+      </div>
+    </section>
   );
 }
