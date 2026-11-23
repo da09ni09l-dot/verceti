@@ -70,7 +70,6 @@ export default async function Home() {
     }
   }
 
-  // Перевірка ролі адміністратора
   const { data: adminRole, error: adminRoleError } =
     await supabase.rpc("current_verceti_role");
 
@@ -207,7 +206,7 @@ export default async function Home() {
 
         <section className="panel welcome">
           <div className="eyebrow">
-            Ласкаво просимо до VERCETI
+            Ласкаво просимо до VERCETTI
           </div>
 
           {pinnedNews && pinnedNews.length > 0 ? (
@@ -216,7 +215,7 @@ export default async function Home() {
             <>
               <h1>ТВОЯ СПІЛЬНОТА. ТВОЇ ПРАВИЛА.</h1>
               <p>
-                Розвивайся. Спілкуйся. Будь частиною VERCETI.
+                Розвивайся. Спілкуйся. Будь частиною VERCETTI.
                 Тут з&apos;являтимуться важливі новини,
                 оголошення та події спільноти.
               </p>
@@ -240,15 +239,12 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* PREMIUM STATISTICS */}
-
         <section className="grid stats-grid vercetti-stats">
           <div className="stat-card vercetti-stat-card stat-members">
             <div className="stat-card-top">
               <div className="stat-label">
                 УЧАСНИКИ СПІЛЬНОТИ
               </div>
-
               <div className="stat-icon">♟</div>
             </div>
 
@@ -258,7 +254,7 @@ export default async function Home() {
 
             <div className="stat-note">
               <span className="stat-indicator" />
-              Зареєстровані учасники VERCETI
+              Зареєстровані учасники VERCETTI
             </div>
 
             <div className="stat-decoration">01</div>
@@ -269,7 +265,6 @@ export default async function Home() {
               <div className="stat-label">
                 АНКЕТИ НА ПЕРЕВІРЦІ
               </div>
-
               <div className="stat-icon">✦</div>
             </div>
 
@@ -286,14 +281,10 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* TOP MEMBERS AND ONLINE */}
-
         <section className="grid content-grid">
           <TopMembersPanel />
           <MembersOnlinePanel members={profiles ?? []} />
         </section>
-
-        {/* PREMIUM NOTIFICATIONS */}
 
         <section className="panel premium-notices-panel">
           <div className="panel-head">
@@ -305,7 +296,7 @@ export default async function Home() {
               <h2>ОСТАННІ СПОВІЩЕННЯ</h2>
 
               <div className="panel-sub">
-                Важливі події та оновлення VERCETI
+                Важливі події та оновлення VERCETTI
               </div>
             </div>
 
@@ -359,13 +350,12 @@ export default async function Home() {
           )}
 
           <div className="premium-notices-footer">
-            <span>VERCETI PRIVATE COMMUNITY</span>
+            <span>VERCETTI PRIVATE COMMUNITY</span>
             <span>БУДЬ У КУРСІ ПОДІЙ</span>
           </div>
         </section>
       </main>
 
-      {/* Плаваюча кнопка адміністратора */}
       {showAdminButton && (
         <Link
           href="/admin"
