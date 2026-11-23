@@ -83,11 +83,11 @@ export default async function AdminPage({
 
   const roleLabels: Record<string, string> = {
     admin: "Адміністратор",
-    junior: "Junior",
-    local: "Local",
-    senior: "Senior",
-    moderator: "Moderator",
-    leader: "Leader",
+    junior: "Молодший учасник",
+    local: "Учасник",
+    senior: "Старший учасник",
+    moderator: "Модератор",
+    leader: "Лідер",
   };
 
   const categoryLabels: Record<string, string> = {
@@ -209,11 +209,11 @@ export default async function AdminPage({
               defaultValue="junior"
               style={{ width: "100%", marginBottom: 20 }}
             >
-              <option value="junior">Junior</option>
-              <option value="local">Local</option>
-              <option value="senior">Senior</option>
-              <option value="moderator">Moderator</option>
-              <option value="leader">Leader</option>
+              <option value="junior">Молодший учасник</option>
+              <option value="local">Учасник</option>
+              <option value="senior">Старший учасник</option>
+              <option value="moderator">Модератор</option>
+              <option value="leader">Лідер</option>
             </select>
 
             <button
