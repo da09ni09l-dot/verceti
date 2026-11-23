@@ -1,4 +1,5 @@
 
+import Link from "next/link";
 import LoginForm from "./login-form";
 
 export default function LoginPage() {
@@ -15,10 +16,13 @@ export default function LoginPage() {
         </h1>
 
         <p className="muted" style={{ fontSize: 12, lineHeight: 1.7 }}>
-          Увійди до свого облікового запису або створи новий.
+          Увійди до свого облікового запису. Нові акаунти створює адміністрація.
         </p>
 
         <LoginForm />
+        <p className="muted" style={{ fontSize: 11, lineHeight: 1.6, marginTop: 16 }}>
+          Забув пароль? <Link href="/support" style={{ textDecoration: "underline" }}>Звернися до адміністрації через підтримку</Link>, щоб безпечно відновити доступ.
+        </p>
       </section>
     </main>
   );
