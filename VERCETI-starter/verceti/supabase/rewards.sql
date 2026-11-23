@@ -40,6 +40,12 @@ declare
   v_running numeric := 0;
 begin
   if v_user is null then raise exception 'not_authenticated'; end if;
+  if not exists (
+    select 1 from public.profiles
+    where id = v_user and is_banned = false
+  ) then
+    raise exception 'account_inactive';
+  end if;
   perform pg_advisory_xact_lock(hashtextextended(v_user::text, 0));
   if exists (select 1 from public.rewards_spins where user_id = v_user and spun_at >= date_trunc('day', now()) and spun_at < date_trunc('day', now()) + interval '1 day') then
     raise exception 'daily_spin_used';
