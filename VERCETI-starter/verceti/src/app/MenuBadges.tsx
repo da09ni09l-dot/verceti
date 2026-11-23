@@ -39,7 +39,7 @@ const menuGroups = [
       ["Тестування", "✧", "tests", "/preview/tests"],
     ],
   },
-];
+] as const;
 
 export default function MenuBadges({ userId }: MenuBadgesProps) {
   const supabase = useMemo(() => createClient(), []);
@@ -76,7 +76,7 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
     void loadCounts();
 
     const channel = supabase
-      .channel("verceti-menu-unread-badges")
+      .channel("vercetti-menu-unread-badges")
       .on(
         "postgres_changes",
         {
@@ -105,6 +105,8 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
   useEffect(() => {
     if (!mobileOpen) return;
 
+    const previousOverflow = document.body.style.overflow;
+
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setMobileOpen(false);
@@ -116,7 +118,7 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
 
     return () => {
       document.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
     };
   }, [mobileOpen]);
 
@@ -181,6 +183,7 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
         className="mobile-menu-toggle"
         aria-label={mobileOpen ? "Закрити меню" : "Відкрити меню"}
         aria-expanded={mobileOpen}
+        aria-controls="vercetti-mobile-navigation"
         onClick={() => setMobileOpen((current) => !current)}
       >
         {mobileOpen ? "✕" : "☰"}
@@ -193,11 +196,13 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
       />
 
       <nav
+        id="vercetti-mobile-navigation"
         className={`menu ${mobileOpen ? "mobile-menu-open" : ""}`}
         aria-label="Головне меню"
       >
         <div className="mobile-menu-header">
           <span>VERCETTI</span>
+
           <button
             type="button"
             onClick={() => setMobileOpen(false)}
@@ -211,16 +216,13 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
           <div className="menu-group" key={group.title}>
             <div className="menu-group-title">{group.title}</div>
 
-            {group.items.map((item) =>
-              renderItem(
-                item as readonly [string, string, string, string]
-              )
-            )}
+            {group.items.map((item) => renderItem(item))}
           </div>
         ))}
 
         <div className="menu-group menu-bottom">
           <div className="menu-group-title">ПРОФІЛЬ</div>
+
           {renderItem([
             "Налаштування",
             "⚙",
