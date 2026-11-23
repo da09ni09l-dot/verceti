@@ -1382,3 +1382,193 @@ video {
     flex-wrap: wrap;
   }
 }
+
+/* =========================================
+   VERCETTI — PREMIUM TOP MEMBERS RANKING
+========================================= */
+
+.top-ranking-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.top-ranking-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-color: rgba(168, 85, 255, 0.3);
+}
+
+.ranking-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #b66cff;
+  box-shadow: 0 0 10px #a855ff;
+}
+
+.top-ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.top-ranking-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.025);
+  color: inherit;
+  text-decoration: none;
+  transition: 0.25s ease;
+}
+
+.top-ranking-row:hover {
+  transform: translateX(4px);
+  border-color: rgba(168, 85, 255, 0.4);
+  background: rgba(168, 85, 255, 0.075);
+}
+
+.ranking-place-1 {
+  border-color: rgba(168, 85, 255, 0.28);
+  background:
+    linear-gradient(
+      110deg,
+      rgba(168, 85, 255, 0.14),
+      rgba(255, 255, 255, 0.025)
+    );
+  box-shadow: inset 3px 0 0 #a855ff;
+}
+
+.ranking-position {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.ranking-place-1 .ranking-position {
+  background: rgba(168, 85, 255, 0.17);
+}
+
+.ranking-medal {
+  font-size: 23px;
+}
+
+.ranking-member-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ranking-member-name {
+  overflow: hidden;
+  color: #f4edff;
+  font-size: 13px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking-member-role {
+  margin-top: 5px;
+  color: #91869f;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+
+.ranking-member-activity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.ranking-member-activity strong {
+  color: #d8baff;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ranking-member-activity span {
+  color: #756a83;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.ranking-arrow {
+  color: #88739f;
+  font-size: 17px;
+  opacity: 0;
+  transition: 0.2s ease;
+}
+
+.top-ranking-row:hover .ranking-arrow {
+  opacity: 1;
+  transform: translate(2px, -2px);
+}
+
+.ranking-empty {
+  padding: 32px 15px;
+  text-align: center;
+  color: #e9ddff;
+}
+
+.ranking-empty-icon {
+  display: block;
+  margin-bottom: 12px;
+  color: #b66cff;
+  font-size: 28px;
+}
+
+.ranking-empty p {
+  margin: 7px 0 0;
+  color: #8e829c;
+  font-size: 12px;
+}
+
+.ranking-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: #71677f;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 600px) {
+  .top-ranking-row {
+    gap: 9px;
+    padding: 11px;
+  }
+
+  .ranking-position {
+    width: 36px;
+    height: 36px;
+  }
+
+  .ranking-member-activity strong {
+    font-size: 10px;
+  }
+
+  .ranking-footer {
+    flex-direction: column;
+  }
+}
