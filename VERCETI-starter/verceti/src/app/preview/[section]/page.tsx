@@ -163,23 +163,11 @@ export default async function PreviewSection({
 
   const isStaff = !staffError && staffStatus === true;
 
-  let applicationApproved = false;
+  const { data: membershipStatus, error: membershipError } =
+    await supabase.rpc("is_verceti_member");
+  const hasCommunityAccess = !membershipError && membershipStatus === true;
 
-  if (!isStaff) {
-    const { data: applications, error: applicationError } =
-      await supabase
-        .from("applications")
-        .select("status")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-    applicationApproved =
-      !applicationError &&
-      applications?.[0]?.status === "approved";
-  }
-
-  if (!isStaff && !applicationApproved && section !== "forms") {
+  if (!hasCommunityAccess && section !== "forms") {
     redirect("/preview/forms");
   }
 

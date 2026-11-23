@@ -47,7 +47,7 @@ begin
   if not exists (
     select 1 from public.profiles p
     where p.id = v_user and p.is_banned = false
-      and (p.role in ('admin', 'leader', 'moderator') or (
+      and (p.role in ('admin', 'leader', 'moderator', 'senior', 'local') or (
         select a.status from public.applications a
         where a.user_id = p.id
         order by a.created_at desc
@@ -90,7 +90,7 @@ begin
   if not exists (
     select 1 from public.profiles p
     where p.id = v_user and p.is_banned = false
-      and (p.role in ('admin', 'leader', 'moderator') or (
+      and (p.role in ('admin', 'leader', 'moderator', 'senior', 'local') or (
         select a.status from public.applications a
         where a.user_id = p.id
         order by a.created_at desc

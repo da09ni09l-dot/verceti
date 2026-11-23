@@ -352,7 +352,7 @@ begin
   if not exists (
     select 1 from public.profiles p
     where p.id = v_user and p.is_banned = false
-      and (p.role in ('admin', 'leader', 'moderator') or (
+      and (p.role in ('admin', 'leader', 'moderator', 'senior', 'local') or (
         select a.status from public.applications a
         where a.user_id = p.id
         order by a.created_at desc
@@ -418,7 +418,7 @@ as $$
       where current_profile.id = auth.uid()
         and current_profile.is_banned = false
         and (
-          current_profile.role in ('admin', 'leader', 'moderator')
+          current_profile.role in ('admin', 'leader', 'moderator', 'senior', 'local')
           or (
             select current_application.status
             from public.applications current_application
@@ -758,7 +758,7 @@ returns boolean language sql stable security definer set search_path = public as
   select exists (
     select 1 from public.profiles p
     where p.id = (select auth.uid()) and p.is_banned = false
-      and (p.role in ('admin','leader','moderator') or (
+      and (p.role in ('admin','leader','moderator','senior','local') or (
         select a.status from public.applications a
         where a.user_id = p.id
         order by a.created_at desc
