@@ -1,4 +1,5 @@
 
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -111,9 +112,14 @@ export default async function AdminPage({
         className="login-card"
         style={{ width: "100%", maxWidth: 760 }}
       >
-        <div className="brand" style={{ padding: 0 }}>
-          VERCETI
-          <small>ADMINISTRATION</small>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <div className="brand" style={{ padding: 0 }}>
+            VERCETI
+            <small>ADMINISTRATION</small>
+          </div>
+          <Link href="/" className="btn secondary" style={{ whiteSpace: "nowrap" }}>
+            ← Назад на сайт
+          </Link>
         </div>
 
         <h1 style={{ fontSize: 27, marginTop: 28 }}>
