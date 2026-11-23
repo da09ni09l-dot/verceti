@@ -466,18 +466,19 @@ export default async function PreviewSection({
     }
   }
 
-  let rewardPrizes: { id: string; title: string; description: string; weight: number }[] = [];
+  let rewardPrizes: { id: string; title: string; description: string; weight: number; created_by: string }[] = [];
   let rewardError = false;
   let canManageRewards = false;
   let lastRewardSpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
   if (section === "rewards") {
     const { data: role } = await supabase.rpc("current_verceti_role");
     canManageRewards = role === "admin" || role === "leader";
-    const [{ data, error }, { data: spinData }] = await Promise.all([
-      supabase.from("rewards_prizes").select("id, title, description, weight").order("created_at", { ascending: true }),
+    const [{ data, error }, { data: spinData, error: spinError }] = await Promise.all([
+      supabase.from("rewards_prizes").select("id, title, description, weight, created_by").order("created_at", { ascending: true }),
       supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).order("spun_at", { ascending: false }).limit(1).maybeSingle()
     ]);
     rewardError = !!error;
+    if (spinError) console.error("VERCETI rewards spin history loading error:", spinError.message);
     rewardPrizes = data ?? [];
     lastRewardSpin = spinData as typeof lastRewardSpin;
   }
@@ -1118,9 +1119,13 @@ export default async function PreviewSection({
             <div className="panel" style={{ marginTop: 20 }}>
               <h2>Щоденний безкоштовний оберт</h2>
               <p className="muted">Один оберт на день. Вибір призу та перевірка повторного оберту виконуються на сервері.</p>
-              <form action={spinRewards} style={{ marginTop: 14 }}>
-                <button className="btn" type="submit" disabled={rewardPrizes.length === 0} style={{ width: "100%" }}>🎡 Крутити рулетку</button>
-              </form>
+              {lastRewardSpin && new Date(lastRewardSpin.spun_at).toDateString() === new Date().toDateString() ? (
+                <p className="page-note" style={{ marginTop: 14 }}>Ти вже використав(ла) безкоштовний оберт сьогодні. Наступний буде доступний завтра.</p>
+              ) : (
+                <form action={spinRewards} style={{ marginTop: 14 }}>
+                  <button className="btn" type="submit" disabled={rewardPrizes.length === 0} style={{ width: "100%" }}>🎡 Крутити рулетку</button>
+                </form>
+              )}
               <p className="page-note">Додаткові оберти за бали й тижневі нагороди підключимо після створення безпечного балансу балів.</p>
             </div>
             <div className="panel" style={{ marginTop: 20 }}>
@@ -1134,7 +1139,7 @@ export default async function PreviewSection({
                         {prize.description && <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>{prize.description}</p>}
                         <p className="notice-time">Вага випадіння: {prize.weight}</p>
                       </div>
-                      {canManageRewards && (
+                      {(role === "admin" || (role === "leader" && prize.created_by === user.id)) && (
                         <form action={deleteRewardPrize}>
                           <input type="hidden" name="id" value={prize.id} />
                           <button className="btn" type="submit" style={{ background: "#8f303f", borderColor: "#b94b5c" }}>Видалити</button>
