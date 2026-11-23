@@ -498,6 +498,14 @@ export async function createNews(formData: FormData) {
     redirect("/admin?error=news_create");
   }
 
+  const returnTo = formData.get("return_to") === "/preview/news" ? "/preview/news" : "/admin";
+  const successRedirect = returnTo === "/preview/news" ? "/preview/news?status=created" : "/admin?news_created=1";
+  const isVisibleNow =
+    (!showFrom || showFrom.getTime() <= Date.now()) &&
+    (!showUntil || showUntil.getTime() > Date.now());
+
+  if (!isVisibleNow) redirect(successRedirect);
+
   const admin = createAdminClient();
 
   const { data: members, error: membersError } = await admin
@@ -534,8 +542,7 @@ export async function createNews(formData: FormData) {
     }
   }
 
-  const returnTo = formData.get("return_to") === "/preview/news" ? "/preview/news" : "/admin";
-  redirect(returnTo === "/preview/news" ? "/preview/news?status=created" : "/admin?news_created=1");
+  redirect(successRedirect);
 }
 
 export async function deleteNews(formData: FormData) {
