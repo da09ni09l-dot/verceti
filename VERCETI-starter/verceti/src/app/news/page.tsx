@@ -80,7 +80,7 @@ export default async function NewsPage() {
           <div className="panel" style={{ marginTop: 24 }}>
             <h2>Поки немає новин</h2>
             <p className="muted" style={{ fontSize: 13 }}>
-              Коли адміністрація опублікує новини, вони з'являться тут.
+              Коли адміністрація опублікує новини, вони з&apos;являться тут.
             </p>
           </div>
         ) : (
