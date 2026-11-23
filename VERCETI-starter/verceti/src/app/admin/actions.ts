@@ -203,6 +203,28 @@ export async function banMember(formData: FormData) {
   redirect("/admin?updated=1");
 }
 
+
+export async function changeMemberRole(formData: FormData) {
+  const memberId = String(formData.get("member_id") ?? "").trim();
+  const role = String(formData.get("role") ?? "");
+  if (!memberId || !/^[0-9a-f-]{36}$/i.test(memberId)) redirect("/admin?error=member");
+  if (!allowedRoles.includes(role as (typeof allowedRoles)[number])) redirect("/admin?error=role");
+  const { supabase, user } = await requireAdmin();
+  if (memberId === user.id) redirect("/admin?error=self_role");
+  const { data: member, error: memberError } = await supabase.from("profiles").select("id, role").eq("id", memberId).single();
+  if (memberError || !member) redirect("/admin?error=member");
+  if (member.role === "admin") redirect("/admin?error=protected");
+  const { error } = await supabase.rpc("change_member_role", {
+    p_member_id: memberId, p_new_role: role, p_reason: "Зміна ролі адміністратором"
+  });
+  if (error) {
+    console.error("Change member role error:", error.message);
+    redirect("/admin?error=role_assignment");
+  }
+  await notifyMember(memberId, "Змінено роль у VERCETI", "Адміністрація змінила твою роль у спільноті.", "system", "/preview/stats");
+  redirect("/admin?updated=1");
+}
+
 export async function unbanMember(formData: FormData) {
   const memberId = String(formData.get("member_id") ?? "").trim();
 

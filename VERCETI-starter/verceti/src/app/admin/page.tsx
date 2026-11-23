@@ -6,6 +6,7 @@ import {
   createMember,
   banMember,
   unbanMember,
+  changeMemberRole,
   deleteMember,
   createNews,
   deleteNews,
@@ -60,7 +61,8 @@ export default async function AdminPage({
     password: "Пароль має містити щонайменше 8 символів.",
     role: "Вибрано неправильну роль.",
     create: "Не вдалося створити акаунт. Можливо, такий нікнейм уже існує.",
-    role_assignment: "Не вдалося призначити роль. Акаунт не створено.",
+    role_assignment: "Не вдалося призначити або змінити роль.",
+    self_role: "Не можна змінювати власну роль.",
     member: "Учасника не знайдено.",
     self_ban: "Не можна заблокувати власний акаунт.",
     self_delete: "Не можна видалити власний акаунт.",
@@ -510,6 +512,18 @@ export default async function AdminPage({
                     </p>
                   ) : (
                     <>
+                      <form action={changeMemberRole} style={{ marginTop: 12 }}>
+                        <input type="hidden" name="member_id" value={member.id} />
+                        <label htmlFor={`member-role-${member.id}`}>Змінити роль</label>
+                        <select id={`member-role-${member.id}`} name="role" defaultValue={member.role} style={{ width: "100%", marginTop: 6 }}>
+                          <option value="junior">Молодший учасник</option>
+                          <option value="local">Учасник</option>
+                          <option value="senior">Старший учасник</option>
+                          <option value="moderator">Модератор</option>
+                          <option value="leader">Лідер</option>
+                        </select>
+                        <button className="btn secondary" type="submit" style={{ width: "100%", marginTop: 8 }}>Зберегти роль</button>
+                      </form>
                       {member.is_banned ? (
                         <form action={unbanMember}>
                           <input

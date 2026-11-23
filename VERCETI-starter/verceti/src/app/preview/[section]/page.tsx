@@ -555,10 +555,13 @@ export default async function PreviewSection({
   }
 
   if (section === "events") {
+    const nowIso = new Date().toISOString();
     const { data, error } = await supabase
       .from("news")
-      .select("id, title, content, event_date, created_at")
+      .select("id, title, content, event_date, created_at, show_from, show_until")
       .eq("category", "event")
+      .or(`show_from.is.null,show_from.lte.${nowIso}`)
+      .or(`show_until.is.null,show_until.gt.${nowIso}`)
       .order("event_date", { ascending: true, nullsFirst: false })
       .limit(100);
 
@@ -603,9 +606,12 @@ export default async function PreviewSection({
       .eq("type", "news")
       .eq("is_read", false);
 
+    const nowIso = new Date().toISOString();
     const { data, error } = await supabase
       .from("news")
       .select("id, title, content, category, event_date, created_at")
+      .or(`show_from.is.null,show_from.lte.${nowIso}`)
+      .or(`show_until.is.null,show_until.gt.${nowIso}`)
       .order("created_at", { ascending: false });
 
     if (error) {

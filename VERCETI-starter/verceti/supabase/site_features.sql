@@ -735,8 +735,52 @@ as restrictive for all to authenticated
 using (public.is_verceti_account_active())
 with check (public.is_verceti_account_active());
 
+
+-- Approved members and staff only: protect private community tables and storage.
+create or replace function public.is_verceti_member()
+returns boolean language sql stable security definer set search_path = public as $
+  select exists (
+    select 1 from public.profiles p
+    where p.id = (select auth.uid()) and p.is_banned = false
+      and (p.role in ('admin','leader','moderator') or exists (
+        select 1 from public.applications a
+        where a.user_id = p.id and a.status = 'approved'
+      ))
+  );
+$;
+revoke all on function public.is_verceti_member() from public;
+grant execute on function public.is_verceti_member() to authenticated;
+
+do $
+declare table_name text;
+begin
+  foreach table_name in array array[
+    'disciplinary_actions','role_history','news','notifications','chat_messages',
+    'direct_messages','community_rules','tests','test_questions','test_answers',
+    'test_permissions','test_results','music_tracks','music_favorites',
+    'music_recommendations','member_activity','moderation_actions',
+    'rewards_prizes','rewards_spins','voice_rooms','support_requests','support_messages'
+  ] loop
+    execute format('drop policy if exists %I on public.%I','approved_member_guard',table_name);
+    execute format(
+      'create policy %I on public.%I as restrictive for all to authenticated using (public.is_verceti_member()) with check (public.is_verceti_member())',
+      'approved_member_guard',table_name
+    );
+  end loop;
+end;
+$;
+
+drop policy if exists approved_member_guard on public.profiles;
+create policy approved_member_guard on public.profiles as restrictive for all to authenticated
+using (public.is_verceti_member() or id = (select auth.uid()))
+with check (public.is_verceti_member() or id = (select auth.uid()));
+
+drop policy if exists approved_member_guard on storage.objects;
+create policy approved_member_guard on storage.objects as restrictive for all to authenticated
+using (public.is_verceti_member()) with check (public.is_verceti_member());
+
 -- Realtime publication for live chat and live unread counters.
-do $$
+do $
 begin
   alter publication supabase_realtime add table public.direct_messages;
 exception when duplicate_object then

@@ -8,6 +8,7 @@ export async function middleware(request: NextRequest) {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
   if (!url || !key || !/^https?:\/\/.+/.test(url)) {
+    if (request.nextUrl.pathname === "/setup") return NextResponse.next();
     console.error("VERCETI: Supabase environment variables are missing or invalid", {
       hasUrl: !!url,
       validUrl: !!url && /^https?:\/\/.+/.test(url),
