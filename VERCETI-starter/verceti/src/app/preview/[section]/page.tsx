@@ -552,6 +552,13 @@ export default async function PreviewSection({
   }
 
   if (section === "news") {
+    await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("user_id", user.id)
+      .eq("type", "news")
+      .eq("is_read", false);
+
     const { data, error } = await supabase
       .from("news")
       .select("id, title, content, category, event_date, created_at")
