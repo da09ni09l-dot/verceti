@@ -196,6 +196,8 @@ export default async function PreviewSection({
     category: string;
     event_date: string | null;
     created_at: string;
+    show_from: string | null;
+    show_until: string | null;
   }[] = [];
 
   let newsError = false;
@@ -204,7 +206,7 @@ export default async function PreviewSection({
   let membersError = false;
   let activityItems: { user_id: string; nickname: string; role: string; total_seconds: number }[] = [];
   let activityError = false;
-  let eventItems: { id: string; title: string; content: string; event_date: string | null; created_at: string }[] = [];
+  let eventItems: { id: string; title: string; content: string; event_date: string | null; created_at: string; show_from: string | null; show_until: string | null }[] = [];
   let eventsError = false;
 
   let ruleItems: {
@@ -555,13 +557,10 @@ export default async function PreviewSection({
   }
 
   if (section === "events") {
-    const nowIso = new Date().toISOString();
     const { data, error } = await supabase
       .from("news")
       .select("id, title, content, event_date, created_at, show_from, show_until")
       .eq("category", "event")
-      .or(`show_from.is.null,show_from.lte.${nowIso}`)
-      .or(`show_until.is.null,show_until.gt.${nowIso}`)
       .order("event_date", { ascending: true, nullsFirst: false })
       .limit(100);
 
@@ -570,7 +569,10 @@ export default async function PreviewSection({
       eventsError = true;
     } else {
       const now = Date.now();
-      eventItems = (data ?? []).sort((a, b) => {
+      eventItems = (data ?? []).filter((item) =>
+        (!item.show_from || new Date(item.show_from).getTime() <= now) &&
+        (!item.show_until || new Date(item.show_until).getTime() > now)
+      ).sort((a, b) => {
         const aTime = a.event_date ? new Date(a.event_date).getTime() : Number.POSITIVE_INFINITY;
         const bTime = b.event_date ? new Date(b.event_date).getTime() : Number.POSITIVE_INFINITY;
         const aUpcoming = aTime >= now;
@@ -606,19 +608,20 @@ export default async function PreviewSection({
       .eq("type", "news")
       .eq("is_read", false);
 
-    const nowIso = new Date().toISOString();
     const { data, error } = await supabase
       .from("news")
-      .select("id, title, content, category, event_date, created_at")
-      .or(`show_from.is.null,show_from.lte.${nowIso}`)
-      .or(`show_until.is.null,show_until.gt.${nowIso}`)
+      .select("id, title, content, category, event_date, created_at, show_from, show_until")
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("VERCETI news loading error:", error.message);
       newsError = true;
     } else {
-      newsItems = data ?? [];
+      const now = Date.now();
+      newsItems = (data ?? []).filter((item) =>
+        (!item.show_from || new Date(item.show_from).getTime() <= now) &&
+        (!item.show_until || new Date(item.show_until).getTime() > now)
+      );
     }
   }
 
