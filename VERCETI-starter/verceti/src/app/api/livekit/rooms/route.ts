@@ -23,6 +23,19 @@ async function checkStaff(supabase: Awaited<ReturnType<typeof createClient>>) {
   return !error && data === true;
 }
 
+async function isAccountActive(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("is_banned")
+    .eq("id", userId)
+    .maybeSingle();
+
+  return !error && !!data && data.is_banned === false;
+}
+
 // Отримати список кімнат
 export async function GET() {
   try {
@@ -163,6 +176,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!(await isAccountActive(supabase, user.id))) {
+      return NextResponse.json(
+        { error: "Немає доступу до спільноти." },
+        { status: 403 }
+      );
+    }
+
     const staff = await checkStaff(supabase);
 
     if (!staff) {
@@ -251,6 +271,13 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         { error: "Потрібно увійти в акаунт." },
         { status: 401 }
+      );
+    }
+
+    if (!(await isAccountActive(supabase, user.id))) {
+      return NextResponse.json(
+        { error: "Немає доступу до спільноти." },
+        { status: 403 }
       );
     }
 
