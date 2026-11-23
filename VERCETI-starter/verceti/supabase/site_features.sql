@@ -540,12 +540,33 @@ grant usage, select on all sequences in schema public to authenticated;
 
 -- Storage buckets used by chat and community media.
 insert into storage.buckets (id, name, public)
-values ('chat-media', 'chat-media', true)
-on conflict (id) do update set public = true;
+values ('chat-media', 'chat-media', false)
+on conflict (id) do update set public = false;
 
 insert into storage.buckets (id, name, public)
 values ('verceti-media', 'verceti-media', false)
 on conflict (id) do update set public = false;
+
+drop policy if exists "Members read media referenced by accessible messages" on storage.objects;
+create policy "Members read media referenced by accessible messages" on storage.objects
+for select to authenticated
+using (
+  bucket_id = 'chat-media'
+  and (
+    (storage.foldername(name))[1] = (select auth.uid())::text
+    or exists (
+      select 1
+      from public.chat_messages cm
+      where position(name in cm.content) > 0
+    )
+    or exists (
+      select 1
+      from public.direct_messages dm
+      where (dm.sender_id = (select auth.uid()) or dm.recipient_id = (select auth.uid()))
+        and position(name in dm.content) > 0
+    )
+  )
+);
 
 drop policy if exists "Members upload own chat media" on storage.objects;
 create policy "Members upload own chat media" on storage.objects
