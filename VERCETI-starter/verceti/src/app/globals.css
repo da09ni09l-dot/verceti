@@ -2411,3 +2411,123 @@ td {
     padding: 11px;
   }
 }
+
+
+/* =========================================================
+   VERCETTI — RESPONSIVE BROWSER LAYOUT / NO SQUEEZED SIDEBAR
+========================================================= */
+
+/* Keep the navigation readable and prevent icons from shrinking. */
+.menu,
+.menu-group,
+.menu-link {
+  min-width: 0;
+}
+
+.menu-link {
+  min-height: 44px;
+  gap: 12px;
+}
+
+.menu-icon {
+  flex: 0 0 22px;
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.menu-link > span:nth-child(2) {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+@media (min-width: 1051px) {
+  .app-shell {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
+
+  .sidebar {
+    width: 260px;
+    padding-right: 17px;
+    padding-left: 17px;
+  }
+
+  .mobile-menu-toggle,
+  .mobile-menu-backdrop,
+  .mobile-menu-header {
+    display: none !important;
+  }
+
+  .main {
+    min-width: 0;
+    padding-right: clamp(22px, 3vw, 48px);
+    padding-left: clamp(22px, 3vw, 48px);
+  }
+}
+
+/* At tablet and narrow laptop widths use the same drawer as mobile,
+   instead of squeezing the sidebar and the page content side by side. */
+@media (max-width: 1050px) {
+  .app-shell {
+    display: block;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(310px, 86vw);
+    height: 100dvh;
+    max-height: 100dvh;
+    padding: 22px 16px 25px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-right: 1px solid rgba(174,123,255,.3);
+    background: rgba(12,8,22,.98);
+    transform: translateX(-105%);
+    visibility: hidden;
+    transition: transform .3s ease, visibility .3s ease;
+    z-index: 1002;
+  }
+
+  .sidebar:has(.mobile-menu-open) {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  .mobile-menu-toggle {
+    display: grid;
+  }
+
+  .mobile-menu-backdrop {
+    display: block;
+  }
+
+  .main {
+    width: 100%;
+    min-width: 0;
+    padding: 76px clamp(16px, 3vw, 30px) 40px;
+  }
+
+  .content-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .main {
+    padding: 70px 12px 28px;
+  }
+
+  .menu-link {
+    min-height: 44px;
+    padding: 11px 13px;
+    font-size: 13px;
+  }
+}
