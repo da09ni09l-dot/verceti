@@ -2575,3 +2575,20 @@ td {
     padding: clamp(26px, 3vw, 46px);
   }
 }
+
+
+/* Chat gets the full desktop workspace width. */
+@media (min-width: 761px) {
+  .login-wrap.workspace-wrap:has(.chat-page-card) {
+    width: 100%;
+    padding: 16px clamp(12px, 1.5vw, 28px);
+    place-items: start stretch;
+  }
+
+  .login-card.chat-page-card {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    padding: clamp(18px, 1.8vw, 30px);
+  }
+}
