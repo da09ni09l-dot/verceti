@@ -726,7 +726,7 @@ export default function MusicRoom() {
         display: "grid",
         gap: 18,
         marginTop: 24,
-        paddingBottom: 260,
+        paddingBottom: pathname === "/preview/music" ? 260 : 0,
       }}
     >
       {pathname === "/preview/music" ? (
@@ -1176,7 +1176,7 @@ export default function MusicRoom() {
       ) : null}
 
       {/* ЗАКРІПЛЕНИЙ ПЛЕЄР — ПОЗА ОСНОВНИМ КОНТЕЙНЕРОМ */}
-      {isMounted &&
+      {isMounted && playing &&
         createPortal(
           <section
             className="panel"
