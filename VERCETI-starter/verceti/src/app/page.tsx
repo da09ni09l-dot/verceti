@@ -28,6 +28,14 @@ const roleColors: Record<string, string> = {
   junior: "muted"
 };
 
+const noticeIcons: Record<string, string> = {
+  success: "✓",
+  warning: "!",
+  danger: "!",
+  info: "i",
+  purple: "✦"
+};
+
 export default async function Home() {
   const supabase = await createClient();
 
@@ -271,49 +279,81 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* TOP MEMBERS AND ONLINE */}
+
         <section className="grid content-grid">
           <TopMembersPanel />
-
           <MembersOnlinePanel members={profiles ?? []} />
         </section>
 
-        <section
-          className="panel"
-          style={{ marginTop: 20 }}
-        >
+        {/* PREMIUM NOTIFICATIONS */}
+
+        <section className="panel premium-notices-panel">
           <div className="panel-head">
             <div>
-              <h2>Останні сповіщення</h2>
+              <div className="eyebrow">
+                COMMUNITY ACTIVITY
+              </div>
+
+              <h2>ОСТАННІ СПОВІЩЕННЯ</h2>
+
               <div className="panel-sub">
-                Останні події спільноти VERCETTI
+                Важливі події та оновлення VERCETTI
               </div>
             </div>
 
-            <span className="tag">
-              СПОВІЩЕННЯ
-            </span>
+            <Link
+              href="/preview/notifications"
+              className="tag premium-notices-link"
+            >
+              УСІ СПОВІЩЕННЯ →
+            </Link>
           </div>
 
-          <div className="notice-list">
-            {notices.map((n) => (
-              <div className="notice" key={n.title}>
-                <span className={`notice-mark ${n.kind}`} />
-
-                <div>
-                  <div className="notice-title">
-                    {n.title}
+          {notices.length > 0 ? (
+            <div className="premium-notices-list">
+              {notices.map((n, index) => (
+                <div
+                  className={`premium-notice notice-type-${n.kind}`}
+                  key={`${n.title}-${index}`}
+                >
+                  <div className="premium-notice-icon">
+                    {noticeIcons[n.kind] ?? "✦"}
                   </div>
 
-                  <div className="notice-detail">
-                    {n.detail}
+                  <div className="premium-notice-content">
+                    <div className="premium-notice-title">
+                      {n.title}
+                    </div>
+
+                    <div className="premium-notice-detail">
+                      {n.detail}
+                    </div>
+
+                    <div className="premium-notice-time">
+                      <span className="premium-notice-time-icon">
+                        ◷
+                      </span>
+                      {n.time}
+                    </div>
                   </div>
 
-                  <div className="notice-time">
-                    {n.time}
+                  <div className="premium-notice-number">
+                    {String(index + 1).padStart(2, "0")}
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          ) : (
+            <div className="premium-notices-empty">
+              <span>✦</span>
+              <p>Нових сповіщень поки немає</p>
+            </div>
+          )}
+
+          <div className="premium-notices-footer">
+            <span>VERCETTI PRIVATE COMMUNITY</span>
+            <span>БУДЬ У КУРСІ ПОДІЙ</span>
           </div>
         </section>
       </main>
