@@ -7,6 +7,7 @@ import MenuBadges from "./MenuBadges";
 import NewsBell from "./NewsBell";
 import PinnedNewsCarousel from "./PinnedNewsCarousel";
 import MembersOnlinePanel from "./MembersOnlinePanel";
+import TopMembersPanel from "./TopMembersPanel";
 import { logout } from "./logout/actions";
 
 const roleLabels: Record<string, string> = {
@@ -140,11 +141,18 @@ export default async function Home() {
             <h1>Головна</h1>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12
+            }}
+          >
             <div className="user-pill">
               <div className="avatar">
                 {nickname.slice(0, 1).toUpperCase()}
               </div>
+
               <div>
                 <strong>{nickname}</strong>
                 <div className={`role ${roleColor}`}>
@@ -162,7 +170,9 @@ export default async function Home() {
         </header>
 
         <section className="panel welcome">
-          <div className="eyebrow">Ласкаво просимо до VERCETI</div>
+          <div className="eyebrow">
+            Ласкаво просимо до VERCETI
+          </div>
 
           {pinnedNews && pinnedNews.length > 0 ? (
             <PinnedNewsCarousel news={pinnedNews} />
@@ -170,8 +180,8 @@ export default async function Home() {
             <>
               <h1>Твоя спільнота. Твої правила.</h1>
               <p>
-                Тут з&apos;являтимуться важливі новини, оголошення та події
-                спільноти VERCETI.
+                Тут з&apos;являтимуться важливі новини, оголошення та
+                події спільноти VERCETI.
               </p>
             </>
           )}
@@ -180,6 +190,7 @@ export default async function Home() {
             <Link className="btn secondary" href="/preview/members">
               Переглянути учасників
             </Link>
+
             <Link className="btn secondary" href="/preview/forms">
               Перейти до анкет
             </Link>
@@ -189,43 +200,61 @@ export default async function Home() {
         <section className="grid stats-grid">
           <div className="stat-card">
             <div className="stat-label">Учасники</div>
-            <div className="stat-value">{activeMembers.length}</div>
-            <div className="stat-note">Зареєстровані учасники</div>
+            <div className="stat-value">
+              {activeMembers.length}
+            </div>
+            <div className="stat-note">
+              Зареєстровані учасники
+            </div>
           </div>
 
           <div className="stat-card">
             <div className="stat-label">Анкети на перевірці</div>
-            <div className="stat-value">{pendingApplications ?? 0}</div>
-            <div className="stat-note">Очікують розгляду</div>
+            <div className="stat-value">
+              {pendingApplications ?? 0}
+            </div>
+            <div className="stat-note">
+              Очікують розгляду
+            </div>
           </div>
         </section>
 
         <section className="grid content-grid">
-          <MembersOnlinePanel members={profiles ?? []} />
+          <TopMembersPanel />
 
-          <div className="panel">
-            <div className="panel-head">
-              <div>
-                <h2>Останні сповіщення</h2>
-                <div className="panel-sub">
-                  Останні події спільноти
-                </div>
+          <MembersOnlinePanel members={profiles ?? []} />
+        </section>
+
+        <section className="panel" style={{ marginTop: 20 }}>
+          <div className="panel-head">
+            <div>
+              <h2>Останні сповіщення</h2>
+              <div className="panel-sub">
+                Останні події спільноти
               </div>
-              <span className="tag">СПОВІЩЕННЯ</span>
             </div>
 
-            <div className="notice-list">
-              {notices.map((n) => (
-                <div className="notice" key={n.title}>
-                  <span className={`notice-mark ${n.kind}`} />
-                  <div>
-                    <div className="notice-title">{n.title}</div>
-                    <div className="notice-detail">{n.detail}</div>
-                    <div className="notice-time">{n.time}</div>
+            <span className="tag">СПОВІЩЕННЯ</span>
+          </div>
+
+          <div className="notice-list">
+            {notices.map((n) => (
+              <div className="notice" key={n.title}>
+                <span className={`notice-mark ${n.kind}`} />
+
+                <div>
+                  <div className="notice-title">
+                    {n.title}
+                  </div>
+                  <div className="notice-detail">
+                    {n.detail}
+                  </div>
+                  <div className="notice-time">
+                    {n.time}
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </section>
       </main>
