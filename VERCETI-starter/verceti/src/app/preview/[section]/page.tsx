@@ -324,7 +324,7 @@ export default async function PreviewSection({
             item.changed_by
           ])
         )
-      );
+      ).filter((id): id is string => Boolean(id));
 
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
@@ -348,7 +348,9 @@ export default async function PreviewSection({
         roleHistory = historyData.map((item) => ({
           id: item.id,
           memberNickname: profilesMap.get(item.member_id) ?? null,
-          changedByNickname: profilesMap.get(item.changed_by) ?? null,
+          changedByNickname: item.changed_by
+            ? profilesMap.get(item.changed_by) ?? null
+            : null,
           oldRole: item.old_role,
           newRole: item.new_role,
           reason: item.reason,
@@ -389,7 +391,7 @@ export default async function PreviewSection({
             item.issued_by
           ])
         )
-      );
+      ).filter((id): id is string => Boolean(id));
 
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
@@ -413,7 +415,9 @@ export default async function PreviewSection({
         disciplinaryActions = disciplinaryData.map((item) => ({
           id: item.id,
           memberNickname: profilesMap.get(item.member_id) ?? null,
-          moderatorNickname: profilesMap.get(item.issued_by) ?? null,
+          moderatorNickname: item.issued_by
+            ? profilesMap.get(item.issued_by) ?? null
+            : null,
           reason: item.reason,
           actionType: item.action_type,
           createdAt: item.created_at
