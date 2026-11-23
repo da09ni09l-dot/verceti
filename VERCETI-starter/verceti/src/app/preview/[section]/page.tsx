@@ -1121,8 +1121,8 @@ export default async function PreviewSection({
             <div className="panel" style={{ marginTop: 20 }}>
               <h2>Щоденний безкоштовний оберт</h2>
               <p className="muted">Один оберт на день. Вибір призу та перевірка повторного оберту виконуються на сервері.</p>
-              {lastRewardSpin && new Date(lastRewardSpin.spun_at).toDateString() === new Date().toDateString() ? (
-                <p className="page-note" style={{ marginTop: 14 }}>Ти вже використав(ла) безкоштовний оберт сьогодні. Наступний буде доступний завтра.</p>
+              {status === "used" ? (
+                <p className="page-note" style={{ marginTop: 14 }}>Ти вже використав(ла) безкоштовний оберт за сьогодні. Спробуй знову завтра.</p>
               ) : (
                 <form action={spinRewards} style={{ marginTop: 14 }}>
                   <button className="btn" type="submit" disabled={rewardPrizes.length === 0} style={{ width: "100%" }}>🎡 Крутити рулетку</button>
