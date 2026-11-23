@@ -48,6 +48,11 @@ const actionLabels: Record<string, string> = {
   decision: "Рішення"
 };
 
+const roleLabels: Record<string, string> = {
+  admin: "Адміністратор", leader: "Лідер", moderator: "Модератор",
+  senior: "Старший учасник", local: "Учасник", junior: "Молодший учасник"
+};
+
 export default function StatsSection({
   totalMembers,
   newMembers7Days,
@@ -161,10 +166,10 @@ export default function StatsSection({
                       {item.memberNickname ?? "Невідомий учасник"}
                     </td>
                     <td style={{ padding: 10 }}>
-                      {item.oldRole ?? "—"}
+                      {item.oldRole ? roleLabels[item.oldRole] ?? item.oldRole : "—"}
                     </td>
                     <td style={{ padding: 10 }}>
-                      {item.newRole}
+                      {roleLabels[item.newRole] ?? item.newRole}
                     </td>
                     <td style={{ padding: 10 }}>
                       {item.changedByNickname ?? "Невідомо"}
