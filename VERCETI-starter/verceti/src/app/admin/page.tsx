@@ -107,7 +107,7 @@ export default async function AdminPage({
   };
 
   return (
-    <main className="login-wrap">
+    <main className="login-wrap workspace-wrap">
       <section
         className="login-card workspace-card"
         style={{ width: "100%", maxWidth: 760 }}
