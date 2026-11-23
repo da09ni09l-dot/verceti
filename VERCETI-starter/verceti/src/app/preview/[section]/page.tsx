@@ -475,7 +475,16 @@ export default async function PreviewSection({
       console.error("VERCETI events loading error:", error.message);
       eventsError = true;
     } else {
-      eventItems = data ?? [];
+      const now = Date.now();
+      eventItems = (data ?? []).sort((a, b) => {
+        const aTime = a.event_date ? new Date(a.event_date).getTime() : Number.POSITIVE_INFINITY;
+        const bTime = b.event_date ? new Date(b.event_date).getTime() : Number.POSITIVE_INFINITY;
+        const aUpcoming = aTime >= now;
+        const bUpcoming = bTime >= now;
+        if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
+        if (!Number.isFinite(aTime) && !Number.isFinite(bTime)) return 0;
+        return aUpcoming ? aTime - bTime : bTime - aTime;
+      });
     }
   }
 
