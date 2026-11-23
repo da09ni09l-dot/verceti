@@ -504,6 +504,83 @@ revoke all on function public.delete_application(uuid) from public;
 grant execute on function public.resubmit_application(uuid, jsonb) to authenticated;
 grant execute on function public.staff_update_application(uuid, jsonb) to authenticated;
 grant execute on function public.delete_application(uuid) to authenticated;
+ 
+-- Treat bans as an authorization boundary, not only a page redirect.
+create or replace function public.is_verceti_account_active()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $
+  select exists (
+    select 1
+    from public.profiles
+    where id = (select auth.uid())
+      and is_banned = false
+  );
+$;
+revoke all on function public.is_verceti_account_active() from public;
+grant execute on function public.is_verceti_account_active() to authenticated;
+
+create or replace function public.current_verceti_role()
+returns public.verceti_role
+language sql
+stable
+security definer
+set search_path = public
+as $
+  select role
+  from public.profiles
+  where id = (select auth.uid())
+    and is_banned = false
+  limit 1;
+$;
+
+-- Restrictive policies apply in addition to each table's normal role/ownership rules.
+do $
+declare
+  table_name text;
+begin
+  foreach table_name in array array[
+    'profiles',
+    'applications',
+    'disciplinary_actions',
+    'role_history',
+    'news',
+    'notifications',
+    'chat_messages',
+    'direct_messages',
+    'application_questions',
+    'community_rules',
+    'tests',
+    'test_questions',
+    'test_answers',
+    'test_permissions',
+    'test_results',
+    'music_tracks',
+    'music_favorites',
+    'music_recommendations',
+    'member_activity',
+    'moderation_actions',
+    'rewards_prizes',
+    'rewards_spins'
+  ]
+  loop
+    execute format(
+      'drop policy if exists %I on public.%I',
+      'active_account_guard',
+      table_name
+    );
+    execute format(
+      'create policy %I on public.%I as restrictive for all to authenticated using (public.is_verceti_account_active()) with check (public.is_verceti_account_active())',
+      'active_account_guard',
+      table_name
+    );
+  end loop;
+end;
+$;
+
 
 -- Updated-at triggers for editable content.
 create or replace function public.site_features_set_updated_at()
