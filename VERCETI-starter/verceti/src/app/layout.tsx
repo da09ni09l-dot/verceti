@@ -4,6 +4,7 @@ import "./globals.css";
 import OnlinePresenceProvider from "./OnlinePresenceProvider";
 import MusicRoom from "./preview/[section]/MusicRoom";
 import PinnedSiteActions from "./PinnedSiteActions";
+import LiveDataRefresh from "./LiveDataRefresh";
 
 export const metadata: Metadata = {
   title: "VERCETI — закрита спільнота",
@@ -19,6 +20,7 @@ export default function RootLayout({
     <html lang="uk">
       <body>
         <OnlinePresenceProvider>
+          <LiveDataRefresh />
           {children}
           <MusicRoom />
           <PinnedSiteActions />
