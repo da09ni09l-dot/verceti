@@ -106,7 +106,6 @@ export async function banMember(formData: FormData) {
     redirect("/admin?error=self_ban");
   }
 
-  // Використовуємо адміністративний клієнт для роботи з profiles.
   const admin = createAdminClient();
 
   const { data: member, error: memberError } = await admin
@@ -156,7 +155,6 @@ export async function unbanMember(formData: FormData) {
     redirect("/admin?error=protected");
   }
 
-  // Використовуємо адміністративний клієнт для роботи з profiles.
   const admin = createAdminClient();
 
   const { data: member, error: memberError } = await admin
@@ -215,7 +213,6 @@ export async function deleteMember(formData: FormData) {
 
   const admin = createAdminClient();
 
-  // Перевіряємо цільовий акаунт
   const { data: member, error: memberError } = await admin
     .from("profiles")
     .select("id, nickname, role")
@@ -227,12 +224,10 @@ export async function deleteMember(formData: FormData) {
     redirect("/admin?error=member");
   }
 
-  // Захист від видалення адміністраторів
   if (member.role === "admin") {
     redirect("/admin?error=protected");
   }
 
-  // Від'єднуємо автора від спільних записів
   const detachOperations = [
     admin
       .from("application_questions")
@@ -282,7 +277,6 @@ export async function deleteMember(formData: FormData) {
     redirect("/admin?error=delete_cleanup");
   }
 
-  // Видаляємо результати тестів користувача
   const { error: resultsError } = await admin
     .from("test_results")
     .delete()
@@ -293,8 +287,6 @@ export async function deleteMember(formData: FormData) {
     redirect("/admin?error=delete_cleanup");
   }
 
-  // Видаляємо Auth-акаунт.
-  // Профіль видалиться автоматично через ON DELETE CASCADE.
   const { error: deleteError } =
     await admin.auth.admin.deleteUser(memberId);
 
@@ -304,4 +296,172 @@ export async function deleteMember(formData: FormData) {
   }
 
   redirect("/admin?deleted=1");
+}
+
+// ==========================================
+// NEWS MANAGEMENT
+// ==========================================
+
+export async function createNews(formData: FormData) {
+  const { supabase, user } = await requireAdmin();
+
+  const title = String(formData.get("title") ?? "").trim();
+  const content = String(formData.get("content") ?? "").trim();
+  const category = String(
+    formData.get("category") ?? "announcement"
+  );
+  const isPinned = formData.get("is_pinned") === "on";
+
+  const fromValue = String(
+    formData.get("show_from") ?? ""
+  ).trim();
+
+  const untilValue = String(
+    formData.get("show_until") ?? ""
+  ).trim();
+
+  if (!title || !content) {
+    redirect("/admin?error=news_fields");
+  }
+
+  const categories = [
+    "announcement",
+    "event",
+    "update",
+    "important",
+  ];
+
+  if (!categories.includes(category)) {
+    redirect("/admin?error=news_category");
+  }
+
+  const showFrom = fromValue ? new Date(fromValue) : null;
+  const showUntil = untilValue ? new Date(untilValue) : null;
+
+  if (
+    (showFrom && Number.isNaN(showFrom.getTime())) ||
+    (showUntil && Number.isNaN(showUntil.getTime()))
+  ) {
+    redirect("/admin?error=news_date");
+  }
+
+  if (
+    showFrom &&
+    showUntil &&
+    showUntil.getTime() <= showFrom.getTime()
+  ) {
+    redirect("/admin?error=news_period");
+  }
+
+  const { data: news, error } = await supabase
+    .from("news")
+    .insert({
+      title,
+      content,
+      category,
+      is_pinned: isPinned,
+      show_from: showFrom?.toISOString() ?? null,
+      show_until: showUntil?.toISOString() ?? null,
+      created_by: user.id,
+    })
+    .select("id, title")
+    .single();
+
+  if (error || !news) {
+    console.error("Create news error:", error?.message);
+    redirect("/admin?error=news_create");
+  }
+
+  const admin = createAdminClient();
+
+  const { data: members, error: membersError } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("is_banned", false)
+    .neq("id", user.id);
+
+  if (membersError) {
+    console.error("Load members for news notification:", membersError.message);
+    redirect("/admin?error=news_notification");
+  }
+
+  if (members && members.length > 0) {
+    const notifications = members.map((member) => ({
+      user_id: member.id,
+      title: "Нова новина VERCETI",
+      message: news.title,
+      type: "news",
+      link: "/news",
+      is_read: false,
+    }));
+
+    const { error: notificationError } = await admin
+      .from("notifications")
+      .insert(notifications);
+
+    if (notificationError) {
+      console.error(
+        "Create news notifications error:",
+        notificationError.message
+      );
+      redirect("/admin?error=news_notification");
+    }
+  }
+
+  redirect("/admin?news_created=1");
+}
+
+export async function deleteNews(formData: FormData) {
+  const newsId = String(formData.get("news_id") ?? "").trim();
+
+  if (!newsId || !/^[0-9a-f-]{36}$/i.test(newsId)) {
+    redirect("/admin?error=news");
+  }
+
+  const { supabase } = await requireAdmin();
+
+  const { error } = await supabase
+    .from("news")
+    .delete()
+    .eq("id", newsId);
+
+  if (error) {
+    console.error("Delete news error:", error.message);
+    redirect("/admin?error=news_delete");
+  }
+
+  redirect("/admin?news_deleted=1");
+}
+
+export async function toggleNewsPin(formData: FormData) {
+  const newsId = String(formData.get("news_id") ?? "").trim();
+
+  if (!newsId || !/^[0-9a-f-]{36}$/i.test(newsId)) {
+    redirect("/admin?error=news");
+  }
+
+  const { supabase } = await requireAdmin();
+
+  const { data: news, error: findError } = await supabase
+    .from("news")
+    .select("is_pinned")
+    .eq("id", newsId)
+    .single();
+
+  if (findError || !news) {
+    console.error("Find news error:", findError?.message);
+    redirect("/admin?error=news");
+  }
+
+  const { error } = await supabase
+    .from("news")
+    .update({ is_pinned: !news.is_pinned })
+    .eq("id", newsId);
+
+  if (error) {
+    console.error("Toggle news pin error:", error.message);
+    redirect("/admin?error=news_update");
+  }
+
+  redirect("/admin?news_updated=1");
 }
