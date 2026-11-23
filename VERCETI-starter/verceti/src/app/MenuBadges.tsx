@@ -46,6 +46,7 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
 
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const loadCounts = useCallback(async () => {
     const [messagesResult, notificationsResult] = await Promise.all([
@@ -101,9 +102,26 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
     };
   }, [supabase, loadCounts]);
 
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
+
   const renderItem = (
-    item: readonly [string, string, string, string],
-    index: number
+    item: readonly [string, string, string, string]
   ) => {
     const [label, icon, id, href] = item;
 
@@ -118,6 +136,7 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
       <Link
         key={id}
         href={href}
+        onClick={() => setMobileOpen(false)}
         className={`menu-link ${id === "home" ? "active" : ""}`}
         style={{
           display: "flex",
@@ -156,24 +175,60 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
   };
 
   return (
-    <nav className="menu" aria-label="Головне меню">
-      {menuGroups.map((group) => (
-        <div className="menu-group" key={group.title}>
-          <div className="menu-group-title">{group.title}</div>
+    <>
+      <button
+        type="button"
+        className="mobile-menu-toggle"
+        aria-label={mobileOpen ? "Закрити меню" : "Відкрити меню"}
+        aria-expanded={mobileOpen}
+        onClick={() => setMobileOpen((current) => !current)}
+      >
+        {mobileOpen ? "✕" : "☰"}
+      </button>
 
-          {group.items.map((item, index) =>
-            renderItem(item as readonly [string, string, string, string], index)
-          )}
+      <div
+        className={`mobile-menu-backdrop ${mobileOpen ? "is-open" : ""}`}
+        onClick={() => setMobileOpen(false)}
+        aria-hidden="true"
+      />
+
+      <nav
+        className={`menu ${mobileOpen ? "mobile-menu-open" : ""}`}
+        aria-label="Головне меню"
+      >
+        <div className="mobile-menu-header">
+          <span>VERCETTI</span>
+          <button
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Закрити меню"
+          >
+            ✕
+          </button>
         </div>
-      ))}
 
-      <div className="menu-group menu-bottom">
-        <div className="menu-group-title">ПРОФІЛЬ</div>
-        {renderItem(
-          ["Налаштування", "⚙", "settings", "/preview/settings"],
-          0
-        )}
-      </div>
-    </nav>
+        {menuGroups.map((group) => (
+          <div className="menu-group" key={group.title}>
+            <div className="menu-group-title">{group.title}</div>
+
+            {group.items.map((item) =>
+              renderItem(
+                item as readonly [string, string, string, string]
+              )
+            )}
+          </div>
+        ))}
+
+        <div className="menu-group menu-bottom">
+          <div className="menu-group-title">ПРОФІЛЬ</div>
+          {renderItem([
+            "Налаштування",
+            "⚙",
+            "settings",
+            "/preview/settings",
+          ])}
+        </div>
+      </nav>
+    </>
   );
 }
