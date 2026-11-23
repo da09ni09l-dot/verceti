@@ -17,6 +17,15 @@ alter table public.disciplinary_actions
 alter table public.role_history
   alter column changed_by drop not null;
 
+-- Keep reward history and prizes when their creator account is removed.
+alter table public.rewards_prizes
+  alter column created_by drop not null;
+alter table public.rewards_prizes
+  drop constraint if exists rewards_prizes_created_by_fkey;
+alter table public.rewards_prizes
+  add constraint rewards_prizes_created_by_fkey
+  foreign key (created_by) references public.profiles(id) on delete set null;
+
 -- NEWS
 create table if not exists public.news (
   id uuid primary key default gen_random_uuid(),
