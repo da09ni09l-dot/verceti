@@ -6,6 +6,10 @@
 
 create extension if not exists pgcrypto;
 
+alter table public.profiles
+  add column if not exists is_banned boolean not null default false;
+grant select (is_banned) on public.profiles to authenticated;
+
 -- NEWS
 create table if not exists public.news (
   id uuid primary key default gen_random_uuid(),
@@ -493,7 +497,11 @@ grant select, insert, update, delete on public.news, public.chat_messages,
   public.direct_messages, public.application_questions, public.community_rules,
   public.music_tracks, public.music_favorites, public.music_recommendations
 to authenticated;
-grant select, update on public.notifications to authenticated;
+grant select on public.notifications to authenticated;
+revoke update on public.notifications from authenticated;
+grant update (is_read) on public.notifications to authenticated;
+revoke update on public.direct_messages from authenticated;
+grant update (is_read) on public.direct_messages to authenticated;
 grant select on public.member_activity to authenticated;
 grant usage, select on all sequences in schema public to authenticated;
 
