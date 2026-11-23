@@ -2472,7 +2472,7 @@ td {
   white-space: nowrap;
 }
 
-@media (min-width: 1051px) {
+@media (min-width: 761px) {
   .app-shell {
     grid-template-columns: 260px minmax(0, 1fr);
   }
@@ -2496,9 +2496,8 @@ td {
   }
 }
 
-/* At tablet and narrow laptop widths use the same drawer as mobile,
-   instead of squeezing the sidebar and the page content side by side. */
-@media (max-width: 1050px) {
+/* Mobile navigation drawer: keep the full desktop sidebar on laptops and PCs. */
+@media (max-width: 760px) {
   .app-shell {
     display: block;
     min-height: 100vh;
