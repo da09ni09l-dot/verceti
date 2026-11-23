@@ -2658,3 +2658,195 @@ a {
     transition-duration: .01ms !important;
   }
 }
+
+/* =========================================
+   VERCETTI — MOBILE DRAWER MENU
+========================================= */
+
+/* За замовчуванням мобільні елементи приховані */
+
+.mobile-menu-toggle,
+.mobile-menu-header,
+.mobile-menu-backdrop {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  /* Кнопка відкриття меню */
+
+  .mobile-menu-toggle {
+    position: fixed;
+    top: 16px;
+    left: 15px;
+    z-index: 1002;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border: 1px solid rgba(174, 123, 255, .38);
+    border-radius: 13px;
+    background: rgba(20, 16, 32, .96);
+    color: #e4caff;
+    font-size: 23px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, .35);
+    backdrop-filter: blur(15px);
+  }
+
+  .mobile-menu-toggle:active {
+    transform: scale(.94);
+  }
+
+  /* Затемнення сторінки */
+
+  .mobile-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: block;
+    background: rgba(0, 0, 0, .68);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity .28s ease,
+      visibility .28s ease;
+  }
+
+  .mobile-menu-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  /* Висувна панель */
+
+  .sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 1001;
+    width: min(310px, 86vw);
+    height: 100dvh !important;
+    max-height: 100dvh;
+    padding: 20px 16px 25px !important;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-right: 1px solid rgba(174, 123, 255, .28);
+    border-bottom: 0;
+    background:
+      radial-gradient(
+        ellipse at 15% 0%,
+        rgba(125, 48, 205, .2),
+        transparent 45%
+      ),
+      #0d0917;
+    box-shadow: 20px 0 70px rgba(0, 0, 0, .45);
+    transform: translateX(-105%);
+    transition: transform .3s cubic-bezier(.22, .8, .25, 1);
+    visibility: hidden;
+  }
+
+  /* Відкритий стан панелі */
+
+  .sidebar:has(.mobile-menu-open) {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  /* Заголовок меню */
+
+  .mobile-menu-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+    margin-bottom: 22px;
+    padding: 0 5px;
+    color: #d5aaff;
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: .19em;
+    text-shadow: 0 0 20px rgba(168, 85, 255, .5);
+  }
+
+  .mobile-menu-header button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgba(174, 123, 255, .25);
+    border-radius: 10px;
+    background: rgba(168, 85, 255, .1);
+    color: #e4caff;
+    font-size: 17px;
+  }
+
+  /* Внутрішні групи меню */
+
+  .sidebar .menu {
+    display: flex;
+    flex-direction: column;
+    gap: 23px;
+  }
+
+  .sidebar .menu-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .sidebar .menu-group-title {
+    padding-left: 11px;
+    margin-bottom: 7px;
+  }
+
+  .sidebar .menu a,
+  .sidebar .menu .menu-link {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .sidebar .menu-bottom {
+    margin-top: auto;
+    padding-top: 15px;
+    border-top: 1px solid rgba(174, 123, 255, .14);
+  }
+
+  .sidebar .sidebar-foot {
+    display: none;
+  }
+
+  /* Відступ контенту для кнопки */
+
+  .main {
+    padding-top: 76px !important;
+  }
+
+  /* На мобільному меню не займає місце зверху */
+
+  .app-shell {
+    display: block;
+  }
+}
+
+@media (max-width: 380px) {
+  .sidebar {
+    width: min(290px, 88vw);
+  }
+
+  .mobile-menu-toggle {
+    top: 12px;
+    left: 11px;
+    width: 43px;
+    height: 43px;
+  }
+
+  .main {
+    padding-top: 68px !important;
+  }
+}
