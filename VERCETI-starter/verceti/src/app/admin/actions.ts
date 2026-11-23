@@ -484,7 +484,8 @@ export async function createNews(formData: FormData) {
     }
   }
 
-  redirect("/admin?news_created=1");
+  const returnTo = formData.get("return_to") === "/preview/news" ? "/preview/news" : "/admin";
+  redirect(returnTo === "/preview/news" ? "/preview/news?status=created" : "/admin?news_created=1");
 }
 
 export async function deleteNews(formData: FormData) {
@@ -506,7 +507,8 @@ export async function deleteNews(formData: FormData) {
     redirect("/admin?error=news_delete");
   }
 
-  redirect("/admin?news_deleted=1");
+  const returnTo = formData.get("return_to") === "/preview/news" ? "/preview/news" : "/admin";
+  redirect(returnTo === "/preview/news" ? "/preview/news?status=deleted" : "/admin?news_deleted=1");
 }
 
 export async function toggleNewsPin(formData: FormData) {
