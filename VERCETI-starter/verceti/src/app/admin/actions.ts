@@ -35,6 +35,30 @@ async function requireAdmin() {
   return { supabase, user };
 }
 
+// Надсилання особистого сповіщення
+async function notifyMember(
+  userId: string,
+  title: string,
+  message: string,
+  type: string,
+  link = "/"
+) {
+  const admin = createAdminClient();
+
+  const { error } = await admin.from("notifications").insert({
+    user_id: userId,
+    title,
+    message,
+    type,
+    link,
+    is_read: false,
+  });
+
+  if (error) {
+    console.error("Notification error:", error.message);
+  }
+}
+
 export async function createMember(formData: FormData) {
   const nickname = String(formData.get("nickname") ?? "").trim();
   const password = String(formData.get("password") ?? "");
@@ -90,6 +114,14 @@ export async function createMember(formData: FormData) {
     }
   }
 
+  await notifyMember(
+    data.user.id,
+    "Ласкаво просимо до VERCETI!",
+    "Для тебе створено обліковий запис. Тепер ти можеш увійти до спільноти.",
+    "member",
+    "/"
+  );
+
   redirect("/admin?created=1");
 }
 
@@ -139,6 +171,14 @@ export async function banMember(formData: FormData) {
     redirect("/admin?error=ban");
   }
 
+  await notifyMember(
+    memberId,
+    "Обліковий запис заблоковано",
+    "Адміністрація VERCETI заблокувала твій обліковий запис.",
+    "warning",
+    "/"
+  );
+
   redirect("/admin?updated=1");
 }
 
@@ -187,6 +227,14 @@ export async function unbanMember(formData: FormData) {
     console.error("Unban member error:", error?.message);
     redirect("/admin?error=unban");
   }
+
+  await notifyMember(
+    memberId,
+    "Обліковий запис розблоковано",
+    "Адміністрація VERCETI відновила доступ до твого облікового запису.",
+    "system",
+    "/"
+  );
 
   redirect("/admin?updated=1");
 }
