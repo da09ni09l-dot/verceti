@@ -512,14 +512,14 @@ language sql
 stable
 security definer
 set search_path = public
-as $
+as $$
   select exists (
     select 1
     from public.profiles
     where id = (select auth.uid())
       and is_banned = false
   );
-$;
+$$;
 revoke all on function public.is_verceti_account_active() from public;
 grant execute on function public.is_verceti_account_active() to authenticated;
 
@@ -529,16 +529,16 @@ language sql
 stable
 security definer
 set search_path = public
-as $
+as $$
   select role
   from public.profiles
   where id = (select auth.uid())
     and is_banned = false
   limit 1;
-$;
+$$;
 
 -- Restrictive policies apply in addition to each table's normal role/ownership rules.
-do $
+do $$
 declare
   table_name text;
 begin
@@ -582,7 +582,7 @@ begin
     );
   end loop;
 end;
-$;
+$$;
 
 
 -- Updated-at triggers for editable content.
