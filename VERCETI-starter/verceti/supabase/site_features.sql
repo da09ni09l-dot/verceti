@@ -349,6 +349,12 @@ begin
   if v_user is null then
     raise exception 'authentication_required';
   end if;
+  if not exists (
+    select 1 from public.profiles
+    where id = v_user and is_banned = false
+  ) then
+    raise exception 'account_inactive';
+  end if;
   if seconds_to_add is null or seconds_to_add < 1 or seconds_to_add > 60 then
     raise exception 'invalid_activity_increment';
   end if;
@@ -401,6 +407,11 @@ as $$
   from public.member_activity a
   join public.profiles p on p.id = a.user_id
   where coalesce(p.is_banned, false) = false
+    and exists (
+      select 1 from public.profiles current_profile
+      where current_profile.id = auth.uid()
+        and current_profile.is_banned = false
+    )
   order by a.total_seconds desc, p.nickname asc
   limit 10;
 $$;
@@ -431,6 +442,12 @@ as $$
 begin
   if auth.uid() is null then
     raise exception 'authentication_required';
+  end if;
+  if not exists (
+    select 1 from public.profiles
+    where id = auth.uid() and is_banned = false
+  ) then
+    raise exception 'account_inactive';
   end if;
   if p_answers is null or jsonb_typeof(p_answers) <> 'object' then
     raise exception 'invalid_application_answers';
