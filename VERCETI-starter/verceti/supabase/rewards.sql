@@ -5,7 +5,7 @@ create table if not exists public.rewards_prizes (
   description text not null default '' check (char_length(description) <= 500),
   weight integer not null default 1 check (weight between 1 and 10000),
   is_active boolean not null default true,
-  created_by uuid not null references public.profiles(id) on delete restrict,
+  created_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now()
 );
 create table if not exists public.rewards_spins (
