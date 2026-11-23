@@ -89,8 +89,10 @@ export default async function Home() {
     "Учасник";
 
   const currentRole = currentProfile?.role ?? "local";
+
   const roleLabel =
     roleLabels[currentRole] ?? currentRole.toUpperCase();
+
   const roleColor = roleColors[currentRole] ?? "muted";
 
   const activeMembers = (profiles ?? []).filter(
@@ -105,21 +107,10 @@ export default async function Home() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            gap: 10
-          }}
-        >
-          <div className="brand">
-            VERCETI
-            <small>PRIVATE COMMUNITY</small>
-          </div>
-
-          <NewsBell userId={user.id} />
-        </div>
+        <Link href="/" className="brand">
+          VERCETTI
+          <small>PRIVATE COMMUNITY</small>
+        </Link>
 
         <MenuBadges userId={user.id} />
 
@@ -130,21 +121,51 @@ export default async function Home() {
           <br />
           Доступ лише за запрошенням.
           <br />
-          VERCETI · PRIVATE COMMUNITY
+          VERCETTI · PRIVATE COMMUNITY
         </div>
       </aside>
 
       <main className="main">
         <header className="topbar">
-          <div>
-            <div className="eyebrow">Панель спільноти</div>
+          <div className="topbar-heading">
+            <div className="eyebrow">
+              Панель спільноти
+            </div>
             <h1>Головна</h1>
           </div>
 
-          <div
+          <nav
+            aria-label="Швидка навігація"
             style={{
               display: "flex",
               alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              flexWrap: "wrap"
+            }}
+          >
+            <div className="topbar-action">
+              <NewsBell userId={user.id} />
+            </div>
+
+            <Link
+              href="/preview/news"
+              className="btn secondary"
+              style={{
+                minHeight: 42,
+                whiteSpace: "nowrap"
+              }}
+            >
+              📰 Новини
+            </Link>
+          </nav>
+
+          <div
+            className="topbar-user"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
               gap: 12
             }}
           >
@@ -171,27 +192,34 @@ export default async function Home() {
 
         <section className="panel welcome">
           <div className="eyebrow">
-            Ласкаво просимо до VERCETI
+            Ласкаво просимо до VERCETTI
           </div>
 
           {pinnedNews && pinnedNews.length > 0 ? (
             <PinnedNewsCarousel news={pinnedNews} />
           ) : (
             <>
-              <h1>Твоя спільнота. Твої правила.</h1>
+              <h1>ТВОЯ СПІЛЬНОТА. ТВОЇ ПРАВИЛА.</h1>
               <p>
-                Тут з&apos;являтимуться важливі новини, оголошення та
-                події спільноти VERCETI.
+                Розвивайся. Спілкуйся. Будь частиною VERCETTI.
+                Тут з&apos;являтимуться важливі новини,
+                оголошення та події спільноти.
               </p>
             </>
           )}
 
           <div className="welcome-actions">
-            <Link className="btn secondary" href="/preview/members">
-              Переглянути учасників
+            <Link
+              className="btn"
+              href="/preview/members"
+            >
+              Переглянути учасників →
             </Link>
 
-            <Link className="btn secondary" href="/preview/forms">
+            <Link
+              className="btn secondary"
+              href="/preview/forms"
+            >
               Перейти до анкет
             </Link>
           </div>
@@ -199,17 +227,21 @@ export default async function Home() {
 
         <section className="grid stats-grid">
           <div className="stat-card">
-            <div className="stat-label">Учасники</div>
+            <div className="stat-label">
+              Учасники
+            </div>
             <div className="stat-value">
               {activeMembers.length}
             </div>
             <div className="stat-note">
-              Зареєстровані учасники
+              Зареєстровані учасники VERCETTI
             </div>
           </div>
 
           <div className="stat-card">
-            <div className="stat-label">Анкети на перевірці</div>
+            <div className="stat-label">
+              Анкети на перевірці
+            </div>
             <div className="stat-value">
               {pendingApplications ?? 0}
             </div>
@@ -225,16 +257,21 @@ export default async function Home() {
           <MembersOnlinePanel members={profiles ?? []} />
         </section>
 
-        <section className="panel" style={{ marginTop: 20 }}>
+        <section
+          className="panel"
+          style={{ marginTop: 20 }}
+        >
           <div className="panel-head">
             <div>
               <h2>Останні сповіщення</h2>
               <div className="panel-sub">
-                Останні події спільноти
+                Останні події спільноти VERCETTI
               </div>
             </div>
 
-            <span className="tag">СПОВІЩЕННЯ</span>
+            <span className="tag">
+              СПОВІЩЕННЯ
+            </span>
           </div>
 
           <div className="notice-list">
@@ -246,9 +283,11 @@ export default async function Home() {
                   <div className="notice-title">
                     {n.title}
                   </div>
+
                   <div className="notice-detail">
                     {n.detail}
                   </div>
+
                   <div className="notice-time">
                     {n.time}
                   </div>
