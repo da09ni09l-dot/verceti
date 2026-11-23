@@ -410,7 +410,9 @@ export async function createNews(formData: FormData) {
 
   const showFrom = fromValue ? new Date(fromValue) : null;
   const showUntil = untilValue ? new Date(untilValue) : null;
-  const eventDate = eventDateValue ? new Date(eventDateValue) : null;
+  const eventDate = eventDateValue
+    ? new Date(eventDateValue.length === 10 ? `${eventDateValue}T12:00:00` : eventDateValue)
+    : null;
 
   if (
     (showFrom && Number.isNaN(showFrom.getTime())) ||
