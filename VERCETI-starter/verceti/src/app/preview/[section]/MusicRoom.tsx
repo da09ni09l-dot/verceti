@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Source = "Audius" | "Jamendo" | "YouTube" | "SoundCloud";
@@ -112,6 +113,7 @@ const tabs: { value: Tab; label: string }[] = [
 ];
 
 export default function MusicRoom() {
+  const pathname = usePathname();
   const supabase = useMemo(() => createClient(), []);
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -727,6 +729,8 @@ export default function MusicRoom() {
         paddingBottom: 260,
       }}
     >
+      {pathname === "/preview/music" ? (
+        <>
       {/* ВКЛАДКИ */}
       <section className="panel">
         <h2 style={{ marginTop: 0 }}>🎵 Музичний простір VERCETI</h2>
@@ -1167,6 +1171,9 @@ export default function MusicRoom() {
           композицій та можливість відтворення залежать від авторів і джерела.
         </p>
       </section>
+
+        </>
+      ) : null}
 
       {/* ЗАКРІПЛЕНИЙ ПЛЕЄР — ПОЗА ОСНОВНИМ КОНТЕЙНЕРОМ */}
       {isMounted &&
