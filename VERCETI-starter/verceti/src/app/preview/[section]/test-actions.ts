@@ -18,6 +18,16 @@ async function getCurrentUser() {
     throw new Error("Потрібно увійти в акаунт.");
   }
 
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("is_banned")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError || !profile || profile.is_banned) {
+    throw new Error("Обліковий запис не має доступу до тестування.");
+  }
+
   return { user, supabase };
 }
 
