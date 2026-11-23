@@ -48,7 +48,7 @@ export default function ActivityTracker() {
         error
       } = await supabase.auth.getUser();
 
-      if (cancelled || error || !user) return;
+      if (cancelled || error || !user || interval !== undefined) return;
 
       interval = window.setInterval(() => {
         if (document.visibilityState === "visible") {
@@ -64,10 +64,25 @@ export default function ActivityTracker() {
       window.addEventListener("beforeunload", handleBeforeUnload);
     }
 
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        void startTracking();
+      } else {
+        if (interval !== undefined) {
+          window.clearInterval(interval);
+          interval = undefined;
+        }
+        seconds = 0;
+      }
+    });
+
     void startTracking();
 
     return () => {
       cancelled = true;
+      subscription.unsubscribe();
       if (interval !== undefined) window.clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("beforeunload", handleBeforeUnload);
