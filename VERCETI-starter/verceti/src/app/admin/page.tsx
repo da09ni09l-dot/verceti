@@ -115,7 +115,7 @@ export default async function AdminPage({
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div className="brand" style={{ padding: 0 }}>
             VERCETI
-            <small>ADMINISTRATION</small>
+            <small>АДМІНІСТРУВАННЯ</small>
           </div>
           <Link href="/" className="btn secondary" style={{ whiteSpace: "nowrap" }}>
             ← Назад на сайт
@@ -178,7 +178,7 @@ export default async function AdminPage({
           <h2>Створити акаунт</h2>
 
           <form action={createMember} style={{ marginTop: 16 }}>
-            <label>Нікнейм гравця</label>
+            <label>Нікнейм учасника</label>
             <input
               name="nickname"
               type="text"
@@ -186,11 +186,11 @@ export default async function AdminPage({
               minLength={3}
               maxLength={20}
               pattern="[a-zA-Z0-9_]+"
-              placeholder="Наприклад: Player_01"
+              placeholder="Наприклад: Учасник_01"
             />
 
             <label style={{ display: "block", marginTop: 16 }}>
-              Пароль гравця
+              Пароль учасника
             </label>
             <input
               name="password"
@@ -201,7 +201,7 @@ export default async function AdminPage({
             />
 
             <label style={{ display: "block", marginTop: 16 }}>
-              Роль гравця
+              Роль учасника
             </label>
 
             <select
@@ -221,7 +221,7 @@ export default async function AdminPage({
               className="btn"
               style={{ width: "100%" }}
             >
-              Створити акаунт гравця
+              Створити акаунт учасника
             </button>
           </form>
         </div>
