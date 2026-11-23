@@ -32,9 +32,9 @@ const roleLabels: Record<string, string> = {
   admin: "Адміністратор",
   leader: "Лідер",
   moderator: "Модератор",
-  senior: "Старший місцевий",
-  local: "Місцевий",
-  junior: "Молодший місцевий"
+  senior: "Старший учасник",
+  local: "Учасник",
+  junior: "Молодший учасник"
 };
 
 const roleColors: Record<string, string> = {
