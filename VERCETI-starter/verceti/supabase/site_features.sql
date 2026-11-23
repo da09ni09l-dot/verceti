@@ -645,15 +645,19 @@ grant select on public.member_activity to authenticated;
 grant usage, select on all sequences in schema public to authenticated;
 
 -- Storage buckets used by chat and community media.
-insert into storage.buckets (id, name, public, file_size_limit)
-values ('chat-media', 'chat-media', false, 15728640)
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('chat-media', 'chat-media', false, 15728640, array['image/*', 'audio/*'])
 on conflict (id) do update
-  set public = false, file_size_limit = 15728640;
+  set public = false,
+      file_size_limit = 15728640,
+      allowed_mime_types = array['image/*', 'audio/*'];
 
-insert into storage.buckets (id, name, public, file_size_limit)
-values ('verceti-media', 'verceti-media', false, 52428800)
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('verceti-media', 'verceti-media', false, 52428800, array['image/*', 'video/*'])
 on conflict (id) do update
-  set public = false, file_size_limit = 52428800;
+  set public = false,
+      file_size_limit = 52428800,
+      allowed_mime_types = array['image/*', 'video/*'];
 
 drop policy if exists "Members read media referenced by accessible messages" on storage.objects;
 create policy "Members read media referenced by accessible messages" on storage.objects
