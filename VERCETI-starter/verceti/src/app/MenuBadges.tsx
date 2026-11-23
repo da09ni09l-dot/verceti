@@ -17,6 +17,7 @@ const menuGroups = [
       ["Головна", "⌂", "home", "/"],
       ["Чат", "▤", "chat", "/preview/chat"],
       ["Сповіщення", "♧", "notifications", "/preview/notifications"],
+      ["Новини", "▤", "news", "/preview/news"],
       ["Учасники", "♙", "members", "/preview/members"],
       ["Анкети", "▣", "forms", "/preview/forms"],
       ["Події", "◷", "events", "/preview/events"],
