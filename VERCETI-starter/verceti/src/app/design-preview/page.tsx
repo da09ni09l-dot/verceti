@@ -126,7 +126,7 @@ export default function DesignPreview() {
               </div>
             </div>
             {demoMembers.map((member, index) => (
-              <div className="ranking-member" key={member.name}>
+              <div className={`ranking-member ranking-place-${index + 1}`} key={member.name}>
                 <div className="ranking-position">{index + 1}</div>
                 <div className="avatar">{member.name.slice(0, 1)}</div>
                 <div>
