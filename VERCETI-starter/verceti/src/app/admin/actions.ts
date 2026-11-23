@@ -35,6 +35,27 @@ async function requireAdmin() {
   return { supabase, user };
 }
 
+async function requireStaff() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    redirect("/login");
+  }
+
+  const { data: isStaff, error: staffError } =
+    await supabase.rpc("is_verceti_staff");
+
+  if (staffError || isStaff !== true) {
+    redirect("/preview/news?status=forbidden");
+  }
+
+  return { supabase, user };
+}
+
 // Надсилання особистого сповіщення
 async function notifyMember(
   userId: string,
@@ -351,7 +372,7 @@ export async function deleteMember(formData: FormData) {
 // ==========================================
 
 export async function createNews(formData: FormData) {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user } = await requireStaff();
 
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
@@ -473,7 +494,7 @@ export async function deleteNews(formData: FormData) {
     redirect("/admin?error=news");
   }
 
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireStaff();
 
   const { error } = await supabase
     .from("news")
