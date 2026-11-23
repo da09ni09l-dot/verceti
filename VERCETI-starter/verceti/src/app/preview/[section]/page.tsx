@@ -469,10 +469,12 @@ export default async function PreviewSection({
   let rewardPrizes: { id: string; title: string; description: string; weight: number; created_by: string }[] = [];
   let rewardError = false;
   let canManageRewards = false;
+  let rewardsRole: string | null = null;
   let lastRewardSpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
   if (section === "rewards") {
     const { data: role } = await supabase.rpc("current_verceti_role");
-    canManageRewards = role === "admin" || role === "leader";
+    rewardsRole = typeof role === "string" ? role : null;
+    canManageRewards = rewardsRole === "admin" || rewardsRole === "leader";
     const [{ data, error }, { data: spinData, error: spinError }] = await Promise.all([
       supabase.from("rewards_prizes").select("id, title, description, weight, created_by").order("created_at", { ascending: true }),
       supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).order("spun_at", { ascending: false }).limit(1).maybeSingle()
@@ -1139,7 +1141,7 @@ export default async function PreviewSection({
                         {prize.description && <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>{prize.description}</p>}
                         <p className="notice-time">Вага випадіння: {prize.weight}</p>
                       </div>
-                      {(role === "admin" || (role === "leader" && prize.created_by === user.id)) && (
+                      {(rewardsRole === "admin" || (rewardsRole === "leader" && prize.created_by === user.id)) && (
                         <form action={deleteRewardPrize}>
                           <input type="hidden" name="id" value={prize.id} />
                           <button className="btn" type="submit" style={{ background: "#8f303f", borderColor: "#b94b5c" }}>Видалити</button>
