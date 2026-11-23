@@ -738,7 +738,7 @@ with check (public.is_verceti_account_active());
 
 -- Approved members and staff only: protect private community tables and storage.
 create or replace function public.is_verceti_member()
-returns boolean language sql stable security definer set search_path = public as $
+returns boolean language sql stable security definer set search_path = public as $verceti_member$
   select exists (
     select 1 from public.profiles p
     where p.id = (select auth.uid()) and p.is_banned = false
@@ -747,11 +747,11 @@ returns boolean language sql stable security definer set search_path = public as
         where a.user_id = p.id and a.status = 'approved'
       ))
   );
-$;
+$verceti_member$;
 revoke all on function public.is_verceti_member() from public;
 grant execute on function public.is_verceti_member() to authenticated;
 
-do $
+do $verceti_member_guard$
 declare table_name text;
 begin
   foreach table_name in array array[
@@ -768,7 +768,7 @@ begin
     );
   end loop;
 end;
-$;
+$verceti_member_guard$;
 
 drop policy if exists approved_member_guard on public.profiles;
 create policy approved_member_guard on public.profiles as restrictive for all to authenticated
@@ -780,7 +780,7 @@ create policy approved_member_guard on storage.objects as restrictive for all to
 using (public.is_verceti_member()) with check (public.is_verceti_member());
 
 -- Realtime publication for live chat and live unread counters.
-do $
+do $realtime_direct_messages$
 begin
   alter publication supabase_realtime add table public.direct_messages;
 exception when duplicate_object then
@@ -788,7 +788,7 @@ exception when duplicate_object then
 when undefined_object then
   null;
 end;
-$$;
+$realtime_direct_messages$;
 do $$
 begin
   alter publication supabase_realtime add table public.notifications;

@@ -238,7 +238,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    if (!(await isAccountActive(supabase, user.id))) {
+    if (!(await isCommunityMember(supabase))) {
       return NextResponse.json(
         { error: "Немає доступу до спільноти." },
         { status: 403 }
