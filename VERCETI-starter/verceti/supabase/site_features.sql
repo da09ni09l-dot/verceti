@@ -10,6 +10,12 @@ alter table public.profiles
   add column if not exists is_banned boolean not null default false;
 grant select (is_banned) on public.profiles to authenticated;
 
+-- Preserve moderation and role-history records when an actor account is deleted.
+alter table public.disciplinary_actions
+  alter column issued_by drop not null;
+alter table public.role_history
+  alter column changed_by drop not null;
+
 -- NEWS
 create table if not exists public.news (
   id uuid primary key default gen_random_uuid(),
