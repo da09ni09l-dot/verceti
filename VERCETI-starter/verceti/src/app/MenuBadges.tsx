@@ -4,11 +4,42 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { menu } from "@/lib/demo-data";
 
 type MenuBadgesProps = {
   userId: string;
 };
+
+const menuGroups = [
+  {
+    title: "ГОЛОВНЕ",
+    items: [
+      ["Головна", "⌂", "home", "/"],
+      ["Чат", "▤", "chat", "/preview/chat"],
+      ["Сповіщення", "♧", "notifications", "/preview/notifications"],
+      ["Новини", "▤", "news", "/preview/news"],
+      ["Учасники", "♙", "members", "/preview/members"],
+      ["Анкети", "▣", "forms", "/preview/forms"],
+      ["Події", "◷", "events", "/preview/events"],
+      ["Рейтинг", "▥", "stats", "/preview/stats"],
+    ],
+  },
+  {
+    title: "МУЛЬТИМЕДІА",
+    items: [
+      ["Голосова кімната", "◖", "voice", "/preview/voice"],
+      ["Музика", "♫", "music", "/preview/music"],
+      ["Фото", "▧", "media", "/preview/media"],
+    ],
+  },
+  {
+    title: "СПІЛЬНОТА",
+    items: [
+      ["Рулетка", "◇", "rewards", "/preview/rewards"],
+      ["Правила", "⚖", "rules", "/preview/rules"],
+      ["Тестування", "✧", "tests", "/preview/tests"],
+    ],
+  },
+];
 
 export default function MenuBadges({ userId }: MenuBadgesProps) {
   const supabase = useMemo(() => createClient(), []);
@@ -28,7 +59,7 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
         .from("notifications")
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId)
-        .eq("is_read", false)
+        .eq("is_read", false),
     ]);
 
     if (!messagesResult.error) {
@@ -50,22 +81,18 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
         {
           event: "*",
           schema: "public",
-          table: "direct_messages"
+          table: "direct_messages",
         },
-        () => {
-          void loadCounts();
-        }
+        () => void loadCounts()
       )
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
-          table: "notifications"
+          table: "notifications",
         },
-        () => {
-          void loadCounts();
-        }
+        () => void loadCounts()
       )
       .subscribe();
 
@@ -74,57 +101,79 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
     };
   }, [supabase, loadCounts]);
 
-  return (
-    <nav className="menu" aria-label="Головне меню">
-      {menu.map(([label, icon, id], index) => {
-        const count =
-          id === "chat"
-            ? unreadMessages
-            : id === "notifications"
-              ? unreadNotifications
-              : 0;
+  const renderItem = (
+    item: readonly [string, string, string, string],
+    index: number
+  ) => {
+    const [label, icon, id, href] = item;
 
-        return (
-          <Link
-            key={id}
-            className={index === 0 ? "active" : ""}
-            href={index === 0 ? "/" : `/preview/${id}`}
+    const count =
+      id === "chat"
+        ? unreadMessages
+        : id === "notifications"
+          ? unreadNotifications
+          : 0;
+
+    return (
+      <Link
+        key={id}
+        href={href}
+        className={`menu-link ${id === "home" ? "active" : ""}`}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+        }}
+      >
+        <span className="menu-icon">{icon}</span>
+        <span style={{ flex: 1 }}>{label}</span>
+
+        {count > 0 && (
+          <span
+            aria-label={`${count} непрочитаних`}
             style={{
-              display: "flex",
+              display: "inline-flex",
               alignItems: "center",
-              gap: 8
+              justifyContent: "center",
+              minWidth: 21,
+              height: 21,
+              padding: "0 6px",
+              boxSizing: "border-box",
+              borderRadius: 20,
+              background: "#e53970",
+              color: "#fff",
+              fontSize: 11,
+              fontWeight: 800,
+              lineHeight: 1,
+              boxShadow: "0 0 12px rgba(229,57,112,0.4)",
             }}
           >
-            <span className="menu-icon">{icon}</span>
+            {count > 99 ? "99+" : count}
+          </span>
+        )}
+      </Link>
+    );
+  };
 
-            <span style={{ flex: 1 }}>{label}</span>
+  return (
+    <nav className="menu" aria-label="Головне меню">
+      {menuGroups.map((group) => (
+        <div className="menu-group" key={group.title}>
+          <div className="menu-group-title">{group.title}</div>
 
-            {count > 0 && (
-              <span
-                aria-label={`${count} непрочитаних`}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  minWidth: 21,
-                  height: 21,
-                  padding: "0 6px",
-                  boxSizing: "border-box",
-                  borderRadius: 20,
-                  background: "#e53950",
-                  color: "#ffffff",
-                  fontSize: 11,
-                  fontWeight: 800,
-                  lineHeight: 1,
-                  boxShadow: "0 0 10px rgba(229,57,80,0.45)"
-                }}
-              >
-                {count > 99 ? "99+" : count}
-              </span>
-            )}
-          </Link>
-        );
-      })}
+          {group.items.map((item, index) =>
+            renderItem(item as readonly [string, string, string, string], index)
+          )}
+        </div>
+      ))}
+
+      <div className="menu-group menu-bottom">
+        <div className="menu-group-title">ПРОФІЛЬ</div>
+        {renderItem(
+          ["Налаштування", "⚙", "settings", "/preview/settings"],
+          0
+        )}
+      </div>
     </nav>
   );
 }
