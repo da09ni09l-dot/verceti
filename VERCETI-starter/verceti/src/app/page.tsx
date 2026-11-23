@@ -1,238 +1,110 @@
 
-import Link from "next/link";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { members, notices } from "@/lib/demo-data";
-import MenuBadges from "./MenuBadges";
-import NewsBell from "./NewsBell";
-import PinnedNewsCarousel from "./PinnedNewsCarousel";
-import { logout } from "./logout/actions";
+"use client";
 
-function Stat({
-  label,
-  value,
-  note
+import { useOnlinePresence } from "./OnlinePresenceProvider";
+
+type Member = {
+  id: string;
+  nickname: string | null;
+  role: string;
+  is_banned: boolean;
+};
+
+const roleInfo: Record<string, { label: string; color: string; order: number }> = {
+  leader: { label: "ЗАСНОВНИК", color: "orange", order: 1 },
+  admin: { label: "АДМІНІСТРАТОР", color: "orange", order: 2 },
+  moderator: { label: "МОДЕРАТОР", color: "purple", order: 3 },
+  senior: { label: "СТАРШИЙ УЧАСНИК", color: "blue", order: 4 },
+  local: { label: "УЧАСНИК", color: "green", order: 5 },
+  junior: { label: "МОЛОДШИЙ УЧАСНИК", color: "muted", order: 6 }
+};
+
+export default function MembersOnlinePanel({
+  members
 }: {
-  label: string;
-  value: string;
-  note: string;
+  members: Member[];
 }) {
-  return (
-    <div className="stat-card">
-      <div className="stat-label">{label}</div>
-      <div className="stat-value">{value}</div>
-      <div className="stat-note">{note}</div>
-    </div>
-  );
-}
+  const { onlineIds } = useOnlinePresence();
 
-export default async function Home() {
-  const supabase = await createClient();
+  const activeMembers = members
+    .filter((member) => !member.is_banned)
+    .sort((a, b) => {
+      const orderA = roleInfo[a.role]?.order ?? 99;
+      const orderB = roleInfo[b.role]?.order ?? 99;
 
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+      if (orderA !== orderB) return orderA - orderB;
 
-  if (!user) {
-    redirect("/login");
-  }
+      return (a.nickname ?? "").localeCompare(b.nickname ?? "", "uk");
+    });
 
-  const { data: staffStatus, error: staffError } =
-    await supabase.rpc("is_verceti_staff");
-
-  const isStaff = !staffError && staffStatus === true;
-
-  if (!isStaff) {
-    const { data: applications, error: applicationError } =
-      await supabase
-        .from("applications")
-        .select("status")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-    const isApproved =
-      !applicationError &&
-      applications?.[0]?.status === "approved";
-
-    if (!isApproved) {
-      redirect("/preview/forms");
-    }
-  }
-
-  const now = new Date().toISOString();
-
-  const { data: pinnedNews } = await supabase
-    .from("news")
-    .select("id, title, content, category")
-    .eq("is_pinned", true)
-    .or(`show_from.is.null,show_from.lte.${now}`)
-    .or(`show_until.is.null,show_until.gt.${now}`)
-    .order("created_at", { ascending: false });
+  const onlineCount = activeMembers.filter((member) =>
+    onlineIds.includes(member.id)
+  ).length;
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            gap: 10
-          }}
-        >
-          <div className="brand">
-            VERCETI
-            <small>PRIVATE COMMUNITY</small>
+    <div className="panel">
+      <div className="panel-head">
+        <div>
+          <h2>Учасники спільноти</h2>
+          <div className="panel-sub">
+            Реальний список учасників VERCETI
           </div>
-
-          <NewsBell userId={user.id} />
         </div>
+        <span className="tag">{activeMembers.length} УЧАСНИКІВ</span>
+      </div>
 
-        <MenuBadges userId={user.id} />
+      <div className="member-list">
+        {activeMembers.map((member) => {
+          const isOnline = onlineIds.includes(member.id);
+          const role = roleInfo[member.role] ?? {
+            label: member.role.toUpperCase(),
+            color: "muted"
+          };
 
-        <div className="sidebar-foot">
-          <strong style={{ color: "#d8baff" }}>
-            ЗАКРИТА СПІЛЬНОТА
-          </strong>
-          <br />
-          Доступ лише за запрошенням.
-          <br />
-          Демо-макет · версія 0.1
-        </div>
-      </aside>
+          const nickname = member.nickname || "Без нікнейму";
 
-      <main className="main">
-        <header className="topbar">
-          <div>
-            <div className="eyebrow">Панель спільноти</div>
-            <h1>Головна</h1>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div className="user-pill">
-              <div className="avatar">A</div>
-              <div>
-                <strong>Засновник</strong>
-                <div className="role orange">АДМІН</div>
-              </div>
-            </div>
-
-            <form action={logout}>
-              <button className="btn secondary" type="submit">
-                Вийти
-              </button>
-            </form>
-          </div>
-        </header>
-
-        <section className="panel welcome">
-          <div className="eyebrow">Ласкаво просимо до VERCETI</div>
-
-          {pinnedNews && pinnedNews.length > 0 ? (
-            <PinnedNewsCarousel news={pinnedNews} />
-          ) : (
-            <>
-              <h1>Твоя спільнота. Твої правила.</h1>
-              <p>
-                Тут з&apos;являтимуться важливі новини, оголошення та події
-                спільноти VERCETI.
-              </p>
-            </>
-          )}
-
-          <div className="welcome-actions">
-            <Link className="btn secondary" href="/preview/members">
-              Переглянути учасників
-            </Link>
-            <Link className="btn secondary" href="/preview/forms">
-              Перейти до анкет
-            </Link>
-          </div>
-        </section>
-
-        <section className="grid stats-grid">
-          <Stat label="Учасники" value="128" note="Демонстраційне значення" />
-          <Stat label="Зараз онлайн" value="24" note="Не є реальним лічильником" />
-          <Stat label="Анкети на перевірці" value="7" note="Приклад для макета" />
-          <Stat label="Попередження" value="12" note="Демонстраційна статистика" />
-        </section>
-
-        <section className="grid content-grid">
-          <div className="panel">
-            <div className="panel-head">
-              <div>
-                <h2>Учасники спільноти</h2>
-                <div className="panel-sub">
-                  Приклад списку та кольорів ролей
+          return (
+            <div className="member-row" key={member.id}>
+              <div className="member-left">
+                <div className="member-avatar">
+                  {nickname.slice(0, 1).toUpperCase()}
                 </div>
-              </div>
-              <span className="tag">КОМАНДА</span>
-            </div>
 
-            <div className="member-list">
-              {members.map((m) => (
-                <div className="member-row" key={m.name}>
-                  <div className="member-left">
-                    <div className="member-avatar">
-                      {m.name.slice(0, 1)}
-                    </div>
-                    <div>
-                      <div className="member-name">{m.name}</div>
-                      <div className="member-meta">
-                        {m.status === "online" ? (
-                          <>
-                            <span className="status-dot" />
-                            Онлайн
-                          </>
-                        ) : m.status === "away" ? (
-                          "Неактивний"
-                        ) : (
-                          "Офлайн"
-                        )}
-                        {" · "}
-                        {m.hours}
-                      </div>
-                    </div>
-                  </div>
-                  <span className={`role ${m.color}`}>{m.role}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+                <div>
+                  <div className="member-name">{nickname}</div>
 
-          <div className="panel">
-            <div className="panel-head">
-              <div>
-                <h2>Останні сповіщення</h2>
-                <div className="panel-sub">
-                  Приклад центру сповіщень
-                </div>
-              </div>
-              <span className="tag">3 НОВІ</span>
-            </div>
-
-            <div className="notice-list">
-              {notices.map((n) => (
-                <div className="notice" key={n.title}>
-                  <span className={`notice-mark ${n.kind}`} />
-                  <div>
-                    <div className="notice-title">{n.title}</div>
-                    <div className="notice-detail">{n.detail}</div>
-                    <div className="notice-time">{n.time}</div>
+                  <div className="member-meta">
+                    {isOnline ? (
+                      <>
+                        <span className="status-dot" />
+                        Онлайн
+                      </>
+                    ) : (
+                      "Офлайн"
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        </section>
+              </div>
 
-        <p className="page-note">
-          Увага: імена, цифри, онлайн-статуси та сповіщення на цій сторінці
-          вигадані для демонстрації. Реальні дані з&apos;являться після
-          підключення відповідних функцій.
-        </p>
-      </main>
+              <span className={`role ${role.color}`}>
+                {role.label}
+              </span>
+            </div>
+          );
+        })}
+
+        {activeMembers.length === 0 && (
+          <div className="panel-sub">
+            Поки що учасників немає.
+          </div>
+        )}
+      </div>
+
+      <div className="panel-sub" style={{ marginTop: 18 }}>
+        <span className="status-dot" />
+        Зараз онлайн: <strong>{onlineCount}</strong> із{" "}
+        <strong>{activeMembers.length}</strong> учасників
+      </div>
     </div>
   );
 }
