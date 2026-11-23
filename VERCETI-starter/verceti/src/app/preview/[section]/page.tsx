@@ -549,7 +549,7 @@ export default async function PreviewSection({
   }
 
   return (
-    <main className={`login-wrap ${section === "tests" ? "tests-page-wrap" : ""}`}>
+    <main className={`login-wrap workspace-wrap ${section === "tests" ? "tests-page-wrap" : ""}`}>
       <section className={`login-card workspace-card ${section === "tests" ? "tests-page-card" : ""}`}>
         <SectionNavigation />
         <ActivityTracker />
