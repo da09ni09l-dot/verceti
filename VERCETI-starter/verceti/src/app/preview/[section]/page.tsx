@@ -146,7 +146,7 @@ export default async function PreviewSection({
   // Перевірка блокування акаунта
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("is_banned")
+    .select("is_banned, nickname")
     .eq("id", user.id)
     .single();
 
