@@ -1151,3 +1151,234 @@ video {
     font-size: 10px;
   }
 }
+
+/* =========================================
+   VERCETTI — HERO NEWS BANNER
+========================================= */
+
+.welcome {
+  position: relative;
+  padding: clamp(25px, 4vw, 48px);
+  min-height: 330px;
+  border-radius: 23px;
+  border: 1px solid rgba(174, 123, 255, .3);
+  background:
+    radial-gradient(ellipse at 85% 35%, rgba(145, 55, 255, .3), transparent 42%),
+    radial-gradient(ellipse at 10% 100%, rgba(91, 35, 160, .2), transparent 45%),
+    linear-gradient(115deg, #211332, #100c1b 72%);
+  box-shadow:
+    0 20px 65px rgba(0, 0, 0, .3),
+    inset 0 1px 0 rgba(255, 255, 255, .06);
+  overflow: hidden;
+}
+
+.welcome::before {
+  content: "";
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  right: 9%;
+  top: 20px;
+  border: 1px solid rgba(185, 138, 255, .15);
+  border-radius: 50%;
+  box-shadow:
+    0 0 70px rgba(168, 85, 255, .1),
+    inset 0 0 50px rgba(168, 85, 255, .08);
+  pointer-events: none;
+}
+
+.welcome::after {
+  content: "V";
+  position: absolute;
+  right: 10%;
+  top: -30px;
+  font-size: clamp(190px, 22vw, 290px);
+  font-weight: 800;
+  font-style: italic;
+  line-height: 1;
+  color: rgba(255, 255, 255, .035);
+  text-shadow: 0 0 50px rgba(168, 85, 255, .2);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.hero-news {
+  position: relative;
+  z-index: 1;
+  margin-top: 20px;
+}
+
+.hero-news-top,
+.hero-news-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.hero-news-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 13px;
+  color: #c8a5ff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .16em;
+}
+
+.hero-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #a855ff;
+  box-shadow: 0 0 12px #a855ff;
+}
+
+.hero-symbol {
+  color: rgba(196, 151, 255, .2);
+  font-size: 65px;
+  font-weight: 800;
+  font-style: italic;
+}
+
+.hero-news-content {
+  min-height: 145px;
+  padding: 15px 0 20px;
+  animation: heroFade .35s ease;
+}
+
+.hero-category {
+  display: inline-block;
+  padding: 6px 10px;
+  border: 1px solid rgba(174, 123, 255, .35);
+  border-radius: 7px;
+  color: #d4b3ff;
+  background: rgba(168, 85, 255, .1);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.hero-news-content h1 {
+  max-width: 720px;
+  margin: 14px 0 10px;
+  color: #fff;
+  font-size: clamp(24px, 3.2vw, 38px);
+  line-height: 1.2;
+  letter-spacing: -.045em;
+}
+
+.hero-news-content p {
+  max-width: 700px;
+  margin: 0;
+  color: #bcb0ce;
+  font-size: 12px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.hero-news-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.hero-arrow {
+  width: 35px;
+  height: 35px;
+  border: 1px solid rgba(174, 123, 255, .3);
+  border-radius: 10px;
+  color: #e5d2ff;
+  background: rgba(168, 85, 255, .1);
+  transition: .2s;
+}
+
+.hero-arrow:hover {
+  background: #8735e7;
+  border-color: #c18aff;
+  box-shadow: 0 0 17px rgba(168, 85, 255, .3);
+}
+
+.hero-counter {
+  color: #9587a9;
+  font-size: 11px;
+  margin-left: 5px;
+}
+
+.hero-all-news {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #d8baff;
+  font-size: 11px;
+  font-weight: 800;
+  transition: .2s;
+}
+
+.hero-all-news:hover {
+  color: #fff;
+  text-shadow: 0 0 12px #a855ff;
+}
+
+.hero-progress {
+  display: flex;
+  gap: 5px;
+  margin-top: 18px;
+}
+
+.hero-progress-item {
+  width: 24px;
+  height: 3px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, .16);
+  transition: .25s;
+}
+
+.hero-progress-item.active {
+  width: 48px;
+  background: #b77aff;
+  box-shadow: 0 0 10px #a855ff;
+}
+
+@keyframes heroFade {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 600px) {
+  .welcome {
+    min-height: 300px;
+    padding: 22px;
+  }
+
+  .hero-symbol {
+    font-size: 43px;
+  }
+
+  .hero-news-content {
+    min-height: 165px;
+  }
+
+  .hero-news-content h1 {
+    font-size: 25px;
+  }
+
+  .hero-news-content p {
+    font-size: 11px;
+  }
+
+  .hero-news-bottom {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
