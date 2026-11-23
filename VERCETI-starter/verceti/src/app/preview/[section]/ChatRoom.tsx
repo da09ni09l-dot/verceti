@@ -112,6 +112,35 @@ export default function ChatRoom() {
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
+  const resolveMediaContent = useCallback(async (content: string) => {
+    const media = parseMessage(content);
+    if (!media?.url) return content;
+
+    let objectPath = media.url;
+    const publicPrefix = "/storage/v1/object/public/chat-media/";
+    const prefixIndex = objectPath.indexOf(publicPrefix);
+
+    if (prefixIndex >= 0) {
+      objectPath = objectPath.slice(prefixIndex + publicPrefix.length);
+      try {
+        objectPath = decodeURIComponent(objectPath);
+      } catch {
+        return content;
+      }
+    }
+
+    const { data, error } = await supabase.storage
+      .from("chat-media")
+      .createSignedUrl(objectPath, 3600);
+
+    if (error || !data?.signedUrl) {
+      console.error("Chat media signing error:", error?.message);
+      return content;
+    }
+
+    return JSON.stringify({ ...media, url: data.signedUrl });
+  }, [supabase]);
+
   const loadMessages = useCallback(async () => {
     const { data: authData } = await supabase.auth.getUser();
     const currentUserId = authData.user?.id ?? "";
@@ -155,20 +184,23 @@ export default function ChatRoom() {
     );
 
     setMessages(
-      (messageData ?? []).map((item) => {
-        const profile = profileMap.get(item.user_id);
+      await Promise.all(
+        (messageData ?? []).map(async (item) => {
+          const profile = profileMap.get(item.user_id);
 
-        return {
-          ...item,
-          nickname: profile?.nickname || "Учасник",
-          role: profile?.role || "junior"
-        };
-      })
+          return {
+            ...item,
+            content: await resolveMediaContent(item.content),
+            nickname: profile?.nickname || "Учасник",
+            role: profile?.role || "junior"
+          };
+        })
+      )
     );
 
     setError("");
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, resolveMediaContent]);
 
   // Завантаження приватної переписки та позначення отриманих повідомлень прочитаними.
   const loadDirectMessages = useCallback(async () => {
@@ -219,18 +251,21 @@ export default function ChatRoom() {
     }
 
     setDirectMessages(
-      (data ?? []).map((message) => ({
-        ...message,
-        is_read:
-          message.recipient_id === currentUserId
-            ? true
-            : message.is_read
-      })) as DirectMessage[]
+      await Promise.all(
+        (data ?? []).map(async (message) => ({
+          ...message,
+          content: await resolveMediaContent(message.content),
+          is_read:
+            message.recipient_id === currentUserId
+              ? true
+              : message.is_read
+        }))
+      ) as DirectMessage[]
     );
 
     setError("");
     setDirectLoading(false);
-  }, [supabase, selectedPlayer]);
+  }, [supabase, selectedPlayer, resolveMediaContent]);
 
   useEffect(() => {
     void loadMessages();
@@ -338,14 +373,10 @@ export default function ChatRoom() {
       throw new Error("Не вдалося завантажити файл.");
     }
 
-    const { data } = supabase.storage
-      .from("chat-media")
-      .getPublicUrl(filePath);
-
     await saveMessage(
       JSON.stringify({
         type,
-        url: data.publicUrl,
+        url: filePath,
         name: file.name
       })
     );
