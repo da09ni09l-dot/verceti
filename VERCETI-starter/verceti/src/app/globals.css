@@ -2592,3 +2592,58 @@ td {
     padding: clamp(18px, 1.8vw, 30px);
   }
 }
+
+
+/* VERCETI sidebar — wider desktop navigation with full labels */
+@media (min-width: 761px) {
+  :root {
+    --sidebar-width: 292px;
+  }
+
+  .app-shell {
+    grid-template-columns: 292px minmax(0, 1fr);
+  }
+
+  .sidebar {
+    width: 292px;
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .menu {
+    gap: 20px;
+  }
+
+  .menu-group {
+    gap: 6px;
+  }
+
+  .menu-group-title {
+    font-size: 10px;
+    letter-spacing: .19em;
+  }
+
+  .menu-link {
+    min-height: 46px;
+    padding: 12px 14px;
+    gap: 13px;
+    font-size: 13px;
+  }
+
+  .menu-link > span:nth-child(2) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (min-width: 1500px) {
+  .app-shell {
+    grid-template-columns: 304px minmax(0, 1fr);
+  }
+
+  .sidebar {
+    width: 304px;
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+}
