@@ -146,6 +146,27 @@ export async function createMember(formData: FormData) {
   redirect("/admin?created=1");
 }
 
+
+export async function resetMemberPassword(formData: FormData) {
+  const memberId = String(formData.get("member_id") ?? "").trim();
+  const password = String(formData.get("new_password") ?? "");
+  if (!memberId || !/^[0-9a-f-]{36}$/i.test(memberId)) redirect("/admin?error=member");
+  if (password.length < 8 || password.length > 128) redirect("/admin?error=password");
+  const { user } = await requireAdmin();
+  if (memberId === user.id) redirect("/admin?error=self_password");
+  const admin = createAdminClient();
+  const { data: member, error: memberError } = await admin.from("profiles").select("id, role").eq("id", memberId).single();
+  if (memberError || !member) redirect("/admin?error=member");
+  if (member.role === "admin") redirect("/admin?error=protected");
+  const { error } = await admin.auth.admin.updateUserById(memberId, { password });
+  if (error) {
+    console.error("Reset member password error:", error.message);
+    redirect("/admin?error=password_reset");
+  }
+  await notifyMember(memberId, "Пароль оновлено", "Адміністрація оновила пароль твого акаунта. Звернися до адміністратора, щоб отримати новий пароль.", "security", "/");
+  redirect("/admin?password_reset=1");
+}
+
 export async function banMember(formData: FormData) {
   const memberId = String(formData.get("member_id") ?? "").trim();
 

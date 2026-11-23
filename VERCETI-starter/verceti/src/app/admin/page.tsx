@@ -7,6 +7,7 @@ import {
   banMember,
   unbanMember,
   changeMemberRole,
+  resetMemberPassword,
   deleteMember,
   createNews,
   deleteNews,
@@ -18,6 +19,7 @@ export default async function AdminPage({
 }: {
   searchParams: Promise<{
     created?: string;
+    password_reset?: string;
     updated?: string;
     deleted?: string;
     news_created?: string;
@@ -63,6 +65,8 @@ export default async function AdminPage({
     create: "Не вдалося створити акаунт. Можливо, такий нікнейм уже існує.",
     role_assignment: "Не вдалося призначити або змінити роль.",
     self_role: "Не можна змінювати власну роль.",
+    self_password: "Для зміни власного пароля скористайся налаштуваннями профілю.",
+    password_reset: "Не вдалося оновити пароль учасника.",
     member: "Учасника не знайдено.",
     self_ban: "Не можна заблокувати власний акаунт.",
     self_delete: "Не можна видалити власний акаунт.",
@@ -136,6 +140,10 @@ export default async function AdminPage({
           <p style={{ color: "#8ee6a5", fontSize: 13 }}>
             Акаунт успішно створено!
           </p>
+        )}
+
+        {params.password_reset === "1" && (
+          <p style={{ color: "#8ee6a5", fontSize: 13 }}>Пароль учасника оновлено. Передай новий пароль користувачу безпечним способом.</p>
         )}
 
         {params.updated === "1" && (
@@ -523,6 +531,12 @@ export default async function AdminPage({
                           <option value="leader">Лідер</option>
                         </select>
                         <button className="btn secondary" type="submit" style={{ width: "100%", marginTop: 8 }}>Зберегти роль</button>
+                      </form>
+                      <form action={resetMemberPassword} style={{ marginTop: 14 }}>
+                        <input type="hidden" name="member_id" value={member.id} />
+                        <label htmlFor={`member-password-${member.id}`}>Встановити новий пароль</label>
+                        <input id={`member-password-${member.id}`} name="new_password" type="password" required minLength={8} maxLength={128} autoComplete="new-password" placeholder="Мінімум 8 символів" style={{ marginTop: 6 }} />
+                        <button className="btn secondary" type="submit" style={{ width: "100%", marginTop: 8 }}>Оновити пароль</button>
                       </form>
                       {member.is_banned ? (
                         <form action={unbanMember}>

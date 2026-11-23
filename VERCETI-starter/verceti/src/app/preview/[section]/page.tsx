@@ -202,7 +202,7 @@ export default async function PreviewSection({
 
   let newsError = false;
 
-  let memberItems: { id: string; nickname: string; role: string; created_at: string; is_banned: boolean }[] = [];
+  let memberItems: { id: string; nickname: string; game_id: string | null; role: string; created_at: string; is_banned: boolean }[] = [];
   let membersError = false;
   let activityItems: { user_id: string; nickname: string; role: string; total_seconds: number }[] = [];
   let activityError = false;
@@ -497,7 +497,7 @@ export default async function PreviewSection({
   if (section === "members") {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, nickname, role, created_at, is_banned")
+      .select("id, nickname, game_id, role, created_at, is_banned")
       .eq("is_banned", false)
       .order("nickname", { ascending: true })
       .limit(500);
@@ -510,7 +510,8 @@ export default async function PreviewSection({
       memberItems = (data ?? []).filter((member) =>
         !normalizedQuery ||
         member.nickname.toLocaleLowerCase("uk-UA").includes(normalizedQuery) ||
-        member.role.toLocaleLowerCase("uk-UA").includes(normalizedQuery)
+        member.role.toLocaleLowerCase("uk-UA").includes(normalizedQuery) ||
+        (member.game_id ?? "").toLocaleLowerCase("uk-UA").includes(normalizedQuery)
       );
     }
   }
@@ -773,7 +774,7 @@ export default async function PreviewSection({
             <h1>Учасники VERCETI</h1>
             <p className="muted">Список активних профілів спільноти та їхні ролі.</p>
             <form method="get" className="member-search-form" style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
-              <input name="q" type="search" defaultValue={q} placeholder="Пошук за нікнеймом або роллю" aria-label="Пошук учасників" style={{ flex: "1 1 240px" }} />
+              <input name="q" type="search" defaultValue={q} placeholder="Пошук за нікнеймом, роллю або ігровим ID" aria-label="Пошук учасників" style={{ flex: "1 1 240px" }} />
               <button className="btn" type="submit">Знайти</button>
               {q && <Link className="btn secondary" href="/preview/members">Скинути</Link>}
             </form>
@@ -791,7 +792,9 @@ export default async function PreviewSection({
                     <div className="avatar">{member.nickname.slice(0, 1).toUpperCase()}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <strong style={{ overflowWrap: "anywhere" }}>{member.nickname}</strong>
-                      <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>У спільноті з {new Date(member.created_at).toLocaleDateString("uk-UA")}</div>
+                      <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+                        {member.game_id ? `Ігровий ID: ${member.game_id} · ` : ""}У спільноті з {new Date(member.created_at).toLocaleDateString("uk-UA")}
+                      </div>
                     </div>
                     <span className={`role ${member.role === "admin" || member.role === "leader" ? "orange" : member.role === "moderator" ? "purple" : member.role === "senior" ? "blue" : member.role === "local" ? "green" : "muted"}`}>{({ admin: "АДМІН", leader: "ЗАСНОВНИК", moderator: "МОДЕРАТОР", senior: "СТАРШИЙ", local: "УЧАСНИК", junior: "МОЛОДШИЙ" } as Record<string, string>)[member.role] ?? member.role}</span>
                   </div>
