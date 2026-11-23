@@ -30,6 +30,18 @@ export async function deleteRewardPrize(formData: FormData) {
   if (error) { console.error("Delete rewards prize:", error.message); redirect("/preview/rewards?status=error"); }
   redirect("/preview/rewards?status=deleted");
 }
+export async function spinWeeklyRewards() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const { error } = await supabase.rpc("spin_verceti_weekly_rewards");
+  if (error) {
+    const status = error.message.includes("weekly_spin_used") ? "weekly_used" : error.message.includes("no_active_prizes") ? "empty" : "spin-error";
+    redirect("/preview/rewards?status=" + status);
+  }
+  redirect("/preview/rewards?status=weekly_won");
+}
+
 export async function spinRewards() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

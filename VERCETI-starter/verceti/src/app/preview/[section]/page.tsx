@@ -18,7 +18,7 @@ import VoiceRoom from "./VoiceRoom";
 import MediaRoom from "./MediaRoom";
 import ApplicationsSection from "./ApplicationsSection";
 import StatsSection from "./StatsSection";
-import { createRewardPrize, deleteRewardPrize, spinRewards } from "./rewards-actions";
+import { createRewardPrize, deleteRewardPrize, spinRewards, spinWeeklyRewards } from "./rewards-actions";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: {
@@ -631,18 +631,25 @@ export default async function PreviewSection({
   let canManageRewards = false;
   let rewardsRole: string | null = null;
   let lastRewardSpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
+  let lastWeeklySpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
+  let weeklySpinUsed = false;
   if (section === "rewards") {
     const { data: role } = await supabase.rpc("current_verceti_role");
     rewardsRole = typeof role === "string" ? role : null;
     canManageRewards = rewardsRole === "admin" || rewardsRole === "leader";
-    const [{ data, error }, { data: spinData, error: spinError }] = await Promise.all([
+    const now = new Date();
+    const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - ((now.getUTCDay() + 6) % 7)));
+    const [{ data, error }, { data: spinData, error: spinError }, { data: weeklyData, error: weeklyError }] = await Promise.all([
       supabase.from("rewards_prizes").select("id, title, description, weight, created_by").order("created_at", { ascending: true }),
-      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).order("spun_at", { ascending: false }).limit(1).maybeSingle()
+      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "daily").order("spun_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "weekly").gte("spun_at", weekStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle()
     ]);
     rewardError = !!error;
-    if (spinError) console.error("VERCETI rewards spin history loading error:", spinError.message);
+    if (spinError || weeklyError) console.error("VERCETI rewards spin history loading error:", spinError?.message ?? weeklyError?.message);
     rewardPrizes = data ?? [];
     lastRewardSpin = spinData as typeof lastRewardSpin;
+    lastWeeklySpin = weeklyData as typeof lastWeeklySpin;
+    weeklySpinUsed = !!weeklyData;
   }
 
   if (section === "rules") {
@@ -1387,8 +1394,9 @@ export default async function PreviewSection({
             <p className="muted">Спільна рулетка VERCETI — призи доступні всім учасникам.</p>
             {status === "created" && <div className="panel" style={{ marginTop: 14 }}>Приз додано до загальної рулетки.</div>}
             {status === "deleted" && <div className="panel" style={{ marginTop: 14 }}>Приз видалено.</div>}
-            {status === "won" && <div className="panel" style={{ marginTop: 14 }}><strong>🎉 Твій результат</strong><p style={{ marginTop: 8 }}>{lastRewardSpin?.prize?.title ?? "Оберт успішно зафіксовано."}</p>{lastRewardSpin?.prize?.description && <p className="muted" style={{ marginTop: 6 }}>{lastRewardSpin.prize.description}</p>}</div>}
+            {(status === "won" || status === "weekly_won") && <div className="panel" style={{ marginTop: 14 }}><strong>🎉 Твій результат</strong><p style={{ marginTop: 8 }}>{(status === "weekly_won" ? lastWeeklySpin?.prize?.title : lastRewardSpin?.prize?.title) ?? "Оберт успішно зафіксовано."}</p>{(status === "weekly_won" ? lastWeeklySpin?.prize?.description : lastRewardSpin?.prize?.description) && <p className="muted" style={{ marginTop: 6 }}>{status === "weekly_won" ? lastWeeklySpin?.prize?.description : lastRewardSpin?.prize?.description}</p>}</div>}
             {status === "used" && <div className="panel" style={{ marginTop: 14 }}>Ти вже використав(ла) безкоштовний оберт сьогодні. Повертайся завтра!</div>}
+            {status === "weekly_used" && <div className="panel" style={{ marginTop: 14 }}>Щотижневий бонус уже використано. Новий буде доступний наступного понеділка.</div>}
             {status === "empty" && <div className="panel" style={{ marginTop: 14 }}>Активних призів поки немає.</div>}
             {status === "forbidden" && <div className="panel" style={{ marginTop: 14 }}>Керувати призами можуть лише адміністратор і лідер.</div>}
             {(status === "invalid" || status === "error" || status === "spin-error") && <div className="panel" style={{ marginTop: 14 }}>Не вдалося виконати дію. Перевір дані та налаштування бази.</div>}
@@ -1402,7 +1410,18 @@ export default async function PreviewSection({
                   <button className="btn" type="submit" disabled={rewardPrizes.length === 0} style={{ width: "100%" }}>🎡 Крутити рулетку</button>
                 </form>
               )}
-              <p className="page-note">Додаткові оберти за бали й тижневі нагороди підключимо після створення безпечного балансу балів.</p>
+              <div style={{ borderTop: "1px solid rgba(255,255,255,.1)", marginTop: 18, paddingTop: 16 }}>
+                <h3>Щотижневий бонусний оберт</h3>
+                <p className="muted">Один додатковий оберт на календарний тиждень, незалежно від щоденного.</p>
+                {weeklySpinUsed ? (
+                  <p className="page-note">Тижневий бонус уже використано. Наступний доступний із понеділка.</p>
+                ) : (
+                  <form action={spinWeeklyRewards} style={{ marginTop: 12 }}>
+                    <button className="btn secondary" type="submit" disabled={rewardPrizes.length === 0} style={{ width: "100%" }}>🎁 Забрати тижневий бонус</button>
+                  </form>
+                )}
+              </div>
+              <p className="page-note">Додаткові оберти за бали підключимо після визначення правил нарахування та витрат балів.</p>
             </div>
             <div className="panel" style={{ marginTop: 20 }}>
               <h2>Загальні призи</h2>
