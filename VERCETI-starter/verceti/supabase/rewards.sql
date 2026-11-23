@@ -22,9 +22,9 @@ create policy "Authenticated users can view active rewards prizes" on public.rew
 drop policy if exists "Leaders can add shared rewards prizes" on public.rewards_prizes;
 create policy "Leaders can add shared rewards prizes" on public.rewards_prizes for insert to authenticated with check (created_by = (select auth.uid()) and public.current_verceti_role() in ('admin','leader'));
 drop policy if exists "Leaders can update shared rewards prizes" on public.rewards_prizes;
-create policy "Leaders can update shared rewards prizes" on public.rewards_prizes for update to authenticated using (public.current_verceti_role() in ('admin','leader')) with check (public.current_verceti_role() in ('admin','leader'));
+create policy "Leaders can update shared rewards prizes" on public.rewards_prizes for update to authenticated using (public.current_verceti_role() = 'admin' or (public.current_verceti_role() = 'leader' and created_by = (select auth.uid()))) with check (public.current_verceti_role() = 'admin' or (public.current_verceti_role() = 'leader' and created_by = (select auth.uid())));
 drop policy if exists "Leaders can delete shared rewards prizes" on public.rewards_prizes;
-create policy "Leaders can delete shared rewards prizes" on public.rewards_prizes for delete to authenticated using (public.current_verceti_role() in ('admin','leader'));
+create policy "Leaders can delete shared rewards prizes" on public.rewards_prizes for delete to authenticated using (public.current_verceti_role() = 'admin' or (public.current_verceti_role() = 'leader' and created_by = (select auth.uid())));
 drop policy if exists "Users can view own rewards spins" on public.rewards_spins;
 create policy "Users can view own rewards spins" on public.rewards_spins for select to authenticated using (user_id = (select auth.uid()));
 grant select, insert, update, delete on public.rewards_prizes to authenticated;
