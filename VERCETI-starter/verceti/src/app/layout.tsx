@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import OnlinePresenceProvider from "./OnlinePresenceProvider";
+import MusicRoom from "./preview/[section]/MusicRoom";
 
 export const metadata: Metadata = {
   title: "VERCETI — закрита спільнота",
@@ -18,6 +19,7 @@ export default function RootLayout({
       <body>
         <OnlinePresenceProvider>
           {children}
+          <MusicRoom />
         </OnlinePresenceProvider>
       </body>
     </html>
