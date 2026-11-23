@@ -1,6 +1,7 @@
 
 "use client";
 
+import Link from "next/link";
 import { useOnlinePresence } from "./OnlinePresenceProvider";
 
 type Member = {
@@ -10,7 +11,10 @@ type Member = {
   is_banned: boolean;
 };
 
-const roleInfo: Record<string, { label: string; color: string; order: number }> = {
+const roleInfo: Record<
+  string,
+  { label: string; color: string; order: number }
+> = {
   leader: { label: "ЗАСНОВНИК", color: "orange", order: 1 },
   admin: { label: "АДМІНІСТРАТОР", color: "orange", order: 2 },
   moderator: { label: "МОДЕРАТОР", color: "purple", order: 3 },
@@ -34,7 +38,10 @@ export default function MembersOnlinePanel({
 
       if (orderA !== orderB) return orderA - orderB;
 
-      return (a.nickname ?? "").localeCompare(b.nickname ?? "", "uk");
+      return (a.nickname ?? "").localeCompare(
+        b.nickname ?? "",
+        "uk"
+      );
     });
 
   const onlineCount = activeMembers.filter((member) =>
@@ -47,31 +54,46 @@ export default function MembersOnlinePanel({
         <div>
           <h2>Учасники спільноти</h2>
           <div className="panel-sub">
-            Реальний список учасників VERCETI
+            Усі учасники VERCETI
           </div>
         </div>
-        <span className="tag">{activeMembers.length} УЧАСНИКІВ</span>
+
+        <span className="tag">
+          {activeMembers.length} УЧАСНИКІВ
+        </span>
       </div>
 
       <div className="member-list">
         {activeMembers.map((member) => {
           const isOnline = onlineIds.includes(member.id);
+
           const role = roleInfo[member.role] ?? {
             label: member.role.toUpperCase(),
-            color: "muted"
+            color: "muted",
+            order: 99
           };
 
           const nickname = member.nickname || "Без нікнейму";
 
           return (
-            <div className="member-row" key={member.id}>
+            <Link
+              href={`/preview/members/${member.id}`}
+              className="member-row"
+              key={member.id}
+              style={{
+                textDecoration: "none",
+                color: "inherit"
+              }}
+            >
               <div className="member-left">
                 <div className="member-avatar">
                   {nickname.slice(0, 1).toUpperCase()}
                 </div>
 
                 <div>
-                  <div className="member-name">{nickname}</div>
+                  <div className="member-name">
+                    {nickname}
+                  </div>
 
                   <div className="member-meta">
                     {isOnline ? (
@@ -89,7 +111,7 @@ export default function MembersOnlinePanel({
               <span className={`role ${role.color}`}>
                 {role.label}
               </span>
-            </div>
+            </Link>
           );
         })}
 
