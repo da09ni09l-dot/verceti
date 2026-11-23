@@ -368,6 +368,10 @@ export async function createNews(formData: FormData) {
     formData.get("show_until") ?? ""
   ).trim();
 
+  const eventDateValue = String(
+    formData.get("event_date") ?? ""
+  ).trim();
+
   if (!title || !content) {
     redirect("/admin?error=news_fields");
   }
@@ -385,10 +389,12 @@ export async function createNews(formData: FormData) {
 
   const showFrom = fromValue ? new Date(fromValue) : null;
   const showUntil = untilValue ? new Date(untilValue) : null;
+  const eventDate = eventDateValue ? new Date(eventDateValue) : null;
 
   if (
     (showFrom && Number.isNaN(showFrom.getTime())) ||
-    (showUntil && Number.isNaN(showUntil.getTime()))
+    (showUntil && Number.isNaN(showUntil.getTime())) ||
+    (eventDate && Number.isNaN(eventDate.getTime()))
   ) {
     redirect("/admin?error=news_date");
   }
@@ -407,6 +413,7 @@ export async function createNews(formData: FormData) {
       title,
       content,
       category,
+      event_date: category === "event" ? eventDate?.toISOString() ?? null : null,
       is_pinned: isPinned,
       show_from: showFrom?.toISOString() ?? null,
       show_until: showUntil?.toISOString() ?? null,
