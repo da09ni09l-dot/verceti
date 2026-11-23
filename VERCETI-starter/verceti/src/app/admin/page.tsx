@@ -173,6 +173,8 @@ export default async function AdminPage({
         )}
 
         {/* Створення акаунта */}
+        <details className="panel" style={{ marginTop: 24 }}>
+          <summary style={{ cursor: "pointer", fontWeight: 700, padding: 8 }}>📁 Керування акаунтами</summary>
 
         <div className="panel" style={{ marginTop: 24 }}>
           <h2>Створити акаунт</h2>
@@ -226,7 +228,11 @@ export default async function AdminPage({
           </form>
         </div>
 
+        </details>
+
         {/* Керування новинами */}
+        <details className="panel" style={{ marginTop: 16 }}>
+          <summary style={{ cursor: "pointer", fontWeight: 700, padding: 8 }}>📁 Новини та оголошення</summary>
 
         <div className="panel" style={{ marginTop: 24 }}>
           <h2>Створити новину</h2>
@@ -428,7 +434,11 @@ export default async function AdminPage({
           )}
         </div>
 
+        </details>
+
         {/* Учасники спільноти */}
+        <details className="panel" style={{ marginTop: 16 }}>
+          <summary style={{ cursor: "pointer", fontWeight: 700, padding: 8 }}>📁 Учасники та модерація</summary>
 
         <div style={{ marginTop: 32 }}>
           <h2>Учасники спільноти</h2>
@@ -603,6 +613,8 @@ export default async function AdminPage({
             </div>
           )}
         </div>
+
+        </details>
 
         <p className="page-note">
           Доступ до цієї сторінки має лише адміністратор.
