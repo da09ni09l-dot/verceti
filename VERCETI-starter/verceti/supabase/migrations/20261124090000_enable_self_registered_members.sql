@@ -27,9 +27,10 @@ security definer
 set search_path to 'public'
 as $function$
 begin
-  if new.status is distinct from old.status then
+  if new.status is distinct from old.status
+     and new.status = 'approved' then
     update public.profiles
-    set membership_approved = (new.status = 'approved')
+    set membership_approved = true
     where id = new.user_id;
   end if;
   return new;
