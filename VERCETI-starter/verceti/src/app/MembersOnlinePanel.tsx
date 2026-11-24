@@ -9,6 +9,7 @@ type Member = {
   nickname: string | null;
   role: string;
   is_banned: boolean;
+  avatar_url: string | null;
 };
 
 const roleInfo: Record<
@@ -90,8 +91,8 @@ export default function MembersOnlinePanel({
               key={member.id}
             >
               <div className="online-member-left">
-                <div className="online-member-avatar">
-                  {nickname.slice(0, 1).toUpperCase()}
+                <div className="online-member-avatar" style={member.avatar_url ? { backgroundImage: `url("${member.avatar_url}")`, backgroundSize: "cover", backgroundPosition: "center", color: "transparent" } : undefined}>
+                  {member.avatar_url ? "" : nickname.slice(0, 1).toUpperCase()}
 
                   <span
                     className={`online-avatar-status ${
