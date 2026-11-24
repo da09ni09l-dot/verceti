@@ -2663,3 +2663,119 @@ td {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+/* VERCETI rewards wheel */
+.rewards-wheel-panel {
+  display: grid;
+  gap: 22px;
+}
+.rewards-wheel-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: clamp(20px, 4vw, 42px);
+}
+.rewards-wheel-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: 18px 12px 12px;
+}
+.rewards-wheel {
+  position: relative;
+  width: min(100%, 310px);
+  aspect-ratio: 1;
+  border: 8px solid #251b35;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(216,186,255,.45), 0 16px 44px rgba(0,0,0,.4), inset 0 0 0 2px rgba(255,255,255,.22);
+  transition: transform 5s cubic-bezier(.12,.72,.08,1);
+}
+.rewards-wheel::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(255,255,255,.35);
+  border-radius: 50%;
+}
+.rewards-wheel-empty {
+  opacity: .5;
+}
+.rewards-wheel-center {
+  position: absolute;
+  z-index: 1;
+  inset: 50% auto auto 50%;
+  display: grid;
+  place-items: center;
+  width: 82px;
+  height: 82px;
+  transform: translate(-50%,-50%);
+  border: 4px solid #f0d7ff;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #6e42a3, #24162f 72%);
+  color: white;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  box-shadow: 0 4px 18px rgba(0,0,0,.45);
+}
+.rewards-wheel-pointer {
+  position: absolute;
+  z-index: 2;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ffe19a;
+  font-size: 30px;
+  line-height: 1;
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,.6));
+}
+.rewards-wheel-details { min-width: 0; }
+.rewards-wheel-details h2 { margin: 0 0 10px; }
+.rewards-wheel-form { margin-top: 18px; }
+.rewards-spin-button { min-height: 48px; }
+.rewards-wheel-security {
+  margin-top: 12px;
+  color: var(--muted, #aaa);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.rewards-wheel-prizes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 9px;
+}
+.rewards-wheel-prize {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(216,186,255,.14);
+  border-radius: 12px;
+  background: rgba(255,255,255,.035);
+  font-size: 12px;
+}
+.rewards-wheel-swatch {
+  flex: 0 0 11px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  box-shadow: 0 0 9px currentColor;
+}
+.rewards-wheel-prize-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rewards-wheel-prize-chance {
+  color: #d8baff;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 680px) {
+  .rewards-wheel-layout { grid-template-columns: minmax(0, 1fr); }
+  .rewards-wheel { width: min(78vw, 290px); }
+  .rewards-wheel-details { text-align: center; }
+}
