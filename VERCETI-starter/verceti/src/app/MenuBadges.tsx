@@ -16,8 +16,6 @@ const menuGroups = [
     items: [
       ["Головна", "⌂", "home", "/"],
       ["Чат", "▤", "chat", "/preview/chat"],
-      ["Сповіщення", "♧", "notifications", "/preview/notifications"],
-      ["Новини", "▤", "news", "/preview/news"],
       ["Учасники", "♙", "members", "/preview/members"],
       ["Анкети", "▣", "forms", "/preview/forms"],
       ["Події", "◷", "events", "/preview/events"],
@@ -47,30 +45,18 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
   const pathname = usePathname();
 
   const [unreadMessages, setUnreadMessages] = useState(0);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const loadCounts = useCallback(async () => {
-    const [messagesResult, notificationsResult] = await Promise.all([
+    const messagesResult = await supabase
       supabase
         .from("direct_messages")
         .select("id", { count: "exact", head: true })
         .eq("recipient_id", userId)
-        .eq("is_read", false),
-
-      supabase
-        .from("notifications")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("is_read", false),
-    ]);
+        .eq("is_read", false),;
 
     if (!messagesResult.error) {
       setUnreadMessages(messagesResult.count ?? 0);
-    }
-
-    if (!notificationsResult.error) {
-      setUnreadNotifications(notificationsResult.count ?? 0);
     }
   }, [supabase, userId]);
 
@@ -85,15 +71,6 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
           event: "*",
           schema: "public",
           table: "direct_messages",
-        },
-        () => void loadCounts()
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notifications",
         },
         () => void loadCounts()
       )
@@ -132,9 +109,7 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
     const count =
       id === "chat"
         ? unreadMessages
-        : id === "notifications"
-          ? unreadNotifications
-          : 0;
+        : 0;
 
     return (
       <Link
