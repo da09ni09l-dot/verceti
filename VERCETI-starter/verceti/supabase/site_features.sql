@@ -401,7 +401,7 @@ create or replace function public.get_verceti_top_members()
 returns table (
   user_id uuid,
   nickname text,
-  role public.verceti_role,
+  role text,
   total_seconds bigint
 )
 language sql
@@ -409,7 +409,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select p.id, p.nickname, p.role, a.total_seconds
+  select p.id, p.nickname, p.role::text, a.total_seconds
   from public.member_activity a
   join public.profiles p on p.id = a.user_id
   where coalesce(p.is_banned, false) = false
