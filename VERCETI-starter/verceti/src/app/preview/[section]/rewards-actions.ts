@@ -42,14 +42,30 @@ export async function spinWeeklyRewards() {
   redirect("/preview/rewards?status=weekly_won");
 }
 
-export async function spinRewards() {
+export async function spinRewards(): Promise<
+  | { ok: true; prize: { id: string; title: string; description: string } }
+  | { ok: false; error: "used" | "empty" | "unauthorized" | "failed" }
+> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const { error } = await supabase.rpc("spin_verceti_rewards");
+  if (!user) return { ok: false, error: "unauthorized" };
+
+  const { data, error } = await supabase.rpc("spin_verceti_rewards");
   if (error) {
-    const status = error.message.includes("daily_spin_used") ? "used" : error.message.includes("no_active_prizes") ? "empty" : "spin-error";
-    redirect("/preview/rewards?status=" + status);
+    if (error.message.includes("daily_spin_used")) return { ok: false, error: "used" };
+    if (error.message.includes("no_active_prizes")) return { ok: false, error: "empty" };
+    console.error("Spin rewards:", error.message);
+    return { ok: false, error: "failed" };
   }
-  redirect("/preview/rewards?status=won");
+
+  const prize = data as { id?: string; title?: string; description?: string } | null;
+  if (!prize?.id || !prize.title) return { ok: false, error: "failed" };
+  return {
+    ok: true,
+    prize: {
+      id: prize.id,
+      title: prize.title,
+      description: prize.description ?? "",
+    },
+  };
 }
