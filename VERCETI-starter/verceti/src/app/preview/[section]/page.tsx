@@ -663,7 +663,7 @@ export default async function PreviewSection({
     const kyivDayStart = new Date(Date.UTC(kyivYear, kyivMonth - 1, kyivDay) - kyivOffsetMs);
     const daysSinceMonday = (new Date(Date.UTC(kyivYear, kyivMonth - 1, kyivDay)).getUTCDay() + 6) % 7;
     const kyivWeekStart = new Date(Date.UTC(kyivYear, kyivMonth - 1, kyivDay - daysSinceMonday) - kyivOffsetMs);
-    const kyivYearStart = new Date(Date.UTC(kyivYear, 0, 1) - kyivOffsetMs);
+    const kyivYearStart = new Date(Date.UTC(kyivYear, 0, 1) - 2 * 60 * 60 * 1000);
     birthdayEligible = Number(profile.birth_day) === kyivDay && Number(profile.birth_month) === kyivMonth;
 
     const [
