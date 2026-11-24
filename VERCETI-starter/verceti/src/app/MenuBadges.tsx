@@ -34,6 +34,7 @@ const menuGroups = [
     title: "СПІЛЬНОТА",
     items: [
       ["Рулетка", "◇", "rewards", "/preview/rewards"],
+      ["Активність", "◷", "activity", "/preview/activity"],
       ["Правила", "⚖", "rules", "/preview/rules"],
       ["Тестування", "✧", "tests", "/preview/tests"],
     ],
