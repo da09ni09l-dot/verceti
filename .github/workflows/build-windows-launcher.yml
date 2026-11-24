@@ -2,11 +2,6 @@ name: Build VERCETTI Windows Launcher
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "VERCETI-starter/verceti/**"
-      - ".github/workflows/build-windows-launcher.yml"
-    branches: [main, "launcher/**"]
 
 permissions:
   contents: read
