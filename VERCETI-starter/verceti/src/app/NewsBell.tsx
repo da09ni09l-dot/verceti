@@ -54,6 +54,7 @@ export default function NewsBell({ userId }: NewsBellProps) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<NotificationItem | null>(null);
 
   const loadNotifications = useCallback(async () => {
     const { data, error } = await supabase
@@ -84,7 +85,10 @@ export default function NewsBell({ userId }: NewsBellProps) {
           table: "notifications",
           filter: `user_id=eq.${userId}`,
         },
-        () => {
+        (payload) => {
+          if (payload.eventType === "INSERT" && payload.new) {
+            setToast(payload.new as NotificationItem);
+          }
           void loadNotifications();
         }
       )
@@ -94,6 +98,12 @@ export default function NewsBell({ userId }: NewsBellProps) {
       void supabase.removeChannel(channel);
     };
   }, [supabase, userId, loadNotifications]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 6500);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const markAllAsRead = async () => {
     const { error } = await supabase
@@ -139,7 +149,7 @@ export default function NewsBell({ userId }: NewsBellProps) {
   };
 
   return (
-    <div style={{ position: "relative", flexShrink: 0 }}>
+    <div style={{ position: "fixed", top: 16, right: 16, zIndex: 1200, flexShrink: 0 }}>
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
@@ -189,6 +199,28 @@ export default function NewsBell({ userId }: NewsBellProps) {
           </span>
         )}
       </button>
+
+      {toast && !isOpen && (
+        <button
+          type="button"
+          onClick={() => void openNotification(toast)}
+          style={{
+            position: "fixed", top: 68, right: 16, zIndex: 1201,
+            width: "min(350px, calc(100vw - 32px))", display: "flex",
+            gap: 11, padding: 14, textAlign: "left",
+            border: "1px solid rgba(216,186,255,0.32)", borderRadius: 14,
+            background: "#211a30", color: "#fff",
+            boxShadow: "0 12px 36px rgba(0,0,0,.42)", cursor: "pointer"
+          }}
+        >
+          <span style={{ fontSize: 22 }}>{getNotificationIcon(toast.type)}</span>
+          <span style={{ minWidth: 0 }}>
+            <strong style={{ display: "block", fontSize: 13 }}>{toast.title}</strong>
+            <span style={{ display: "block", color: "#c9bfd5", fontSize: 12, marginTop: 4, lineHeight: 1.45 }}>{toast.message}</span>
+            <span style={{ display: "block", color: "#cda6ff", fontSize: 10, marginTop: 7 }}>Натисни, щоб відкрити</span>
+          </span>
+        </button>
+      )}
 
       {isOpen && (
         <>
