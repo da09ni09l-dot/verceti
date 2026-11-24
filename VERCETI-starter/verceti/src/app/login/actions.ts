@@ -89,15 +89,16 @@ export async function registerWithNickname(formData: FormData) {
     return { error: "Не вдалося створити акаунт. Спробуй ще раз." };
   }
 
-  // New accounts remain outside the community until their application is approved.
-  const { error: profileError } = await admin.from("profiles").insert({
-    id: created.user.id, nickname, membership_approved: false,
-  });
+  // The on_auth_user_created trigger already inserts the profile.
+  // Update that row instead of inserting a duplicate primary key.
+  const { error: profileError } = await admin.from("profiles")
+    .update({ nickname, membership_approved: false })
+    .eq("id", created.user.id);
   if (profileError) {
-    console.error("Profile creation error:", profileError.message);
+    console.error("Profile update error:", profileError.message);
     await admin.auth.admin.deleteUser(created.user.id);
     if (profileError.code === "23505") return { error: "Цей нікнейм уже зайнятий. Обери інший." };
-    return { error: "Не вдалося створити профіль. Спробуй ще раз." };
+    return { error: "Не вдалося налаштувати профіль. Спробуй ще раз." };
   }
 
   const supabase = await createClient();
