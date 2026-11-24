@@ -2457,12 +2457,16 @@ td {
 }
 
 .menu-icon {
-  flex: 0 0 22px;
-  width: 22px;
-  min-width: 22px;
-  height: 22px;
+  flex: 0 0 28px;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
   display: inline-grid;
   place-items: center;
+  border-radius: 9px;
+  background: rgba(187, 138, 255, .09);
+  color: #d8baff;
+  font-size: 19px;
   line-height: 1;
 }
 
