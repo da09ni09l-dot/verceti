@@ -391,3 +391,19 @@ export async function deleteApplication(formData: FormData) {
   revalidatePath(formsPath);
   redirect(`${formsPath}?status=application-deleted`);
 }
+
+export async function saveBirthday(formData: FormData) {
+  const birthDay = Number(formData.get("birth_day") ?? 0);
+  const birthMonth = Number(formData.get("birth_month") ?? 0);
+  if (!Number.isInteger(birthDay) || !Number.isInteger(birthMonth) || birthMonth < 1 || birthMonth > 12 || birthDay < 1 || birthDay > new Date(Date.UTC(2000, birthMonth, 0)).getUTCDate()) {
+    redirect(`${formsPath}?status=birthday-required`);
+  }
+  const { supabase, user } = await getUserAndClient();
+  const { error } = await supabase.from("profiles").update({ birth_day: birthDay, birth_month: birthMonth }).eq("id", user.id);
+  if (error) {
+    console.error("Save birthday:", error.message);
+    redirect(`${formsPath}?status=application-error`);
+  }
+  revalidatePath(formsPath);
+  redirect(`${formsPath}?status=birthday-saved`);
+}
