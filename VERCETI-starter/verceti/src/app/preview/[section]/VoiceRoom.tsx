@@ -10,11 +10,13 @@ import {
   useParticipants,
   useTracks,
   VideoTrack,
+  useLocalParticipant,
 } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import {
   Headphones, Mic2, Users, Plus, Trash2, DoorOpen, MonitorUp,
-  Radio, LoaderCircle, X, CheckCircle2, Volume2,
+  Radio, LoaderCircle, X, CheckCircle2, Volume2, VolumeX,
+  Mic, MicOff, ScreenShare, ScreenShareOff, RadioTower, UserX,
 } from "lucide-react";
 
 type Room = {
@@ -259,7 +261,7 @@ export default function VoiceRoom({ isStaff }: VoiceRoomProps) {
             style={{ width: "100%" }}
           >
             <RoomAudioRenderer />
-            <VoiceRoomContent roomName={currentRoom.name} onLeave={leaveRoom} compact={!isVoicePage} />
+            <VoiceRoomContent roomName={currentRoom.name} onLeave={leaveRoom} compact={!isVoicePage} isStaffForRoom={isStaff} />
           </LiveKitRoom>
         )}
       </section>
@@ -267,16 +269,53 @@ export default function VoiceRoom({ isStaff }: VoiceRoomProps) {
   );
 }
 
-function VoiceRoomContent({ roomName, onLeave, compact = false }: { roomName: string; onLeave: () => void; compact?: boolean }) {
+function VoiceRoomContent({ roomName, onLeave, compact = false, isStaffForRoom = false }: { roomName: string; onLeave: () => void; compact?: boolean; isStaffForRoom?: boolean }) {
   const participants = useParticipants();
   const screenTracks = useTracks([Track.Source.ScreenShare]);
+  const { localParticipant, isMicrophoneEnabled, isScreenShareEnabled } = useLocalParticipant();
+  const [moderating, setModerating] = useState<string | null>(null);
+  const [moderationError, setModerationError] = useState("");
+
+  async function toggleMicrophone() {
+    try {
+      await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
+    } catch {
+      setModerationError("Не вдалося змінити стан мікрофона. Перевір дозвіл браузера.");
+    }
+  }
+
+  async function toggleScreenShare() {
+    try {
+      await localParticipant.setScreenShareEnabled(!isScreenShareEnabled);
+    } catch {
+      setModerationError("Не вдалося запустити демонстрацію екрана.");
+    }
+  }
+
+  async function toggleParticipantMute(identity: string, trackSid: string, muted: boolean) {
+    setModerating(identity);
+    setModerationError("");
+    try {
+      const response = await fetch("/api/livekit/moderation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomName, identity, trackSid, muted }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Не вдалося змінити звук учасника.");
+    } catch (error) {
+      setModerationError(error instanceof Error ? error.message : "Помилка модерації.");
+    } finally {
+      setModerating(null);
+    }
+  }
 
   if (compact) {
     return (
       <div className="voice-mini-dock-inner">
         <div className="voice-mini-status"><span className="voice-mini-indicator" /><strong>{roomName}</strong><span><Users size={13} /> {participants.length}</span></div>
         <div className="voice-mini-actions">
-          <ControlBar controls={{ microphone: true, camera: false, screenShare: false, leave: false }} />
+          <button type="button" className={`voice-action-button ${isMicrophoneEnabled ? "" : "is-muted"}`} onClick={() => void toggleMicrophone()} title={isMicrophoneEnabled ? "Вимкнути мікрофон" : "Увімкнути мікрофон"}><>{isMicrophoneEnabled ? <Mic size={17} /> : <MicOff size={17} />}{isMicrophoneEnabled ? "Мікрофон" : "Мікрофон вимкнено"}</></button>
           <Link className="btn secondary" href="/preview/voice"><Radio size={15} /> Відкрити</Link>
           <button className="btn voice-leave-mini" type="button" onClick={onLeave}><DoorOpen size={15} /> Вийти</button>
         </div>
@@ -329,10 +368,10 @@ function VoiceRoomContent({ roomName, onLeave, compact = false }: { roomName: st
 
       <div className="voice-controls-panel">
         <div><strong>Керування звуком</strong><small>Мікрофон та демонстрація екрана</small></div>
-        <ControlBar controls={{ microphone: true, camera: false, screenShare: true, leave: false }} />
+        <div className="voice-action-group"><button type="button" className={`voice-action-button ${isMicrophoneEnabled ? "" : "is-muted"}`} onClick={() => void toggleMicrophone()}><>{isMicrophoneEnabled ? <Mic size={18} /> : <MicOff size={18} />}{isMicrophoneEnabled ? "Мікрофон увімкнено" : "Мікрофон вимкнено"}</></button><button type="button" className={`voice-action-button ${isScreenShareEnabled ? "is-sharing" : ""}`} onClick={() => void toggleScreenShare()}><>{isScreenShareEnabled ? <ScreenShareOff size={18} /> : <ScreenShare size={18} />}{isScreenShareEnabled ? "Зупинити трансляцію" : "Транслювати екран"}</></button></div>
         <button className="voice-leave-button" type="button" onClick={onLeave}><DoorOpen size={17} /> Вийти з кімнати</button>
       </div>
-      <p className="voice-footnote">Звук оптимізовано: придушення еха, фонових шумів та автоматичне регулювання гучності.</p>
+      {moderationError && <p className="voice-error" role="alert">{moderationError}</p>}\n      <p className="voice-footnote">Звук оптимізовано: придушення еха, фонових шумів та автоматичне регулювання гучності.</p>
     </div>
   );
 }
