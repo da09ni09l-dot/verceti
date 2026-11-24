@@ -32,8 +32,10 @@ const roleLabels: Record<string, string> = {
 
 export default async function ApplicationsSection({
   status,
+  showPendingOnly = false,
 }: {
   status?: string;
+  showPendingOnly?: boolean;
 }) {
   const supabase = await createClient();
 
