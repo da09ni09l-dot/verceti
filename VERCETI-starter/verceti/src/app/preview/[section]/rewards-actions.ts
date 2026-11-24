@@ -69,3 +69,24 @@ export async function spinRewards(): Promise<
     },
   };
 }
+
+
+export async function spinBirthdayRewards(): Promise<
+  | { ok: true; prize: { id: string; title: string; description: string } }
+  | { ok: false; error: "used" | "not_birthday" | "empty" | "unauthorized" | "failed" }
+> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "unauthorized" };
+  const { data, error } = await supabase.rpc("spin_verceti_birthday_rewards");
+  if (error) {
+    if (error.message.includes("birthday_spin_used")) return { ok: false, error: "used" };
+    if (error.message.includes("not_birthday")) return { ok: false, error: "not_birthday" };
+    if (error.message.includes("no_active_prizes")) return { ok: false, error: "empty" };
+    console.error("Birthday spin:", error.message);
+    return { ok: false, error: "failed" };
+  }
+  const prize = data as { id?: string; title?: string; description?: string } | null;
+  if (!prize?.id || !prize.title) return { ok: false, error: "failed" };
+  return { ok: true, prize: { id: prize.id, title: prize.title, description: prize.description ?? "" } };
+}
