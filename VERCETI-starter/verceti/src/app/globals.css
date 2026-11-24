@@ -3059,3 +3059,61 @@ td {
   .voice-room-layout.is-dock .voice-mini-actions { justify-content: space-between; gap: 6px; }
   .voice-room-layout.is-dock .voice-mini-actions .btn { flex: 0 0 auto; font-size: 11px; }
 }
+
+/* iOS Safari: keep the mobile navigation drawer inside the visual viewport. */
+@media (max-width: 760px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .app-shell {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .sidebar {
+    box-sizing: border-box;
+    inset-inline-start: 0;
+    width: min(320px, calc(100vw - 48px));
+    max-width: calc(100vw - 48px);
+    min-width: 0;
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: 16px;
+    transform: translate3d(-105%, 0, 0);
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sidebar:has(.mobile-menu-open) {
+    transform: translate3d(0, 0, 0);
+    visibility: visible;
+  }
+
+  .sidebar .menu,
+  .sidebar .menu-group {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .sidebar .menu-link {
+    box-sizing: border-box;
+    width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-menu-toggle {
+    left: max(15px, env(safe-area-inset-left));
+    z-index: 1105;
+    touch-action: manipulation;
+  }
+
+  .mobile-menu-backdrop {
+    z-index: 1100;
+  }
+}
