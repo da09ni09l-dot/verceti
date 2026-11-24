@@ -141,10 +141,10 @@ export default async function PreviewSection({
   searchParams
 }: {
   params: Promise<{ section: string }>;
-  searchParams: Promise<{ status?: string; q?: string; recipient?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; recipient?: string; view?: string }>;
 }) {
   const { section } = await params;
-  const { status, q = "", recipient } = await searchParams;
+  const { status, q = "", recipient, view } = await searchParams;
 
   const supabase = await createClient();
 
@@ -826,7 +826,7 @@ export default async function PreviewSection({
             <MediaRoom />
           </>
         ) : section === "forms" ? (
-          <ApplicationsSection status={status} />
+          <ApplicationsSection status={status} showPendingOnly={view === "pending" && isStaff} />
         ) : section === "members" ? (
           <>
             <h1>Учасники VERCETI</h1>
@@ -1128,6 +1128,8 @@ export default async function PreviewSection({
                 У тебе немає прав для цієї дії.
               </div>
             )}
+            {status === "pinned" && <div className="panel" style={{ marginTop: 16 }}>Закріплення новини оновлено.</div>}
+            {status === "pin-error" && <div className="panel" style={{ marginTop: 16 }}>Не вдалося змінити закріплення новини.</div>}
             {status === "error" && (
               <div className="panel" style={{ marginTop: 16 }}>
                 Не вдалося опублікувати новину. Перевір журнал помилок.
