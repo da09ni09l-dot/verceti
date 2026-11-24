@@ -26,9 +26,9 @@ type Room = {
   created_by?: string | null;
 };
 
-type VoiceRoomProps = { isStaff: boolean; canModerateVoice: boolean };
+type VoiceRoomProps = { isStaff: boolean; canModerateVoice?: boolean };
 
-export default function VoiceRoom({ isStaff, canModerateVoice }: VoiceRoomProps) {
+export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: VoiceRoomProps) {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [activeRoom, setActiveRoom] = useState<number | null>(null);
   const [token, setToken] = useState("");
