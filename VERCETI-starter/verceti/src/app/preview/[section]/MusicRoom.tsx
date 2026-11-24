@@ -134,6 +134,8 @@ export default function MusicRoom() {
   const [musicLoading, setMusicLoading] = useState(false);
 
   const [playing, setPlaying] = useState<PlayingTrack | null>(null);
+  const [playQueue, setPlayQueue] = useState<PlayingTrack[]>([]);
+  const [queueIndex, setQueueIndex] = useState(0);
   const [resolvedId, setResolvedId] = useState("");
   const [resolving, setResolving] = useState(false);
 
@@ -401,6 +403,31 @@ export default function MusicRoom() {
     setAudioError("");
   }
 
+
+  function startQueue(queue: PlayingTrack[], index: number) {
+    const playable = queue.filter((item) => Boolean(item.url));
+    if (!playable.length) {
+      setAudioError("У списку немає композицій для відтворення.");
+      return;
+    }
+    const selected = queue[index];
+    const nextIndex = Math.max(0, playable.findIndex((item) => item.id === selected?.id));
+    setPlayQueue(playable);
+    setQueueIndex(nextIndex);
+    setAudioError("");
+    setResolvedId("");
+    setPlaying(playable[nextIndex]);
+  }
+
+  function changeQueueTrack(direction: -1 | 1) {
+    if (!playQueue.length) return;
+    const nextIndex = (queueIndex + direction + playQueue.length) % playQueue.length;
+    setQueueIndex(nextIndex);
+    setPlaying(playQueue[nextIndex]);
+    setAudioError("");
+    setResolvedId("");
+  }
+
   function playCatalogTrack(track: CatalogTrack) {
     setAudioError("");
     setResolvedId("");
@@ -410,13 +437,11 @@ export default function MusicRoom() {
       return;
     }
 
-    setPlaying({
-      id: track.id,
-      title: track.title,
-      artist: track.artist,
-      source: track.source,
-      url: track.url,
-    });
+    const queue = catalogTracks.map((item) => ({
+      id: item.id, title: item.title, artist: item.artist,
+      source: item.source, url: item.url,
+    }));
+    startQueue(queue, queue.findIndex((item) => item.id === track.id));
   }
 
   async function saveCatalogTrack(
@@ -695,6 +720,8 @@ export default function MusicRoom() {
     }
 
     setPlaying(null);
+    setPlayQueue([]);
+    setQueueIndex(0);
     setResolvedId("");
     setAudioError("");
     setResolving(false);
@@ -826,13 +853,10 @@ export default function MusicRoom() {
                     onClick={() => {
                       setAudioError("");
                       setResolvedId("");
-                      setPlaying({
-                        id: item.id,
-                        title: item.title,
-                        artist: item.artist,
-                        source: item.source,
-                        url: item.url,
-                      });
+                      const queue = recommendations
+                        .filter((entry) => entry.source === "Audius" || entry.source === "Jamendo")
+                        .map((entry) => ({ id: entry.id, title: entry.title, artist: entry.artist, source: entry.source, url: entry.url }));
+                      startQueue(queue, queue.findIndex((entry) => entry.id === item.id));
                     }}
                   >
                     ▶ Слухати
@@ -904,13 +928,11 @@ export default function MusicRoom() {
                 onClick={() => {
                   setAudioError("");
                   setResolvedId("");
-                  setPlaying({
-                    id: track.id,
-                    title: track.title,
-                    artist: track.artist,
-                    source: track.source,
-                    url: track.url,
-                  });
+                  const queue = visibleTracks.map((entry) => ({
+                    id: entry.id, title: entry.title, artist: entry.artist,
+                    source: entry.source, url: entry.url,
+                  }));
+                  startQueue(queue, queue.findIndex((entry) => entry.id === track.id));
                 }}
                 style={{
                   flex: 1,
@@ -1175,127 +1197,58 @@ export default function MusicRoom() {
         </>
       ) : null}
 
-      {/* ЗАКРІПЛЕНИЙ ПЛЕЄР — ПОЗА ОСНОВНИМ КОНТЕЙНЕРОМ */}
+      {/* Компактний закріплений плеєр */}
       {isMounted && playing &&
         createPortal(
           <section
-            className="panel"
+            aria-label="Музичний плеєр"
             style={{
-              position: "fixed",
-              bottom: "max(12px, env(safe-area-inset-bottom))",
-              left: 12,
-              right: 12,
-              zIndex: 10000,
-              width: "auto",
-              maxWidth: 900,
-              margin: "0 auto",
+              position: "fixed", bottom: "max(8px, env(safe-area-inset-bottom))",
+              left: 8, right: 8, zIndex: 10000, maxWidth: 620, margin: "0 auto",
+              display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+              padding: "9px 12px", borderRadius: 14,
               background: "rgba(25, 20, 38, 0.97)",
               border: "1px solid rgba(187,138,255,0.5)",
-              boxShadow: "0 0 25px rgba(0,0,0,0.4)",
-              backdropFilter: "blur(16px)",
-              WebkitBackdropFilter: "blur(16px)",
-              maxHeight: "45vh",
-              overflowY: "auto",
+              boxShadow: "0 4px 22px rgba(0,0,0,0.35)",
+              backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
             }}
           >
-            <h2 style={{ marginTop: 0 }}>▶ Музичний плеєр</h2>
-
-            {playing ? (
-              <>
-                <h3>{playing.title}</h3>
-                <p className="muted">
-                  {playing.artist} · {playing.source}
-                </p>
-
-                {playing.source === "Audius" ? (
-                  resolving ? (
-                    <p className="muted">
-                      Підключаємо композицію до плеєра...
-                    </p>
-                  ) : currentStream ? (
-                    <audio
-                      ref={audioRef}
-                      key={resolvedId}
-                      controls
-                      autoPlay
-                      preload="auto"
-                      src={currentStream}
-                      onError={() => {
-                        setAudioError(
-                          "Audius не зміг передати аудіо. Спробуй іншу композицію."
-                        );
-                      }}
-                      onCanPlay={() => setAudioError("")}
-                      style={{ width: "100%", marginTop: 12 }}
-                    >
-                      Твій браузер не підтримує аудіоплеєр.
-                    </audio>
-                  ) : null
-                ) : playing.source === "Jamendo" ? (
-                  <audio
-                    ref={audioRef}
-                    key={playing.url}
-                    controls
-                    autoPlay
-                    preload="metadata"
-                    src={playing.url}
-                    onError={() => {
-                      setAudioError(
-                        "Jamendo не зміг передати аудіо. Спробуй іншу композицію."
-                      );
-                    }}
-                    onCanPlay={() => setAudioError("")}
-                    style={{ width: "100%", marginTop: 12 }}
-                  >
-                    Твій браузер не підтримує аудіоплеєр.
-                  </audio>
-                ) : playing.source === "SoundCloud" &&
-                  soundCloudEmbed(playing.url) ? (
-                  <iframe
-                    key={playing.id}
-                    src={soundCloudEmbed(playing.url)}
-                    title={playing.title}
-                    width="100%"
-                    height="166"
-                    style={{ border: 0, borderRadius: 12, marginTop: 12 }}
-                    allow="autoplay"
-                  />
-                ) : (
-                  <p className="muted">
-                    Цей формат поки не підтримується вбудованим плеєром.
-                  </p>
-                )}
-
-                {audioError && (
-                  <p className="page-note" role="alert">
-                    {audioError}
-                  </p>
-                )}
-
-                {playing.source === "Audius" && (
-                  <p>
-                    <a
-                      href={playing.url.split("#")[0]}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Відкрити сторінку композиції в Audius
-                    </a>
-                  </p>
-                )}
-
-                <button className="btn" type="button" onClick={stopPlaying}>
-                  ■ Зупинити
-                </button>
-              </>
-            ) : (
-              <p className="muted">
-                Вибери композицію зі списку або натисни ▶ біля результату пошуку.
-              </p>
-            )}
+            <div style={{ flex: "1 1 130px", minWidth: 0 }}>
+              <strong style={{ display: "block", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {playing.title}
+              </strong>
+              <span className="muted" style={{ fontSize: 11 }}>
+                {playing.artist} · {playing.source}
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <button className="btn" type="button" onClick={() => changeQueueTrack(-1)} disabled={playQueue.length < 2} aria-label="Попередня пісня" title="Попередня пісня">⏮</button>
+              <button className="btn" type="button" onClick={() => changeQueueTrack(1)} disabled={playQueue.length < 2} aria-label="Наступна пісня" title="Наступна пісня">⏭</button>
+              <button className="btn" type="button" onClick={stopPlaying} aria-label="Зупинити" title="Зупинити">■</button>
+            </div>
+            <div style={{ flex: "1 1 220px", minWidth: 180 }}>
+              {playing.source === "Audius" ? (
+                resolving ? <span className="muted" style={{ fontSize: 12 }}>Завантаження…</span> :
+                currentStream ? <audio ref={audioRef} key={resolvedId} controls autoPlay preload="auto" src={currentStream}
+                  onEnded={() => changeQueueTrack(1)}
+                  onError={() => setAudioError("Audius не зміг передати аудіо. Спробуй іншу композицію.")}
+                  onCanPlay={() => setAudioError("")}
+                  style={{ width: "100%", height: 34 }} /> : null
+              ) : playing.source === "Jamendo" ? (
+                <audio ref={audioRef} key={playing.url} controls autoPlay preload="metadata" src={playing.url}
+                  onEnded={() => changeQueueTrack(1)}
+                  onError={() => setAudioError("Jamendo не зміг передати аудіо. Спробуй іншу композицію.")}
+                  onCanPlay={() => setAudioError("")}
+                  style={{ width: "100%", height: 34 }} />
+              ) : (
+                <span className="muted" style={{ fontSize: 12 }}>Відкрий композицію у джерелі</span>
+              )}
+            </div>
+            {audioError && <p className="page-note" role="alert" style={{ flexBasis: "100%", margin: 0, fontSize: 12 }}>{audioError}</p>}
           </section>,
           document.body
         )}
+
     </div>
   );
 }
