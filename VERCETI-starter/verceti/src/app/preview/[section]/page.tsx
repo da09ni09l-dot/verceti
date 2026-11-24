@@ -4,7 +4,7 @@ import TestsSection from "./TestsSection";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "../../logout/actions";
-import { createNews, deleteNews } from "../../admin/actions";
+import { createNews, deleteNews, toggleNewsPin } from "../../admin/actions";
 import {
   createRule,
   updateRule,
@@ -197,6 +197,7 @@ export default async function PreviewSection({
     content: string;
     category: string;
     event_date: string | null;
+    is_pinned: boolean;
     created_at: string;
     show_from: string | null;
     show_until: string | null;
@@ -613,7 +614,7 @@ export default async function PreviewSection({
 
     const { data, error } = await supabase
       .from("news")
-      .select("id, title, content, category, event_date, created_at, show_from, show_until")
+      .select("id, title, content, category, event_date, is_pinned, created_at, show_from, show_until")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -1079,8 +1080,16 @@ export default async function PreviewSection({
                   <input
                     id="news-date"
                     name="event_date"
-                    type="date"
+                    type="datetime-local"
                   />
+
+                  <label htmlFor="news-show-from">Показувати з (необов’язково)</label>
+                  <input id="news-show-from" name="show_from" type="datetime-local" />
+                  <label htmlFor="news-show-until">Показувати до (необов’язково)</label>
+                  <input id="news-show-until" name="show_until" type="datetime-local" />
+                  <label style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                    <input name="is_pinned" type="checkbox" /> Закріпити на головній сторінці
+                  </label>
 
                   <button className="btn" type="submit">
                     Опублікувати новину
@@ -1149,6 +1158,7 @@ export default async function PreviewSection({
                     <div className="eyebrow">
                       {categoryLabels[item.category] ?? item.category.toUpperCase()}
                     </div>
+                    {item.is_pinned && <p className="notice-time">📌 Закріплено на головній</p>}
                     <h2>{item.title}</h2>
                     <p className="muted">{item.content}</p>
                     <div className="notice-time">
@@ -1156,6 +1166,12 @@ export default async function PreviewSection({
                     </div>
 
                     {isStaff && (
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+                      <form action={toggleNewsPin}>
+                        <input type="hidden" name="news_id" value={item.id} />
+                        <input type="hidden" name="return_to" value="/preview/news" />
+                        <button className="btn secondary" type="submit">{item.is_pinned ? "Відкріпити" : "Закріпити"}</button>
+                      </form>
                       <form
                         action={deleteNews}
                         style={{ marginTop: 14 }}
@@ -1177,6 +1193,7 @@ export default async function PreviewSection({
                           Видалити новину
                         </button>
                       </form>
+                      </div>
                     )}
                   </div>
                 ))}
