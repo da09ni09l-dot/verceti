@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -274,6 +274,33 @@ function VoiceRoomContent({ roomName, displayRoomName, onLeave, compact = false,
   const { localParticipant, isMicrophoneEnabled, isScreenShareEnabled } = useLocalParticipant();
   const [moderating, setModerating] = useState<string | null>(null);
   const [moderationError, setModerationError] = useState("");
+  const [dockPosition, setDockPosition] = useState<{ left: number; top: number } | null>(null);
+  const dragOrigin = useRef<{ pointerX: number; pointerY: number; left: number; top: number } | null>(null);
+
+  function startDockDrag(event: React.PointerEvent<HTMLDivElement>) {
+    if ((event.target as HTMLElement).closest("button, a")) return;
+    const rect = event.currentTarget.closest(".voice-floating-dock")?.getBoundingClientRect();
+    if (!rect) return;
+    dragOrigin.current = { pointerX: event.clientX, pointerY: event.clientY, left: rect.left, top: rect.top };
+    setDockPosition({ left: rect.left, top: rect.top });
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }
+
+  function moveDock(event: React.PointerEvent<HTMLDivElement>) {
+    if (!dragOrigin.current) return;
+    const origin = dragOrigin.current;
+    const width = event.currentTarget.closest(".voice-floating-dock")?.getBoundingClientRect().width ?? 340;
+    const height = event.currentTarget.closest(".voice-floating-dock")?.getBoundingClientRect().height ?? 160;
+    setDockPosition({
+      left: Math.max(8, Math.min(window.innerWidth - width - 8, origin.left + event.clientX - origin.pointerX)),
+      top: Math.max(8, Math.min(window.innerHeight - height - 8, origin.top + event.clientY - origin.pointerY)),
+    });
+  }
+
+  function stopDockDrag() {
+    dragOrigin.current = null;
+  }
 
   async function toggleMicrophone() {
     try {
@@ -311,12 +338,27 @@ function VoiceRoomContent({ roomName, displayRoomName, onLeave, compact = false,
 
   if (compact) {
     return (
-      <div className="voice-mini-dock-inner">
-        <div className="voice-mini-status"><span className="voice-mini-indicator" /><strong>{displayRoomName}</strong><span><Users size={13} /> {participants.length}</span></div>
-        <div className="voice-mini-actions">
-          <button type="button" className={`voice-action-button ${isMicrophoneEnabled ? "" : "is-muted"}`} onClick={() => void toggleMicrophone()} title={isMicrophoneEnabled ? "Вимкнути мікрофон" : "Увімкнути мікрофон"}><>{isMicrophoneEnabled ? <Mic size={17} /> : <MicOff size={17} />}{isMicrophoneEnabled ? "Мікрофон" : "Мікрофон вимкнено"}</></button>
-          <Link className="btn secondary" href="/preview/voice"><Radio size={15} /> Відкрити</Link>
-          <button className="btn voice-leave-mini" type="button" onClick={onLeave}><DoorOpen size={15} /> Вийти</button>
+      <div className="voice-floating-dock" style={dockPosition ? { left: dockPosition.left, top: dockPosition.top, right: "auto", bottom: "auto" } : undefined}>
+        <div
+          className="voice-floating-dock-header"
+          onPointerDown={startDockDrag}
+          onPointerMove={moveDock}
+          onPointerUp={stopDockDrag}
+          onPointerCancel={stopDockDrag}
+          title="Перетягни, щоб перемістити панель"
+        >
+          <span className="voice-drag-grip" aria-hidden="true">⠿</span>
+          <span className="voice-mini-indicator" />
+          <strong>{displayRoomName}</strong>
+          <span className="voice-mini-count"><Users size={12} /> {participants.length}</span>
+          <span className="voice-drag-hint">Перемістити</span>
+        </div>
+        <div className="voice-floating-dock-actions">
+          <button type="button" className={`voice-dock-icon-button ${isMicrophoneEnabled ? "" : "is-muted"}`} onClick={() => void toggleMicrophone()} title={isMicrophoneEnabled ? "Вимкнути мікрофон" : "Увімкнути мікрофон"} aria-label={isMicrophoneEnabled ? "Вимкнути мікрофон" : "Увімкнути мікрофон"}>
+            {isMicrophoneEnabled ? <Mic size={17} /> : <MicOff size={17} />}
+          </button>
+          <Link className="voice-dock-icon-button" href="/preview/voice" title="Відкрити голосову кімнату" aria-label="Відкрити голосову кімнату"><RadioTower size={17} /></Link>
+          <button className="voice-dock-leave" type="button" onClick={onLeave}><DoorOpen size={16} /> Вийти з голосу</button>
         </div>
       </div>
     );
