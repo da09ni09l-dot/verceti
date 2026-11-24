@@ -149,7 +149,7 @@ export default function NewsBell({ userId }: NewsBellProps) {
   };
 
   return (
-    <div style={{ position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 1200, flexShrink: 0 }}>
+    <div style={{ position: "relative", display: "inline-flex", alignItems: "center", zIndex: 20, flexShrink: 0 }}>
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
