@@ -55,8 +55,6 @@ export default async function Home() {
   const { data: adminRole, error: adminRoleError } =
     await supabase.rpc("current_verceti_role");
 
-  const showAdminButton =
-    !adminRoleError && adminRole === "admin";
 
   const now = new Date().toISOString();
 
@@ -344,17 +342,6 @@ export default async function Home() {
         </section>
       </main>
 
-      {showAdminButton && (
-        <Link
-          href="/admin"
-          className="admin-floating-button"
-          aria-label="Відкрити панель адміністратора"
-        >
-          <span className="admin-floating-icon">⚙</span>
-          <span>АДМІН-ПАНЕЛЬ</span>
-          <span className="admin-floating-arrow">↗</span>
-        </Link>
-      )}
     </div>
   );
 }
