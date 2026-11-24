@@ -11,6 +11,7 @@ type ChatMessage = {
   created_at: string;
   nickname: string;
   role: string;
+  avatar_url: string | null;
 };
 
 type DirectMessage = {
@@ -26,6 +27,7 @@ type Player = {
   id: string;
   nickname: string | null;
   role: string;
+  avatar_url: string | null;
 };
 
 const roleLabels: Record<string, string> = {
@@ -88,7 +90,7 @@ function parseMessage(content: string) {
   return null;
 }
 
-export default function ChatRoom() {
+export default function ChatRoom({ initialRecipientId = null }: { initialRecipientId?: string | null }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [directMessages, setDirectMessages] = useState<DirectMessage[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -167,7 +169,7 @@ export default function ChatRoom() {
 
     const { data: profileData, error: profilesError } = await supabase
       .from("profiles")
-      .select("id, nickname, role")
+      .select("id, nickname, role, avatar_url")
       .order("nickname", { ascending: true });
 
     if (profilesError) {
@@ -192,7 +194,8 @@ export default function ChatRoom() {
             ...item,
             content: await resolveMediaContent(item.content),
             nickname: profile?.nickname || "Учасник",
-            role: profile?.role || "junior"
+            role: profile?.role || "junior",
+            avatar_url: profile?.avatar_url ?? null
           };
         })
       )
@@ -584,6 +587,12 @@ export default function ChatRoom() {
     setDirectMessages([]);
   }
 
+  useEffect(() => {
+    if (!initialRecipientId || selectedPlayer) return;
+    const recipient = players.find((player) => player.id === initialRecipientId);
+    if (recipient && recipient.id !== userId) openPrivateChat(recipient);
+  }, [initialRecipientId, players, selectedPlayer, userId]);
+
   function openGeneralChat() {
     setSelectedPlayer(null);
     setContent("");
@@ -689,6 +698,8 @@ export default function ChatRoom() {
                           : "1px solid rgba(255,255,255,0.07)"
                       }}
                     >
+                      {player.avatar_url ? <img src={player.avatar_url} alt="" style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} /> : <span style={{ width: 34, height: 34, borderRadius: "50%", display: "grid", placeItems: "center", background: "rgba(187,138,255,.16)", flexShrink: 0, fontSize: 12 }}>{(player.nickname || "У").slice(0, 1).toUpperCase()}</span>}
+
                       <span
                         style={{
                           width: 9,
@@ -816,7 +827,8 @@ export default function ChatRoom() {
                           marginBottom: 6
                         }}
                       >
-                        <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          {message.avatar_url ? <img src={message.avatar_url} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }} /> : <span style={{ width: 28, height: 28, borderRadius: "50%", display: "grid", placeItems: "center", background: "rgba(187,138,255,.16)", fontSize: 11 }}>{message.nickname.slice(0, 1).toUpperCase()}</span>}
                           <strong>{message.nickname}</strong>
                           <span
                             style={{
@@ -935,9 +947,9 @@ export default function ChatRoom() {
                           flexWrap: "wrap"
                         }}
                       >
-                        <strong style={{ fontSize: 13 }}>
-                          {isMine ? "Ти" : selectedPlayer.nickname || "Учасник"}
-                        </strong>
+                        <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                          {isMine ? "Ти" : <>{selectedPlayer.avatar_url ? <img src={selectedPlayer.avatar_url} alt="" style={{ width: 26, height: 26, borderRadius: "50%", objectFit: "cover" }} /> : null}{selectedPlayer.nickname || "Учасник"}</>}
+                        </span>
 
                         <span className="notice-time">
                           {new Date(message.created_at).toLocaleString("uk-UA")}
