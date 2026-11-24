@@ -194,13 +194,17 @@ export async function submitApplication(formData: FormData) {
     redirect(`${formsPath}?status=birthday-required`);
   }
 
-  const { error: birthdayError } = await supabase
-    .from("profiles")
-    .update({ birth_day: birthDay, birth_month: birthMonth })
-    .eq("id", user.id);
-  if (birthdayError) {
-    console.error("Save member birthday:", birthdayError.message);
-    redirect(`${formsPath}?status=application-error`);
+  const { data: currentProfile, error: birthdayReadError } = await supabase
+    .from("profiles").select("birth_day, birth_month").eq("id", user.id).single();
+  if (birthdayReadError) redirect(`${formsPath}?status=application-error`);
+  if (currentProfile.birth_day == null || currentProfile.birth_month == null) {
+    const { error: birthdayError } = await supabase.rpc("set_my_birthday_once", {
+      p_birth_day: birthDay, p_birth_month: birthMonth,
+    });
+    if (birthdayError) {
+      console.error("Save member birthday:", birthdayError.message);
+      redirect(`${formsPath}?status=birthday-required`);
+    }
   }
 
   const answers: Record<string, string> = {};
@@ -406,4 +410,48 @@ export async function saveBirthday(formData: FormData) {
   }
   revalidatePath(formsPath);
   redirect(`${formsPath}?status=birthday-saved`);
+}
+
+
+export async function setMyBirthday(formData: FormData) {
+  const { supabase } = await getUserAndClient();
+  const birthDay = Number(formData.get("birth_day") ?? 0);
+  const birthMonth = Number(formData.get("birth_month") ?? 0);
+  if (!Number.isInteger(birthDay) || !Number.isInteger(birthMonth) ||
+      birthMonth < 1 || birthMonth > 12 || birthDay < 1 ||
+      birthDay > new Date(Date.UTC(2000, birthMonth, 0)).getUTCDate()) {
+    redirect(`${formsPath}?status=birthday-required`);
+  }
+  const { error } = await supabase.rpc("set_my_birthday_once", {
+    p_birth_day: birthDay, p_birth_month: birthMonth,
+  });
+  if (error) {
+    console.error("Set birthday once:", error.message);
+    redirect(`${formsPath}?status=birthday-locked`);
+  }
+  revalidatePath(formsPath);
+  redirect(`${formsPath}?status=birthday-saved`);
+}
+
+export async function adminUpdateBirthday(formData: FormData) {
+  const userId = String(formData.get("user_id") ?? "");
+  const birthDay = Number(formData.get("birth_day") ?? 0);
+  const birthMonth = Number(formData.get("birth_month") ?? 0);
+  if (!validId(userId) || !Number.isInteger(birthDay) || !Number.isInteger(birthMonth) ||
+      birthMonth < 1 || birthMonth > 12 || birthDay < 1 ||
+      birthDay > new Date(Date.UTC(2000, birthMonth, 0)).getUTCDate()) {
+    redirect(`${formsPath}?status=birthday-required`);
+  }
+  const { supabase } = await getUserAndClient();
+  const { data: role, error: roleError } = await supabase.rpc("current_verceti_role");
+  if (roleError || role !== "admin") redirect(`${formsPath}?status=forbidden`);
+  const { error } = await supabase.rpc("admin_update_member_birthday", {
+    p_user_id: userId, p_birth_day: birthDay, p_birth_month: birthMonth,
+  });
+  if (error) {
+    console.error("Admin birthday correction:", error.message);
+    redirect(`${formsPath}?status=application-error`);
+  }
+  revalidatePath(formsPath);
+  redirect(`${formsPath}?status=birthday-updated`);
 }
