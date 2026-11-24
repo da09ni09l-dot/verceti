@@ -209,40 +209,11 @@ export default function VoiceRoom({ isStaff }: VoiceRoomProps) {
     }
   }
 
-  if (!isVoicePage) {
-    if (!token || !currentRoom) return null;
-
-    return (
-      <div className="voice-mini-dock" role="region" aria-label="Активна голосова кімната">
-        <LiveKitRoom
-          key={activeRoom}
-          token={token}
-          serverUrl={serverUrl}
-          connect={true}
-          audio={{
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          }}
-          video={false}
-          onDisconnected={leaveRoom}
-          onError={(err) => setError(err.message)}
-          style={{ width: "100%" }}
-        >
-          <RoomAudioRenderer />
-          <VoiceRoomContent
-            roomName={currentRoom.name}
-            onLeave={leaveRoom}
-            compact
-          />
-        </LiveKitRoom>
-      </div>
-    );
-  }
+  if (!isVoicePage && (!token || !currentRoom)) return null;
 
   return (
-    <div className="voice-room-layout" style={{ marginTop: 24 }}>
-      <aside className="panel" style={{ minWidth: 0 }}>
+    <div className={`voice-room-layout ${isVoicePage ? "is-page" : "is-dock"}`} style={{ marginTop: isVoicePage ? 24 : 0 }}>
+      <aside className="panel voice-room-list-panel" style={{ minWidth: 0 }}>
         <h2 style={{ marginTop: 0 }}>🎙️ Голосові канали</h2>
 
         <p className="muted" style={{ fontSize: 12 }}>
@@ -372,7 +343,7 @@ export default function VoiceRoom({ isStaff }: VoiceRoomProps) {
         )}
       </aside>
 
-      <section className="panel" style={{ minWidth: 0 }}>
+      <section className="panel voice-room-session-panel" style={{ minWidth: 0 }}>
         {error && (
           <div
             style={{
@@ -424,6 +395,7 @@ export default function VoiceRoom({ isStaff }: VoiceRoomProps) {
             <VoiceRoomContent
               roomName={currentRoom.name}
               onLeave={leaveRoom}
+              compact={!isVoicePage}
             />
           </LiveKitRoom>
         )}
