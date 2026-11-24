@@ -97,12 +97,6 @@ export default async function ApplicationsSection({
     (application) => application.user_id === user.id
   );
 
-  const { data: myProfile } = await supabase
-    .from("profiles")
-    .select("birth_day, birth_month")
-    .eq("id", user.id)
-    .maybeSingle();
-
   const profileById = new Map(
     profiles.map((profile) => [profile.id, profile])
   );
