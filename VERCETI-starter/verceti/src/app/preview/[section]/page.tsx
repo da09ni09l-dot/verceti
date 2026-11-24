@@ -20,7 +20,7 @@ import ApplicationsSection from "./ApplicationsSection";
 import StatsSection from "./StatsSection";
 import ProductsBoard from "./ProductsBoard";
 import WorkshopBooking from "./WorkshopBooking";
-import { createRewardPrize, deleteRewardPrize, spinWeeklyRewards } from "./rewards-actions";
+import { createRewardPrize, deleteRewardPrize, restoreRewardPrize, spinWeeklyRewards } from "./rewards-actions";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: {
@@ -159,7 +159,7 @@ export default async function PreviewSection({
   // Перевірка блокування акаунта
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("is_banned, nickname, avatar_url")
+    .select("is_banned, nickname, avatar_url, birth_day, birth_month")
     .eq("id", user.id)
     .single();
 
@@ -626,33 +626,68 @@ export default async function PreviewSection({
     }
   }
 
-  let rewardPrizes: { id: string; title: string; description: string; weight: number; created_by: string }[] = [];
+  let rewardPrizes: { id: string; title: string; description: string; weight: number; created_by: string; is_active: boolean }[] = [];
   let rewardError = false;
   let canManageRewards = false;
   let rewardsRole: string | null = null;
   let lastRewardSpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
   let lastWeeklySpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
   let weeklySpinUsed = false;
-  let dailySpinUsed = false;\n  let birthdaySpinUsed = false;\n  let birthdayEligible = false;
+  let dailySpinUsed = false;
+  let birthdaySpinUsed = false;
+  let birthdayEligible = false;
   if (section === "rewards") {
     const { data: role } = await supabase.rpc("current_verceti_role");
     rewardsRole = typeof role === "string" ? role : null;
     canManageRewards = rewardsRole === "admin" || rewardsRole === "leader";
+
     const now = new Date();
-    const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - ((now.getUTCDay() + 6) % 7)));
-    const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-    const [{ data, error }, { data: spinData, error: spinError }, { data: weeklyData, error: weeklyError }, { data: birthdayData, error: birthdayError }] = await Promise.all([
-      supabase.from("rewards_prizes").select("id, title, description, weight, created_by").order("created_at", { ascending: true }),
-      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "daily").gte("spun_at", dayStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "weekly").gte("spun_at", weekStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle(),\n      supabase.from("rewards_spins").select("spun_at").eq("user_id", user.id).eq("spin_type", "birthday").gte("spun_at", new Date(Date.UTC(kyivNow.getFullYear(),0,1)).toISOString()).limit(1).maybeSingle()
+    const kyivParts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Kyiv",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23"
+    }).formatToParts(now);
+    const part = (type: string) => Number(kyivParts.find((item) => item.type === type)?.value ?? 0);
+    const kyivYear = part("year");
+    const kyivMonth = part("month");
+    const kyivDay = part("day");
+    const kyivHour = part("hour");
+    const kyivMinute = part("minute");
+    const kyivSecond = part("second");
+    const kyivOffsetMs = Math.round((Date.UTC(kyivYear, kyivMonth - 1, kyivDay, kyivHour, kyivMinute, kyivSecond) - now.getTime()) / 60000) * 60000;
+    const kyivDayStart = new Date(Date.UTC(kyivYear, kyivMonth - 1, kyivDay) - kyivOffsetMs);
+    const daysSinceMonday = (new Date(Date.UTC(kyivYear, kyivMonth - 1, kyivDay)).getUTCDay() + 6) % 7;
+    const kyivWeekStart = new Date(Date.UTC(kyivYear, kyivMonth - 1, kyivDay - daysSinceMonday) - kyivOffsetMs);
+    const kyivYearStart = new Date(Date.UTC(kyivYear, 0, 1) - 2 * 60 * 60 * 1000);
+    birthdayEligible = Number(profile.birth_day) === kyivDay && Number(profile.birth_month) === kyivMonth;
+
+    const [
+      { data, error },
+      { data: spinData, error: spinError },
+      { data: weeklyData, error: weeklyError },
+      { data: birthdayData, error: birthdayError }
+    ] = await Promise.all([
+      supabase.from("rewards_prizes").select("id, title, description, weight, created_by, is_active").order("created_at", { ascending: true }),
+      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "daily").gte("spun_at", kyivDayStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "weekly").gte("spun_at", kyivWeekStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("rewards_spins").select("spun_at").eq("user_id", user.id).eq("spin_type", "birthday").gte("spun_at", kyivYearStart.toISOString()).limit(1).maybeSingle()
     ]);
+
     rewardError = !!error;
-    if (spinError || weeklyError || birthdayError) console.error("VERCETI rewards spin history loading error:", spinError?.message ?? weeklyError?.message);
+    if (spinError || weeklyError || birthdayError) {
+      console.error("VERCETI rewards spin history loading error:", spinError?.message ?? weeklyError?.message ?? birthdayError?.message);
+    }
     rewardPrizes = data ?? [];
     lastRewardSpin = spinData as typeof lastRewardSpin;
     lastWeeklySpin = weeklyData as typeof lastWeeklySpin;
     weeklySpinUsed = !!weeklyData;
-    dailySpinUsed = !!spinData;\n    birthdaySpinUsed = !!birthdayData;
+    dailySpinUsed = !!spinData;
+    birthdaySpinUsed = !!birthdayData;
   }
 
   if (section === "rules") {
@@ -1414,7 +1449,7 @@ export default async function PreviewSection({
             <h1>🎡 Рулетка та бонуси</h1>
             <p className="muted">Спільна рулетка VERCETI — призи доступні всім учасникам.</p>
             {status === "created" && <div className="panel" style={{ marginTop: 14 }}>Приз додано до загальної рулетки.</div>}
-            {status === "deleted" && <div className="panel" style={{ marginTop: 14 }}>Приз видалено.</div>}
+            {status === "archived" && <div className="panel" style={{ marginTop: 14 }}>Приз прибрано з активної рулетки. Історію обертань збережено.</div>}{status === "restored" && <div className="panel" style={{ marginTop: 14 }}>Приз повернуто до активної рулетки.</div>}
             {(status === "won" || status === "weekly_won") && <div className="panel" style={{ marginTop: 14 }}><strong>🎉 Твій результат</strong><p style={{ marginTop: 8 }}>{(status === "weekly_won" ? (lastWeeklySpin as { prize: { title: string; description: string } | null } | null)?.prize?.title : (lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.title) ?? "Оберт успішно зафіксовано."}</p>{(status === "weekly_won" ? (lastWeeklySpin as { prize: { title: string; description: string } | null } | null)?.prize?.description : (lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.description) && <p className="muted" style={{ marginTop: 6 }}>{status === "weekly_won" ? (lastWeeklySpin as { prize: { title: string; description: string } | null } | null)?.prize?.description : (lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.description}</p>}</div>}
             {status === "used" && <div className="panel" style={{ marginTop: 14 }}>Ти вже використав(ла) безкоштовний оберт сьогодні. Повертайся завтра!</div>}
             {status === "weekly_used" && <div className="panel" style={{ marginTop: 14 }}>Щотижневий бонус уже використано. Новий буде доступний наступного понеділка.</div>}
@@ -1422,7 +1457,7 @@ export default async function PreviewSection({
             {status === "forbidden" && <div className="panel" style={{ marginTop: 14 }}>Керувати призами можуть лише адміністратор і лідер.</div>}
             {(status === "invalid" || status === "error" || status === "spin-error") && <div className="panel" style={{ marginTop: 14 }}>Не вдалося виконати дію. Перевір дані та налаштування бази.</div>}
             <div className="panel" style={{ marginTop: 20 }}>
-              <RewardsWheel prizes={rewardPrizes} alreadySpun={dailySpinUsed || status === "used"} birthdayEligible={birthdayEligible} birthdayAlreadySpun={birthdaySpinUsed} />
+              <RewardsWheel prizes={rewardPrizes.filter((prize) => prize.is_active)} alreadySpun={dailySpinUsed || status === "used"} birthdayEligible={birthdayEligible} birthdayAlreadySpun={birthdaySpinUsed} />
             </div>
             <div className="panel" style={{ marginTop: 16 }}>
               <h2>🎁 Щотижневий бонусний оберт</h2>
@@ -1431,7 +1466,7 @@ export default async function PreviewSection({
                 <p className="page-note" style={{ marginTop: 12 }}>Тижневий бонус уже використано. Наступний доступний із понеділка.</p>
               ) : (
                 <form action={spinWeeklyRewards} style={{ marginTop: 12 }}>
-                  <button className="btn secondary" type="submit" disabled={rewardPrizes.length === 0} style={{ width: "100%" }}>Забрати тижневий бонус</button>
+                  <button className="btn secondary" type="submit" disabled={!rewardPrizes.some((prize) => prize.is_active)} style={{ width: "100%" }}>Забрати тижневий бонус</button>
                 </form>
               )}
             </div>
@@ -1442,14 +1477,14 @@ export default async function PreviewSection({
                   {rewardPrizes.map((prize) => (
                     <div className="member-row" key={prize.id} style={{ alignItems: "flex-start", flexWrap: "wrap" }}>
                       <div style={{ flex: "1 1 220px" }}>
-                        <strong>{prize.title}</strong>
+                        <strong>{prize.title}</strong>{!prize.is_active && <span className="tag" style={{ marginLeft: 8 }}>В АРХІВІ</span>}
                         {prize.description && <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>{prize.description}</p>}
                         <p className="notice-time">Вага випадіння: {prize.weight}</p>
                       </div>
                       {(rewardsRole === "admin" || (rewardsRole === "leader" && prize.created_by === user.id)) && (
-                        <form action={deleteRewardPrize}>
+                        <form action={prize.is_active ? deleteRewardPrize : restoreRewardPrize}>
                           <input type="hidden" name="id" value={prize.id} />
-                          <button className="btn" type="submit" style={{ background: "#8f303f", borderColor: "#b94b5c" }}>Видалити</button>
+                          <button className="btn" type="submit" style={prize.is_active ? { background: "#8f303f", borderColor: "#b94b5c" } : undefined}>{prize.is_active ? "Прибрати з рулетки" : "Повернути в рулетку"}</button>
                         </form>
                       )}
                     </div>
