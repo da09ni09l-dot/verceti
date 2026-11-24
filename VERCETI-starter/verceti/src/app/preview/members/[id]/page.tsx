@@ -60,7 +60,7 @@ export default async function MemberProfilePage({ params }: Props) {
 
   const { data: member, error } = await supabase
     .from("profiles")
-    .select("id, nickname, game_id, role, created_at, is_banned")
+    .select("id, nickname, game_id, role, created_at, is_banned, avatar_url")
     .eq("id", id)
     .maybeSingle();
 
@@ -98,7 +98,7 @@ export default async function MemberProfilePage({ params }: Props) {
         <div className="member-list">
           <div className="member-row">
             <div className="member-left">
-              <div className="member-avatar">👤</div>
+              {member.avatar_url ? <img src={member.avatar_url} alt={`Аватарка ${nickname}`} className="member-avatar" style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover" }} /> : <div className="member-avatar">👤</div>}
 
               <div>
                 <div className="member-name">{nickname}</div>
@@ -118,7 +118,8 @@ export default async function MemberProfilePage({ params }: Props) {
           </div>
         </div>
 
-        <div style={{ marginTop: 20 }}>
+        <div style={{ marginTop: 20, display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {member.id !== user.id && <Link href={`/preview/chat?recipient=${member.id}`} className="btn">✉ Надіслати повідомлення</Link>}
           <Link href="/preview/members" className="tag">
             ← До списку учасників
           </Link>
