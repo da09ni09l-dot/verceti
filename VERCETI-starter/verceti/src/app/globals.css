@@ -2912,3 +2912,80 @@ td {
     grid-column: 2;
   }
 }
+
+
+/* Persistent voice session: keep the LiveKit room mounted across app navigation. */
+.voice-mini-dock {
+  position: fixed;
+  z-index: 1200;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  width: min(560px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border: 1px solid rgba(187, 138, 255, .38);
+  border-radius: 16px;
+  background: rgba(17, 11, 29, .96);
+  box-shadow: 0 14px 48px rgba(0, 0, 0, .48), 0 0 24px rgba(155, 92, 255, .14);
+  backdrop-filter: blur(18px);
+}
+.voice-mini-dock-inner { display: grid; gap: 10px; }
+.voice-mini-status,
+.voice-mini-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.voice-mini-status { min-width: 0; }
+.voice-mini-indicator {
+  flex: 0 0 9px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #54df91;
+  box-shadow: 0 0 12px rgba(84, 223, 145, .7);
+}
+.voice-mini-room {
+  min-width: 0;
+  overflow: hidden;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.voice-mini-count {
+  color: #bdb2cf;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.voice-mini-actions { justify-content: flex-end; }
+.voice-mini-actions .lk-control-bar {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.voice-mini-actions .btn { min-height: 36px; padding: 8px 12px; }
+@media (max-width: 520px) {
+  .voice-mini-dock {
+    right: 10px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    width: calc(100vw - 20px);
+    padding: 10px;
+  }
+  .voice-mini-actions { justify-content: space-between; gap: 6px; }
+  .voice-mini-actions .btn { flex: 0 0 auto; font-size: 11px; }
+}
+
+/* Admin navigation icons must keep their natural square dimensions. */
+.admin-tab {
+  min-width: 0;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.admin-tab > svg {
+  display: block;
+  flex: 0 0 18px;
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+}
