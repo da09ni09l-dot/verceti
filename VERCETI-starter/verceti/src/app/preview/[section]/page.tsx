@@ -19,6 +19,7 @@ import MediaRoom from "./MediaRoom";
 import ApplicationsSection from "./ApplicationsSection";
 import StatsSection from "./StatsSection";
 import ProductsBoard from "./ProductsBoard";
+import WorkshopBooking from "./WorkshopBooking";
 import { createRewardPrize, deleteRewardPrize, spinWeeklyRewards } from "./rewards-actions";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
@@ -31,6 +32,11 @@ const descriptions: Record<string, { title: string; text: string; items: string[
     title: "Продукція",
     text: "Спільний список продукції учасників VERCETI зі скриншотами та кількістю.",
     items: ["Публікація скриншотів", "Облік кількості продукції", "Редагування власних записів"]
+  },
+  workshop: {
+    title: "Бронювання цеху",
+    text: "Погодинний розклад бронювання цеху з вибором виду продукції.",
+    items: ["Алко та петрушка", "Перегляд зайнятих годин", "Оновлення розкладу щодня опівночі"]
   },
   voice: {
     title: "Голосові кімнати",
@@ -737,7 +743,13 @@ export default async function PreviewSection({
 
         <div className="eyebrow">VERCETI · ПОПЕРЕДНІЙ ПЕРЕГЛЯД</div>
 
-        {section === "products" ? (
+        {section === "workshop" ? (
+          <>
+            <h1>Бронювання цеху</h1>
+            <p className="muted">Обери вільну годину та познач продукцію.</p>
+            <WorkshopBooking userId={user.id} />
+          </>
+        ) : section === "products" ? (
           <>
             <h1>📦 Продукція VERCETI</h1>
             <p className="muted">Спільний список продукції учасників. Додавай скриншоти та кількість — записи з’являються в реальному часі.</p>
