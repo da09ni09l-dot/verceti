@@ -6,8 +6,7 @@ on:
     branches:
       - "launcher/**"
     paths:
-      - "VERCETI-starter/verceti/electron/**"
-      - "VERCETI-starter/verceti/package.json"
+      - "VERCETI-starter/verceti/desktop-launcher/**"
       - ".github/workflows/build-windows-launcher.yml"
 
 permissions:
@@ -18,7 +17,7 @@ jobs:
     runs-on: windows-latest
     defaults:
       run:
-        working-directory: VERCETI-starter/verceti
+        working-directory: VERCETI-starter/verceti/desktop-launcher
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,6 +33,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: VERCETTI-LAUNCHER-2026-Windows
-          path: VERCETI-starter/verceti/release/*.exe
+          path: VERCETI-starter/verceti/desktop-launcher/release/*.exe
           if-no-files-found: error
           retention-days: 30
