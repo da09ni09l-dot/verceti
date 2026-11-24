@@ -9,6 +9,8 @@ export async function requestPasswordChange() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  const { data: isMember, error: memberError } = await supabase.rpc("is_verceti_member");
+  if (memberError || isMember !== true) redirect("/");
 
   const admin = createAdminClient();
   const { data: existing, error: lookupError } = await admin
@@ -78,6 +80,8 @@ export async function completeApprovedPasswordChange(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  const { data: isMember, error: memberError } = await supabase.rpc("is_verceti_member");
+  if (memberError || isMember !== true) redirect("/");
 
   const admin = createAdminClient();
   const { data: request, error: requestError } = await admin
