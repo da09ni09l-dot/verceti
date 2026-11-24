@@ -28,6 +28,8 @@ function getNotificationIcon(type: string) {
       return "⚠️";
     case "application":
       return "📋";
+    case "birthday":
+      return "🎂";
     case "member":
       return "👤";
     case "system":
