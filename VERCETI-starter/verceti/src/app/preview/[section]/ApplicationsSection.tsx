@@ -62,9 +62,6 @@ export default async function ApplicationsSection({
 
   const questions = questionsData ?? [];
 
-  const { data: myProfile } = await supabase.from("profiles")
-    .select("birth_day, birth_month").eq("id", user.id).maybeSingle();
-
   const { data: applicationsData, error: applicationsError } = await supabase
     .from("applications")
     .select("*")
@@ -173,7 +170,9 @@ export default async function ApplicationsSection({
         <div className="panel">Керівництво ще не створило запитань.</div>
       )}
 
-      {status === "birthday-saved" && (\n        <div className="panel">Дату народження збережено.</div>\n      )}\n\n      {status === "birthday-saved" && <div className="panel">Дату народження збережено. Змінити її може лише адміністратор.</div>}
+      {status === "birthday-saved" && (
+        <div className="panel">Дату народження збережено. Змінити її може лише адміністратор.</div>
+      )}
       {status === "birthday-updated" && <div className="panel">Дату народження учасника виправлено.</div>}
       {status === "birthday-locked" && <div className="panel">Дату вже встановлено. Для виправлення звернись до адміністратора.</div>}
       {status === "birthday-required" && (
