@@ -183,6 +183,26 @@ export async function submitApplication(formData: FormData) {
     redirect(`${formsPath}?status=no-questions`);
   }
 
+  const birthDay = Number(formData.get("birth_day") ?? 0);
+  const birthMonth = Number(formData.get("birth_month") ?? 0);
+  if (
+    !Number.isInteger(birthDay) ||
+    !Number.isInteger(birthMonth) ||
+    birthMonth < 1 || birthMonth > 12 ||
+    birthDay < 1 || birthDay > new Date(Date.UTC(2000, birthMonth, 0)).getUTCDate()
+  ) {
+    redirect(`${formsPath}?status=birthday-required`);
+  }
+
+  const { error: birthdayError } = await supabase
+    .from("profiles")
+    .update({ birth_day: birthDay, birth_month: birthMonth })
+    .eq("id", user.id);
+  if (birthdayError) {
+    console.error("Save member birthday:", birthdayError.message);
+    redirect(`${formsPath}?status=application-error`);
+  }
+
   const answers: Record<string, string> = {};
 
   for (const question of questions) {
