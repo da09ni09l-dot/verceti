@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import {
   LiveKitRoom,
   RoomAudioRenderer,
-  ControlBar,
   useParticipants,
   useTracks,
   VideoTrack,
@@ -15,8 +14,8 @@ import {
 import { Track } from "livekit-client";
 import {
   Headphones, Mic2, Users, Plus, Trash2, DoorOpen, MonitorUp,
-  Radio, LoaderCircle, X, CheckCircle2, Volume2, VolumeX,
-  Mic, MicOff, ScreenShare, ScreenShareOff, RadioTower, UserX,
+  Radio, LoaderCircle, X, CheckCircle2, Volume2,
+  Mic, MicOff, ScreenShare, ScreenShareOff, RadioTower,
 } from "lucide-react";
 
 type Room = {
