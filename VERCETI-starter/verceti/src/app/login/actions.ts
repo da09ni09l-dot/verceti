@@ -1,8 +1,6 @@
-
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function loginWithNickname(formData: FormData) {
   const nickname = String(formData.get("nickname") ?? "").trim();
@@ -12,61 +10,41 @@ export async function loginWithNickname(formData: FormData) {
     return { error: "Введи нікнейм і пароль." };
   }
 
-  if (nickname.length > 50) {
+  if (!/^[a-zA-Z0-9_]{3,50}$/.test(nickname)) {
     return { error: "Неправильний нікнейм або пароль." };
   }
 
-  try {
-    const admin = createAdminClient();
+  // VERCETI invited accounts use a deterministic internal email address.
+  // Signing in through the public Supabase client avoids requiring the
+  // privileged service-role key just to authenticate an existing member.
+  const supabase = await createClient();
+  const { data, error: loginError } = await supabase.auth.signInWithPassword({
+    email: `${nickname.toLowerCase()}@login.verceti.invalid`,
+    password,
+  });
 
-    const { data: profiles, error: profileError } = await admin
-      .from("profiles")
-      .select("id, nickname, is_banned");
-
-    if (profileError) {
-      console.error("Profile lookup error:", profileError.message);
-      return { error: "Не вдалося знайти профіль." };
-    }
-
-    const profile = profiles?.find(
-      (item) => item.nickname.toLowerCase() === nickname.toLowerCase()
-    );
-
-    if (!profile) {
-      return { error: "Неправильний нікнейм або пароль." };
-    }
-
-    if (profile.is_banned) {
-      return {
-        error: "Твій акаунт заблоковано. Звернися до адміністрації.",
-      };
-    }
-
-    const { data: userData, error: userError } =
-      await admin.auth.admin.getUserById(profile.id);
-
-    if (userError || !userData.user?.email) {
-      console.error("Get user error:", userError?.message);
-      return { error: "Не вдалося знайти обліковий запис." };
-    }
-
-    const supabase = await createClient();
-
-    const { error: loginError } = await supabase.auth.signInWithPassword({
-      email: userData.user.email,
-      password,
-    });
-
-    if (loginError) {
-      console.error("Sign in error:", loginError.message);
-      return { error: "Неправильний нікнейм або пароль." };
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error("Login server error:", error);
-    return { error: "Помилка сервера під час входу." };
+  if (loginError || !data.user) {
+    if (loginError) console.error("Sign in error:", loginError.message);
+    return { error: "Неправильний нікнейм або пароль." };
   }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, is_banned")
+    .eq("id", data.user.id)
+    .single();
+
+  if (profileError || !profile || profile.is_banned) {
+    await supabase.auth.signOut();
+    if (profileError) console.error("Profile lookup error:", profileError.message);
+    return {
+      error: profile?.is_banned
+        ? "Твій акаунт заблоковано. Звернися до адміністрації."
+        : "Не вдалося знайти профіль. Звернися до адміністрації.",
+    };
+  }
+
+  return { success: true };
 }
 
 // Public self-registration is disabled: VERCETI accounts are created by an administrator.
