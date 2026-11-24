@@ -26,6 +26,7 @@ export default async function AdminPage({
     news_deleted?: string;
     news_updated?: string;
     error?: string;
+    tab?: string;
   }>;
 }) {
   const supabase = await createClient();
@@ -45,6 +46,10 @@ export default async function AdminPage({
   }
 
   const params = await searchParams;
+  const allowedTabs = ["overview", "accounts", "news", "members"] as const;
+  const activeTab = allowedTabs.includes(params.tab as (typeof allowedTabs)[number])
+    ? (params.tab as (typeof allowedTabs)[number])
+    : "overview";
 
   const { data: members, error: membersError } = await supabase
     .from("profiles")
@@ -116,7 +121,7 @@ export default async function AdminPage({
     <main className="login-wrap workspace-wrap">
       <section
         className="login-card workspace-card"
-        style={{ width: "100%", maxWidth: 760 }}
+        style={{ width: "100%", maxWidth: 1180 }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div className="brand" style={{ padding: 0 }}>
@@ -133,8 +138,50 @@ export default async function AdminPage({
         </h1>
 
         <p className="muted" style={{ fontSize: 13, lineHeight: 1.7 }}>
-          Створення облікових записів, керування учасниками та новинами спільноти.
+          Керування сайтом у розділах — відкривай лише потрібний інструмент, без довгого списку на одній сторінці.
         </p>
+
+        <nav className="admin-tabs" aria-label="Розділи панелі адміністратора">
+          {([
+            ["overview", "Огляд", "⌂"],
+            ["accounts", "Акаунти", "♙"],
+            ["members", "Учасники", "♧"],
+            ["news", "Новини", "▤"],
+          ] as const).map(([tab, label, icon]) => (
+            <Link
+              key={tab}
+              href={`/admin?tab=${tab}`}
+              className={`admin-tab ${activeTab === tab ? "active" : ""}`}
+              aria-current={activeTab === tab ? "page" : undefined}
+            >
+              <span aria-hidden="true">{icon}</span>
+              {label}
+            </Link>
+          ))}
+        </nav>
+
+        {activeTab === "overview" && (
+          <div className="admin-overview">
+            <div className="admin-overview-card">
+              <span className="admin-overview-icon">♙</span>
+              <span className="muted">Учасники</span>
+              <strong>{members?.length ?? 0}</strong>
+              <Link href="/admin?tab=members">Керувати учасниками →</Link>
+            </div>
+            <div className="admin-overview-card">
+              <span className="admin-overview-icon">▤</span>
+              <span className="muted">Новини</span>
+              <strong>{newsList?.length ?? 0}</strong>
+              <Link href="/admin?tab=news">Керувати новинами →</Link>
+            </div>
+            <div className="admin-overview-card">
+              <span className="admin-overview-icon">＋</span>
+              <span className="muted">Новий акаунт</span>
+              <strong>Створити</strong>
+              <Link href="/admin?tab=accounts">Перейти до створення →</Link>
+            </div>
+          </div>
+        )}
 
         {params.created === "1" && (
           <p style={{ color: "#8ee6a5", fontSize: 13 }}>
@@ -183,8 +230,9 @@ export default async function AdminPage({
         )}
 
         {/* Створення акаунта */}
-        <details className="panel" style={{ marginTop: 24 }}>
-          <summary style={{ cursor: "pointer", fontWeight: 700, padding: 8 }}>📁 Керування акаунтами</summary>
+        {activeTab === "accounts" && (
+        <section className="panel admin-section" style={{ marginTop: 24 }}>
+          <h2>Керування акаунтами</h2>
 
         <div className="panel" style={{ marginTop: 24 }}>
           <h2>Створити акаунт</h2>
@@ -238,11 +286,13 @@ export default async function AdminPage({
           </form>
         </div>
 
-        </details>
+        </section>
+        )}
 
         {/* Керування новинами */}
-        <details className="panel" style={{ marginTop: 16 }}>
-          <summary style={{ cursor: "pointer", fontWeight: 700, padding: 8 }}>📁 Новини та оголошення</summary>
+        {activeTab === "news" && (
+        <section className="panel admin-section" style={{ marginTop: 16 }}>
+          <h2>Новини та оголошення</h2>
 
         <div className="panel" style={{ marginTop: 24 }}>
           <h2>Створити новину</h2>
@@ -454,11 +504,13 @@ export default async function AdminPage({
           )}
         </div>
 
-        </details>
+        </section>
+        )}
 
         {/* Учасники спільноти */}
-        <details className="panel" style={{ marginTop: 16 }}>
-          <summary style={{ cursor: "pointer", fontWeight: 700, padding: 8 }}>📁 Учасники та модерація</summary>
+        {activeTab === "members" && (
+        <section className="panel admin-section" style={{ marginTop: 16 }}>
+          <h2>Учасники та модерація</h2>
 
         <div style={{ marginTop: 32 }}>
           <h2>Учасники спільноти</h2>
@@ -652,7 +704,8 @@ export default async function AdminPage({
           )}
         </div>
 
-        </details>
+        </section>
+        )}
 
         <p className="page-note">
           Доступ до цієї сторінки має лише адміністратор.
