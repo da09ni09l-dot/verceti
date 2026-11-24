@@ -133,6 +133,10 @@ export default async function ApplicationsSection({
         <div className="panel">Керівництво ще не створило запитань.</div>
       )}
 
+      {status === "birthday-required" && (
+        <div className="panel">Обери день і місяць народження. Рік не потрібен.</div>
+      )}
+
       {status === "answers-required" && (
         <div className="panel">Заповни всі обов&apos;язкові поля.</div>
       )}
@@ -380,6 +384,24 @@ export default async function ApplicationsSection({
                     className="member-list"
                     style={{ gap: 12, marginTop: 18 }}
                   >
+                    <div>
+                      <label htmlFor="birth_day">Дата народження *</label>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                        <select id="birth_day" name="birth_day" required defaultValue="">
+                          <option value="">День</option>
+                          {Array.from({ length: 31 }, (_, index) => (
+                            <option key={index + 1} value={index + 1}>{index + 1}</option>
+                          ))}
+                        </select>
+                        <select name="birth_month" required defaultValue="">
+                          <option value="">Місяць</option>
+                          {["Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень", "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"].map((month, index) => (
+                            <option key={month} value={index + 1}>{month}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <p className="muted">Рік народження не запитується. У день народження учасники отримають сповіщення.</p>
+                    </div>
                     {questions.map((question) => {
                       const oldAnswer =
                         myApplication?.answers &&
