@@ -2,6 +2,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   LiveKitRoom,
   RoomAudioRenderer,
@@ -37,6 +39,8 @@ export default function VoiceRoom({ isStaff }: VoiceRoomProps) {
   const [loadingRooms, setLoadingRooms] = useState(true);
 
   const currentRoom = rooms.find((room) => room.id === activeRoom);
+  const pathname = usePathname();
+  const isVoicePage = pathname === "/preview/voice" || pathname === "/preview/streams";
 
   const loadRooms = useCallback(async () => {
     try {
@@ -203,6 +207,37 @@ export default function VoiceRoom({ isStaff }: VoiceRoomProps) {
           : "Помилка видалення кімнати."
       );
     }
+  }
+
+  if (!isVoicePage) {
+    if (!token || !currentRoom) return null;
+
+    return (
+      <div className="voice-mini-dock" role="region" aria-label="Активна голосова кімната">
+        <LiveKitRoom
+          key={activeRoom}
+          token={token}
+          serverUrl={serverUrl}
+          connect={true}
+          audio={{
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          }}
+          video={false}
+          onDisconnected={leaveRoom}
+          onError={(err) => setError(err.message)}
+          style={{ width: "100%" }}
+        >
+          <RoomAudioRenderer />
+          <VoiceRoomContent
+            roomName={currentRoom.name}
+            onLeave={leaveRoom}
+            compact
+          />
+        </LiveKitRoom>
+      </div>
+    );
   }
 
   return (
@@ -400,15 +435,41 @@ export default function VoiceRoom({ isStaff }: VoiceRoomProps) {
 function VoiceRoomContent({
   roomName,
   onLeave,
+  compact = false,
 }: {
   roomName: string;
   onLeave: () => void;
+  compact?: boolean;
 }) {
   const participants = useParticipants();
 
   const screenTracks = useTracks([
     Track.Source.ScreenShare,
   ]);
+
+  if (compact) {
+    return (
+      <div className="voice-mini-dock-inner">
+        <div className="voice-mini-status">
+          <span className="voice-mini-indicator" />
+          <span className="voice-mini-room">{roomName}</span>
+          <span className="voice-mini-count">{participants.length} учасн.</span>
+        </div>
+        <div className="voice-mini-actions">
+          <ControlBar
+            controls={{
+              microphone: true,
+              camera: false,
+              screenShare: false,
+              leave: false,
+            }}
+          />
+          <Link className="btn secondary" href="/preview/voice">Відкрити</Link>
+          <button className="btn" type="button" onClick={onLeave}>Вийти</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ width: "100%" }}>
