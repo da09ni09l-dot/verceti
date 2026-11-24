@@ -4,6 +4,7 @@ import "./globals.css";
 import OnlinePresenceProvider from "./OnlinePresenceProvider";
 import MusicRoom from "./preview/[section]/MusicRoom";
 import PinnedSiteActions from "./PinnedSiteActions";
+import NewsBell from "./NewsBell";
 import LiveDataRefresh from "./LiveDataRefresh";
 import ActivityTracker from "./preview/[section]/ActivityTracker";
 import VoiceRoom from "./preview/[section]/VoiceRoom";
@@ -31,6 +32,7 @@ export default async function RootLayout({
     <html lang="uk">
       <body>
         <OnlinePresenceProvider>
+          {user && <NewsBell userId={user.id} />}
           <LiveDataRefresh />
           <ActivityTracker />
           {children}
