@@ -50,11 +50,10 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
 
   const loadCounts = useCallback(async () => {
     const messagesResult = await supabase
-      supabase
-        .from("direct_messages")
-        .select("id", { count: "exact", head: true })
-        .eq("recipient_id", userId)
-        .eq("is_read", false),;
+      .from("direct_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("recipient_id", userId)
+      .eq("is_read", false);
 
     if (!messagesResult.error) {
       setUnreadMessages(messagesResult.count ?? 0);
