@@ -8,6 +8,8 @@ export default function LoginForm() {
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -45,6 +47,16 @@ export default function LoginForm() {
 
   const registering = mode === "register";
 
+  const visibilityButtonStyle: React.CSSProperties = {
+    border: "none",
+    background: "transparent",
+    color: "#b8b0c7",
+    cursor: "pointer",
+    fontSize: 11,
+    padding: "8px 10px",
+    whiteSpace: "nowrap",
+  };
+
   return (
     <div style={{ marginTop: 24 }}>
       <form onSubmit={submit}>
@@ -65,32 +77,56 @@ export default function LoginForm() {
         <label style={{ fontSize: 11, color: "#b8b0c7" }}>
           Пароль
         </label>
-        <input
-          type="password"
-          required
-          minLength={registering ? 8 : 6}
-          maxLength={72}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Твій пароль"
-          autoComplete={registering ? "new-password" : "current-password"}
-        />
+        <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+          <input
+            type={showPassword ? "text" : "password"}
+            required
+            minLength={registering ? 8 : 6}
+            maxLength={72}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Твій пароль"
+            autoComplete={registering ? "new-password" : "current-password"}
+            style={{ paddingRight: 76 }}
+          />
+          <button
+            type="button"
+            style={{ ...visibilityButtonStyle, position: "absolute", right: 4 }}
+            onClick={() => setShowPassword((visible) => !visible)}
+            aria-label={showPassword ? "Приховати пароль" : "Показати пароль"}
+            aria-pressed={showPassword}
+          >
+            {showPassword ? "Сховати" : "Показати"}
+          </button>
+        </div>
 
         {registering && (
           <>
             <label style={{ fontSize: 11, color: "#b8b0c7" }}>
               Повтори пароль
             </label>
-            <input
-              type="password"
-              required
-              minLength={8}
-              maxLength={72}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Повтори пароль"
-              autoComplete="new-password"
-            />
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                required
+                minLength={8}
+                maxLength={72}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Повтори пароль"
+                autoComplete="new-password"
+                style={{ paddingRight: 76 }}
+              />
+              <button
+                type="button"
+                style={{ ...visibilityButtonStyle, position: "absolute", right: 4 }}
+                onClick={() => setShowConfirmPassword((visible) => !visible)}
+                aria-label={showConfirmPassword ? "Приховати повторений пароль" : "Показати повторений пароль"}
+                aria-pressed={showConfirmPassword}
+              >
+                {showConfirmPassword ? "Сховати" : "Показати"}
+              </button>
+            </div>
           </>
         )}
 
@@ -129,6 +165,8 @@ export default function LoginForm() {
           setError("");
           setPassword("");
           setConfirmPassword("");
+          setShowPassword(false);
+          setShowConfirmPassword(false);
         }}
       >
         {registering ? "Уже є акаунт? Увійти" : "Створити новий акаунт"}
