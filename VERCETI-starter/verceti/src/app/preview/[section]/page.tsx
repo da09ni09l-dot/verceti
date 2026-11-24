@@ -15,6 +15,7 @@ import SectionNavigation from "./SectionNavigation";
 import NotificationBell from "./NotificationBell";
 import ChatRoom from "./ChatRoom";
 import VoiceRoom from "./VoiceRoom";
+import RewardsWheel from "./RewardsWheel";
 import MediaRoom from "./MediaRoom";
 import ApplicationsSection from "./ApplicationsSection";
 import StatsSection from "./StatsSection";
@@ -621,15 +622,17 @@ export default async function PreviewSection({
   let lastRewardSpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
   let lastWeeklySpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
   let weeklySpinUsed = false;
+  let dailySpinUsed = false;
   if (section === "rewards") {
     const { data: role } = await supabase.rpc("current_verceti_role");
     rewardsRole = typeof role === "string" ? role : null;
     canManageRewards = rewardsRole === "admin" || rewardsRole === "leader";
     const now = new Date();
     const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - ((now.getUTCDay() + 6) % 7)));
+    const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
     const [{ data, error }, { data: spinData, error: spinError }, { data: weeklyData, error: weeklyError }] = await Promise.all([
       supabase.from("rewards_prizes").select("id, title, description, weight, created_by").order("created_at", { ascending: true }),
-      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "daily").order("spun_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "daily").gte("spun_at", dayStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "weekly").gte("spun_at", weekStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle()
     ]);
     rewardError = !!error;
@@ -638,6 +641,7 @@ export default async function PreviewSection({
     lastRewardSpin = spinData as typeof lastRewardSpin;
     lastWeeklySpin = weeklyData as typeof lastWeeklySpin;
     weeklySpinUsed = !!weeklyData;
+    dailySpinUsed = !!spinData;
   }
 
   if (section === "rules") {
@@ -1389,27 +1393,7 @@ export default async function PreviewSection({
             {status === "forbidden" && <div className="panel" style={{ marginTop: 14 }}>Керувати призами можуть лише адміністратор і лідер.</div>}
             {(status === "invalid" || status === "error" || status === "spin-error") && <div className="panel" style={{ marginTop: 14 }}>Не вдалося виконати дію. Перевір дані та налаштування бази.</div>}
             <div className="panel" style={{ marginTop: 20 }}>
-              <h2>Щоденний безкоштовний оберт</h2>
-              <p className="muted">Один оберт на день. Вибір призу та перевірка повторного оберту виконуються на сервері.</p>
-              {status === "used" ? (
-                <p className="page-note" style={{ marginTop: 14 }}>Ти вже використав(ла) безкоштовний оберт за сьогодні. Спробуй знову завтра.</p>
-              ) : (
-                <form action={spinRewards} style={{ marginTop: 14 }}>
-                  <button className="btn" type="submit" disabled={rewardPrizes.length === 0} style={{ width: "100%" }}>🎡 Крутити рулетку</button>
-                </form>
-              )}
-              <div style={{ borderTop: "1px solid rgba(255,255,255,.1)", marginTop: 18, paddingTop: 16 }}>
-                <h3>Щотижневий бонусний оберт</h3>
-                <p className="muted">Один додатковий оберт на календарний тиждень, незалежно від щоденного.</p>
-                {weeklySpinUsed ? (
-                  <p className="page-note">Тижневий бонус уже використано. Наступний доступний із понеділка.</p>
-                ) : (
-                  <form action={spinWeeklyRewards} style={{ marginTop: 12 }}>
-                    <button className="btn secondary" type="submit" disabled={rewardPrizes.length === 0} style={{ width: "100%" }}>🎁 Забрати тижневий бонус</button>
-                  </form>
-                )}
-              </div>
-              <p className="page-note">Додаткові оберти за бали підключимо після визначення правил нарахування та витрат балів.</p>
+              <RewardsWheel prizes={rewardPrizes} alreadySpun={dailySpinUsed || status === "used"} />
             </div>
             <div className="panel" style={{ marginTop: 20 }}>
               <h2>Загальні призи</h2>
