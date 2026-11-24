@@ -29,3 +29,5 @@ jobs:
           NEXT_PUBLIC_LIVEKIT_URL: wss://example.livekit.cloud
           LIVEKIT_API_KEY: ci-placeholder
           LIVEKIT_API_SECRET: ci-placeholder
+
+# Keep quality checks active for the latest UI and navigation updates.
