@@ -21,6 +21,7 @@ import StatsSection from "./StatsSection";
 import ProductsBoard from "./ProductsBoard";
 import WorkshopBooking from "./WorkshopBooking";
 import { createRewardPrize, deleteRewardPrize, spinWeeklyRewards } from "./rewards-actions";
+import { requestPasswordChange, completeApprovedPasswordChange } from "./password-actions";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: {
@@ -627,6 +628,19 @@ export default async function PreviewSection({
         (!item.show_until || new Date(item.show_until).getTime() > now)
       );
     }
+  }
+
+  let passwordRequestStatus: string | null = null;
+  if (section === "settings") {
+    const { data: passwordRequest } = await supabase
+      .from("password_change_requests")
+      .select("status")
+      .eq("user_id", user.id)
+      .in("status", ["pending", "approved"])
+      .order("requested_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    passwordRequestStatus = passwordRequest?.status ?? null;
   }
 
   let rewardPrizes: { id: string; title: string; description: string; weight: number; created_by: string }[] = [];
@@ -1238,29 +1252,29 @@ export default async function PreviewSection({
             </div>
             <div className="panel" style={{ marginTop: 18 }}>
               <h2>Безпека акаунта</h2>
-              <form action={async (formData: FormData) => {
-                "use server";
-                const password = String(formData.get("password") ?? "");
-                const confirmation = String(formData.get("password_confirmation") ?? "");
-                if (password.length < 8 || password !== confirmation) redirect("/preview/settings?status=password_error");
-                const client = await createClient();
-                const { data: { user: currentUser } } = await client.auth.getUser();
-                if (!currentUser) redirect("/login");
-                const { error } = await client.auth.updateUser({ password });
-                if (error) {
-                  console.error("VERCETI password update error:", error.message);
-                  redirect("/preview/settings?status=password_save_error");
-                }
-                redirect("/preview/settings?status=password_saved");
-              }} className="member-list" style={{ marginTop: 14, gap: 10 }}>
-                <label htmlFor="settings-password">Новий пароль</label>
-                <input id="settings-password" name="password" type="password" required minLength={8} autoComplete="new-password" />
-                <label htmlFor="settings-password-confirmation">Повторити новий пароль</label>
-                <input id="settings-password-confirmation" name="password_confirmation" type="password" required minLength={8} autoComplete="new-password" />
-                <button className="btn" type="submit">Оновити пароль</button>
-              </form>
+              <p className="muted">Зміна пароля виконується лише після схвалення адміністратором.</p>
+              {passwordRequestStatus === "pending" ? (
+                <p className="page-note">Запит на зміну пароля очікує рішення адміністратора.</p>
+              ) : passwordRequestStatus === "approved" ? (
+                <form action={completeApprovedPasswordChange} className="member-list" style={{ marginTop: 14, gap: 10 }}>
+                  <p className="page-note">Запит схвалено. Тепер можна встановити новий пароль.</p>
+                  <label htmlFor="settings-password">Новий пароль</label>
+                  <input id="settings-password" name="password" type="password" required minLength={8} maxLength={72} autoComplete="new-password" />
+                  <label htmlFor="settings-password-confirmation">Повторити новий пароль</label>
+                  <input id="settings-password-confirmation" name="password_confirmation" type="password" required minLength={8} maxLength={72} autoComplete="new-password" />
+                  <button className="btn" type="submit">Зберегти новий пароль</button>
+                </form>
+              ) : (
+                <form action={requestPasswordChange} style={{ marginTop: 14 }}>
+                  <button className="btn" type="submit">Надіслати запит на зміну пароля</button>
+                </form>
+              )}
+              {status === "password_request_sent" && <p className="page-note">Запит надіслано адміністратору.</p>}
+              {status === "password_request_exists" && <p className="page-note">Запит уже існує або очікує виконання.</p>}
+              {status === "password_request_error" && <p className="page-note">Не вдалося надіслати запит. Спробуй ще раз.</p>}
+              {status === "password_not_approved" && <p className="page-note">Адміністратор ще не схвалив зміну пароля.</p>}
               {status === "password_saved" && <p className="page-note">Пароль успішно оновлено.</p>}
-              {status === "password_error" && <p className="page-note">Паролі мають збігатися та містити щонайменше 8 символів.</p>}
+              {status === "password_error" && <p className="page-note">Паролі мають збігатися та містити від 8 до 72 символів.</p>}
               {status === "password_save_error" && <p className="page-note">Не вдалося оновити пароль. Спробуй ще раз.</p>}
             </div>
           </>
