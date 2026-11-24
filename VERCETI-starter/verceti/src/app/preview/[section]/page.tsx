@@ -36,8 +36,8 @@ const descriptions: Record<string, { title: string; text: string; items: string[
   },
   workshop: {
     title: "Бронювання цеху",
-    text: "Погодинний розклад бронювання цеху з вибором виду продукції.",
-    items: ["Алко та петрушка", "Перегляд зайнятих годин", "Оновлення розкладу щодня опівночі"]
+    text: "Розклад бронювання цеху з інтервалами по 30 хвилин та вибором виду продукції.",
+    items: ["Алко та петрушка", "48 проміжків по 30 хвилин", "Оновлення розкладу щодня опівночі"]
   },
   voice: {
     title: "Голосові кімнати",
@@ -798,7 +798,7 @@ export default async function PreviewSection({
         {section === "workshop" ? (
           <>
             <h1>Бронювання цеху</h1>
-            <p className="muted">Обери вільну годину та познач продукцію.</p>
+            <p className="muted">Обери вільний проміжок на 30 хвилин та познач продукцію.</p>
             <WorkshopBooking userId={user.id} />
           </>
         ) : section === "products" ? (
