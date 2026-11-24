@@ -129,10 +129,10 @@ export default async function PreviewSection({
   searchParams
 }: {
   params: Promise<{ section: string }>;
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; recipient?: string }>;
 }) {
   const { section } = await params;
-  const { status, q = "" } = await searchParams;
+  const { status, q = "", recipient } = await searchParams;
 
   const supabase = await createClient();
 
@@ -190,7 +190,7 @@ export default async function PreviewSection({
 
   let newsError = false;
 
-  let memberItems: { id: string; nickname: string; game_id: string | null; role: string; created_at: string; is_banned: boolean }[] = [];
+  let memberItems: { id: string; nickname: string; game_id: string | null; role: string; created_at: string; is_banned: boolean; avatar_url: string | null }[] = [];
   let membersError = false;
   let activityItems: { user_id: string; nickname: string; role: string; total_seconds: number }[] = [];
   let activityError = false;
@@ -485,7 +485,7 @@ export default async function PreviewSection({
   if (section === "members") {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, nickname, game_id, role, created_at, is_banned")
+      .select("id, nickname, game_id, role, created_at, is_banned, avatar_url")
       .eq("is_banned", false)
       .order("nickname", { ascending: true })
       .limit(500);
@@ -739,7 +739,7 @@ export default async function PreviewSection({
             <p className="muted">
               Спілкування учасників спільноти VERCETI.
             </p>
-            <ChatRoom />
+            <ChatRoom initialRecipientId={recipient ?? null} />
           </>
         ) : section === "voice" || section === "streams" ? (
           <>
@@ -787,7 +787,7 @@ export default async function PreviewSection({
                   <div className="panel"><p className="muted">За цим запитом учасників не знайдено.</p></div>
                 ) : memberItems.map((member) => (
                   <div className="member-row" key={member.id} style={{ gap: 12 }}>
-                    <div className="avatar">{member.nickname.slice(0, 1).toUpperCase()}</div>
+                    {member.avatar_url ? <img src={member.avatar_url} alt="" className="avatar" style={{ width: 42, height: 42, borderRadius: "50%", objectFit: "cover" }} /> : <div className="avatar">{member.nickname.slice(0, 1).toUpperCase()}</div>}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <strong style={{ overflowWrap: "anywhere" }}>{member.nickname}</strong>
                       <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
