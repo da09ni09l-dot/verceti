@@ -179,7 +179,7 @@ export default function ProductsBoard({ userId }: { userId: string }) {
             <input value={quantity} onChange={(event) => setQuantity(event.target.value)} inputMode="decimal" placeholder="Наприклад: 2500" required />
           </label>
           <label style={{ display: "grid", gap: 6 }}>
-            <strong>Коментар (необов'язково)</strong>
+            <strong>Коментар (необов’язково)</strong>
             <textarea value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={1000} rows={3} placeholder="Додаткова інформація про продукцію" />
           </label>
           <label style={{ display: "grid", gap: 6 }}>
