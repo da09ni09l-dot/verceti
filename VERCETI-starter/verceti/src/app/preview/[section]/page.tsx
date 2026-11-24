@@ -19,7 +19,7 @@ import RewardsWheel from "./RewardsWheel";
 import MediaRoom from "./MediaRoom";
 import ApplicationsSection from "./ApplicationsSection";
 import StatsSection from "./StatsSection";
-import { createRewardPrize, deleteRewardPrize, spinRewards, spinWeeklyRewards } from "./rewards-actions";
+import { createRewardPrize, deleteRewardPrize, spinWeeklyRewards } from "./rewards-actions";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: {
@@ -1394,6 +1394,17 @@ export default async function PreviewSection({
             {(status === "invalid" || status === "error" || status === "spin-error") && <div className="panel" style={{ marginTop: 14 }}>Не вдалося виконати дію. Перевір дані та налаштування бази.</div>}
             <div className="panel" style={{ marginTop: 20 }}>
               <RewardsWheel prizes={rewardPrizes} alreadySpun={dailySpinUsed || status === "used"} />
+            </div>
+            <div className="panel" style={{ marginTop: 16 }}>
+              <h2>🎁 Щотижневий бонусний оберт</h2>
+              <p className="muted">Один додатковий оберт на календарний тиждень, окремо від щоденного.</p>
+              {weeklySpinUsed || status === "weekly_used" ? (
+                <p className="page-note" style={{ marginTop: 12 }}>Тижневий бонус уже використано. Наступний доступний із понеділка.</p>
+              ) : (
+                <form action={spinWeeklyRewards} style={{ marginTop: 12 }}>
+                  <button className="btn secondary" type="submit" disabled={rewardPrizes.length === 0} style={{ width: "100%" }}>Забрати тижневий бонус</button>
+                </form>
+              )}
             </div>
             <div className="panel" style={{ marginTop: 20 }}>
               <h2>Загальні призи</h2>
