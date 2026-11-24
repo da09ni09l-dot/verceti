@@ -24,12 +24,30 @@ export async function deleteRewardPrize(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!/^[0-9a-f-]{36}$/i.test(id)) redirect("/preview/rewards?status=invalid");
   const { supabase, user, role } = await requireRewardsManager();
-  let deletion = supabase.from("rewards_prizes").delete().eq("id", id);
-  if (role === "leader") deletion = deletion.eq("created_by", user.id);
-  const { error } = await deletion;
-  if (error) { console.error("Delete rewards prize:", error.message); redirect("/preview/rewards?status=error"); }
-  redirect("/preview/rewards?status=deleted");
+  let archive = supabase.from("rewards_prizes").update({ is_active: false }).eq("id", id);
+  if (role === "leader") archive = archive.eq("created_by", user.id);
+  const { data, error } = await archive.select("id").maybeSingle();
+  if (error || !data) {
+    console.error("Archive rewards prize:", error?.message ?? "Prize not found or not permitted");
+    redirect("/preview/rewards?status=error");
+  }
+  redirect("/preview/rewards?status=archived");
 }
+
+export async function restoreRewardPrize(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) redirect("/preview/rewards?status=invalid");
+  const { supabase, user, role } = await requireRewardsManager();
+  let restore = supabase.from("rewards_prizes").update({ is_active: true }).eq("id", id);
+  if (role === "leader") restore = restore.eq("created_by", user.id);
+  const { data, error } = await restore.select("id").maybeSingle();
+  if (error || !data) {
+    console.error("Restore rewards prize:", error?.message ?? "Prize not found or not permitted");
+    redirect("/preview/rewards?status=error");
+  }
+  redirect("/preview/rewards?status=restored");
+}
+
 export async function spinWeeklyRewards() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
