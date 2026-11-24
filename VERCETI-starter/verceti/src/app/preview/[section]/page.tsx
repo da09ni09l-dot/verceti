@@ -635,7 +635,7 @@ export default async function PreviewSection({
   let weeklySpinUsed = false;
   let dailySpinUsed = false;
   let birthdaySpinUsed = false;
-  let birthdayEligible = false;
+  const birthdayEligible = false;
   if (section === "rewards") {
     const { data: role } = await supabase.rpc("current_verceti_role");
     rewardsRole = typeof role === "string" ? role : null;
