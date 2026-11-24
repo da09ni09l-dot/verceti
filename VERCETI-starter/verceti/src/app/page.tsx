@@ -70,12 +70,12 @@ export default async function Home() {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, nickname, role, is_banned")
+    .select("id, nickname, role, is_banned, avatar_url")
     .order("created_at", { ascending: true });
 
   const { data: currentProfile } = await supabase
     .from("profiles")
-    .select("nickname, role")
+    .select("nickname, role, avatar_url")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -173,9 +173,7 @@ export default async function Home() {
             }}
           >
             <div className="user-pill">
-              <div className="avatar">
-                {nickname.slice(0, 1).toUpperCase()}
-              </div>
+              {currentProfile?.avatar_url ? <img src={currentProfile.avatar_url} alt="" className="avatar" style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover" }} /> : <div className="avatar">{nickname.slice(0, 1).toUpperCase()}</div>}
 
               <div>
                 <strong>{nickname}</strong>
