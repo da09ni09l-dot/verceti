@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
-  Home, MessageCircle, Users, ClipboardList, CalendarDays, Trophy,
+  Home, MessageCircle, Users, ClipboardList, CalendarDays, Trophy, Package,
   Mic2, Music2, Images, Gift, Activity, Scale, ClipboardCheck, Settings,
 } from "lucide-react";
 
@@ -14,6 +14,7 @@ const menuIcons = {
   home: Home,
   chat: MessageCircle,
   members: Users,
+  products: Package,
   forms: ClipboardList,
   events: CalendarDays,
   stats: Trophy,
@@ -38,6 +39,7 @@ const menuGroups = [
       ["Головна", "home", "home", "/"],
       ["Чат", "chat", "chat", "/preview/chat"],
       ["Учасники", "members", "members", "/preview/members"],
+      ["Продукція", "products", "products", "/preview/products"],
       ["Анкети", "forms", "forms", "/preview/forms"],
       ["Події", "events", "events", "/preview/events"],
       ["Рейтинг", "stats", "stats", "/preview/stats"],
