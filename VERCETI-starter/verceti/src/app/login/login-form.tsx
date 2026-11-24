@@ -33,7 +33,7 @@ export default function LoginForm() {
       }
 
       if (result?.success) {
-        window.location.href = "/";
+        window.location.href = registering ? "/preview/forms" : "/";
       }
     } catch (err) {
       console.error("Authentication form error:", err);
@@ -115,7 +115,7 @@ export default function LoginForm() {
 
         <p className="muted" style={{ fontSize: 11, lineHeight: 1.6, marginTop: 14 }}>
           {registering
-            ? "Реєстрація без email. Після створення акаунта ти одразу увійдеш у VERCETI."
+            ? "Реєстрація без email. Після створення акаунта заповни анкету — доступ відкриється після схвалення адміністрацією."
             : "Увійди за нікнеймом і паролем або створи новий акаунт."}
         </p>
       </form>
