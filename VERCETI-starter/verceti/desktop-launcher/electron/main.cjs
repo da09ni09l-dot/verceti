@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- Electron entrypoint is CommonJS. */
 const { app, BrowserWindow, shell } = require("electron");
 
 const WEBSITE_URL = "https://verceti.vercel.app/";
