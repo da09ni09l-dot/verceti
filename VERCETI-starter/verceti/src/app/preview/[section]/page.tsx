@@ -633,7 +633,7 @@ export default async function PreviewSection({
   let lastRewardSpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
   let lastWeeklySpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
   let weeklySpinUsed = false;
-  let dailySpinUsed = false;\n  let birthdaySpinUsed = false;\n  let birthdayEligible = false;
+  let dailySpinUsed = false;
   if (section === "rewards") {
     const { data: role } = await supabase.rpc("current_verceti_role");
     rewardsRole = typeof role === "string" ? role : null;
@@ -641,18 +641,18 @@ export default async function PreviewSection({
     const now = new Date();
     const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - ((now.getUTCDay() + 6) % 7)));
     const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-    const [{ data, error }, { data: spinData, error: spinError }, { data: weeklyData, error: weeklyError }, { data: birthdayData, error: birthdayError }] = await Promise.all([
+    const [{ data, error }, { data: spinData, error: spinError }, { data: weeklyData, error: weeklyError }] = await Promise.all([
       supabase.from("rewards_prizes").select("id, title, description, weight, created_by").order("created_at", { ascending: true }),
       supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "daily").gte("spun_at", dayStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "weekly").gte("spun_at", weekStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle(),\n      supabase.from("rewards_spins").select("spun_at").eq("user_id", user.id).eq("spin_type", "birthday").gte("spun_at", new Date(Date.UTC(kyivNow.getFullYear(),0,1)).toISOString()).limit(1).maybeSingle()
+      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "weekly").gte("spun_at", weekStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle()
     ]);
     rewardError = !!error;
-    if (spinError || weeklyError || birthdayError) console.error("VERCETI rewards spin history loading error:", spinError?.message ?? weeklyError?.message);
+    if (spinError || weeklyError) console.error("VERCETI rewards spin history loading error:", spinError?.message ?? weeklyError?.message);
     rewardPrizes = data ?? [];
     lastRewardSpin = spinData as typeof lastRewardSpin;
     lastWeeklySpin = weeklyData as typeof lastWeeklySpin;
     weeklySpinUsed = !!weeklyData;
-    dailySpinUsed = !!spinData;\n    birthdaySpinUsed = !!birthdayData;
+    dailySpinUsed = !!spinData;
   }
 
   if (section === "rules") {
@@ -1422,7 +1422,7 @@ export default async function PreviewSection({
             {status === "forbidden" && <div className="panel" style={{ marginTop: 14 }}>Керувати призами можуть лише адміністратор і лідер.</div>}
             {(status === "invalid" || status === "error" || status === "spin-error") && <div className="panel" style={{ marginTop: 14 }}>Не вдалося виконати дію. Перевір дані та налаштування бази.</div>}
             <div className="panel" style={{ marginTop: 20 }}>
-              <RewardsWheel prizes={rewardPrizes} alreadySpun={dailySpinUsed || status === "used"} birthdayEligible={birthdayEligible} birthdayAlreadySpun={birthdaySpinUsed} />
+              <RewardsWheel prizes={rewardPrizes} alreadySpun={dailySpinUsed || status === "used"} />
             </div>
             <div className="panel" style={{ marginTop: 16 }}>
               <h2>🎁 Щотижневий бонусний оберт</h2>

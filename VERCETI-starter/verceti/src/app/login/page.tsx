@@ -1,4 +1,3 @@
-
 import Link from "next/link";
 import LoginForm from "./login-form";
 
@@ -16,7 +15,7 @@ export default function LoginPage() {
         </h1>
 
         <p className="muted" style={{ fontSize: 12, lineHeight: 1.7 }}>
-          Увійди до свого облікового запису. Нові акаунти створює адміністрація.
+          Увійди або створи акаунт за нікнеймом і паролем. Email не потрібен.
         </p>
 
         <LoginForm />
