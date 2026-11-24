@@ -70,7 +70,10 @@ export default async function ApplicationsSection({
     .select("*")
     .order("created_at", { ascending: false });
 
-  const applications = applicationsData ?? [];
+  const allApplications = applicationsData ?? [];
+  const applications = showPendingOnly
+    ? allApplications.filter((application) => application.status === "pending")
+    : allApplications;
 
   const userIds = Array.from(
     new Set(applications.map((application) => application.user_id))
@@ -509,11 +512,11 @@ export default async function ApplicationsSection({
 
       {isStaff && (
         <div style={{ marginTop: 28 }}>
-          <h2>Анкети учасників</h2>
+          <h2>{showPendingOnly ? "Анкети на підтвердження" : "Анкети учасників"}</h2>
 
           {applications.length === 0 ? (
             <div className="panel">
-              Поки що учасники не надсилали анкет.
+              {showPendingOnly ? "Немає анкет, які очікують підтвердження." : "Поки що учасники не надсилали анкет."}
             </div>
           ) : (
             applications.map((application) => {
