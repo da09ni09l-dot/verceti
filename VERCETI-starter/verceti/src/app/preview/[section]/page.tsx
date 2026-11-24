@@ -646,7 +646,8 @@ export default async function PreviewSection({
     const [{ data, error }, { data: spinData, error: spinError }, { data: weeklyData, error: weeklyError }, { data: birthdayData, error: birthdayError }] = await Promise.all([
       supabase.from("rewards_prizes").select("id, title, description, weight, created_by").order("created_at", { ascending: true }),
       supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "daily").gte("spun_at", dayStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "weekly").gte("spun_at", weekStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle(),\n      supabase.from("rewards_spins").select("spun_at").eq("user_id", user.id).eq("spin_type", "birthday").gte("spun_at", new Date(Date.UTC(kyivNow.getFullYear(),0,1)).toISOString()).limit(1).maybeSingle()
+      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "weekly").gte("spun_at", weekStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("rewards_spins").select("spun_at").eq("user_id", user.id).eq("spin_type", "birthday").gte("spun_at", new Date(Date.UTC(kyivNow.getFullYear(),0,1)).toISOString()).limit(1).maybeSingle()
     ]);
     rewardError = !!error;
     if (spinError || weeklyError || birthdayError) console.error("VERCETI rewards spin history loading error:", spinError?.message ?? weeklyError?.message);
@@ -654,7 +655,8 @@ export default async function PreviewSection({
     lastRewardSpin = spinData as typeof lastRewardSpin;
     lastWeeklySpin = weeklyData as typeof lastWeeklySpin;
     weeklySpinUsed = !!weeklyData;
-    dailySpinUsed = !!spinData;\n    birthdaySpinUsed = !!birthdayData;
+    dailySpinUsed = !!spinData;
+    birthdaySpinUsed = !!birthdayData;
   }
 
   if (section === "rules") {
