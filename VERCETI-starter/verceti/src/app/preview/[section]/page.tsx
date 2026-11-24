@@ -633,7 +633,9 @@ export default async function PreviewSection({
   let lastRewardSpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
   let lastWeeklySpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
   let weeklySpinUsed = false;
-  let dailySpinUsed = false;\n  let birthdaySpinUsed = false;\n  let birthdayEligible = false;
+  let dailySpinUsed = false;
+  let birthdaySpinUsed = false;
+  let birthdayEligible = false;
   if (section === "rewards") {
     const { data: role } = await supabase.rpc("current_verceti_role");
     rewardsRole = typeof role === "string" ? role : null;
