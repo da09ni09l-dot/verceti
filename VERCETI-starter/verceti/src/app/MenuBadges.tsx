@@ -5,6 +5,27 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import {
+  Home, MessageCircle, Users, ClipboardList, CalendarDays, Trophy,
+  Mic2, Music2, Images, Gift, Activity, Scale, ClipboardCheck, Settings,
+} from "lucide-react";
+
+const menuIcons = {
+  home: Home,
+  chat: MessageCircle,
+  members: Users,
+  forms: ClipboardList,
+  events: CalendarDays,
+  stats: Trophy,
+  voice: Mic2,
+  music: Music2,
+  media: Images,
+  rewards: Gift,
+  activity: Activity,
+  rules: Scale,
+  tests: ClipboardCheck,
+  settings: Settings,
+} as const;
 
 type MenuBadgesProps = {
   userId: string;
@@ -14,29 +35,29 @@ const menuGroups = [
   {
     title: "ГОЛОВНЕ",
     items: [
-      ["Головна", "⌂", "home", "/"],
-      ["Чат", "▤", "chat", "/preview/chat"],
-      ["Учасники", "♙", "members", "/preview/members"],
-      ["Анкети", "▣", "forms", "/preview/forms"],
-      ["Події", "◷", "events", "/preview/events"],
-      ["Рейтинг", "▥", "stats", "/preview/stats"],
+      ["Головна", "home", "home", "/"],
+      ["Чат", "chat", "chat", "/preview/chat"],
+      ["Учасники", "members", "members", "/preview/members"],
+      ["Анкети", "forms", "forms", "/preview/forms"],
+      ["Події", "events", "events", "/preview/events"],
+      ["Рейтинг", "stats", "stats", "/preview/stats"],
     ],
   },
   {
     title: "МУЛЬТИМЕДІА",
     items: [
-      ["Голосова кімната", "◖", "voice", "/preview/voice"],
-      ["Музика", "♫", "music", "/preview/music"],
-      ["Фото", "▧", "media", "/preview/media"],
+      ["Голосова кімната", "voice", "voice", "/preview/voice"],
+      ["Музика", "music", "music", "/preview/music"],
+      ["Фото", "media", "media", "/preview/media"],
     ],
   },
   {
     title: "СПІЛЬНОТА",
     items: [
-      ["Рулетка", "◇", "rewards", "/preview/rewards"],
-      ["Активність", "◷", "activity", "/preview/activity"],
-      ["Правила", "⚖", "rules", "/preview/rules"],
-      ["Тестування", "✧", "tests", "/preview/tests"],
+      ["Рулетка", "rewards", "rewards", "/preview/rewards"],
+      ["Активність", "activity", "activity", "/preview/activity"],
+      ["Правила", "rules", "rules", "/preview/rules"],
+      ["Тестування", "tests", "tests", "/preview/tests"],
     ],
   },
 ] as const;
@@ -104,7 +125,8 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
   const renderItem = (
     item: readonly [string, string, string, string]
   ) => {
-    const [label, icon, id, href] = item;
+    const [label, iconKey, id, href] = item;
+    const Icon = menuIcons[iconKey as keyof typeof menuIcons];
 
     const count =
       id === "chat"
@@ -123,7 +145,7 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
           gap: 12,
         }}
       >
-        <span className="menu-icon">{icon}</span>
+        <span className="menu-icon"><Icon size={19} strokeWidth={1.9} aria-hidden="true" /></span>
         <span style={{ flex: 1 }}>{label}</span>
 
         {count > 0 && (
@@ -163,7 +185,7 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
         aria-controls="vercetti-mobile-navigation"
         onClick={() => setMobileOpen((current) => !current)}
       >
-        {mobileOpen ? "✕" : "☰"}
+        {mobileOpen ? <span aria-hidden="true">×</span> : <span aria-hidden="true">☰</span>}
       </button>
 
       <div
@@ -202,7 +224,7 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
 
           {renderItem([
             "Налаштування",
-            "⚙",
+            "settings",
             "settings",
             "/preview/settings",
           ])}
