@@ -95,12 +95,12 @@ iframe {
 }
 
 .sidebar {
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  position: relative;
+  top: auto;
+  height: auto;
+  min-height: 100vh;
   min-width: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: visible;
   padding: 25px 17px;
   display: flex;
   flex-direction: column;
