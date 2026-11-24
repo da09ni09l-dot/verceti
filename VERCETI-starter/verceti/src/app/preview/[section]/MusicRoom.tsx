@@ -402,24 +402,6 @@ export default function MusicRoom() {
     setAudioError("");
   }
 
-  function playCatalogTrack(track: CatalogTrack) {
-    setAudioError("");
-    setResolvedId("");
-
-    if (!track.url) {
-      setAudioError("Для цієї композиції немає доступного аудіопотоку.");
-      return;
-    }
-
-    setPlaying({
-      id: track.id,
-      title: track.title,
-      artist: track.artist,
-      source: track.source,
-      url: track.url,
-    });
-  }
-
   async function saveCatalogTrack(
     track: CatalogTrack,
     playlistType: PlaylistType
@@ -1231,10 +1213,10 @@ export default function MusicRoom() {
             style={{
               position: "fixed",
               bottom: "max(12px, env(safe-area-inset-bottom))",
-              left: 12,
-              right: 12,
+              left: "auto",
+              right: "max(12px, env(safe-area-inset-right))",
               zIndex: 10000,
-              width: "min(390px, calc(100vw - 28px))",
+              width: "min(390px, calc(100vw - 24px))",
               maxWidth: 390,
               margin: 0,
               padding: 12,
@@ -1324,18 +1306,6 @@ export default function MusicRoom() {
                 {audioError && (
                   <p className="page-note" role="alert">
                     {audioError}
-                  </p>
-                )}
-
-                {playing.source === "Audius" && (
-                  <p>
-                    <a
-                      href={playing.url.split("#")[0]}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Відкрити сторінку композиції в Audius
-                    </a>
                   </p>
                 )}
 
