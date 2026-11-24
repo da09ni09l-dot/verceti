@@ -18,6 +18,7 @@ import RewardsWheel from "./RewardsWheel";
 import MediaRoom from "./MediaRoom";
 import ApplicationsSection from "./ApplicationsSection";
 import StatsSection from "./StatsSection";
+import ProductsBoard from "./ProductsBoard";
 import { createRewardPrize, deleteRewardPrize, spinWeeklyRewards } from "./rewards-actions";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
@@ -25,6 +26,11 @@ const descriptions: Record<string, { title: string; text: string; items: string[
     title: "Учасники",
     text: "Список учасників, ролі та профілі.",
     items: ["Пошук за нікнеймом та ігровим ID", "Кольорові позначки ролей", "Історія зміни ролей"]
+  },
+  products: {
+    title: "Продукція",
+    text: "Спільний список продукції учасників VERCETI зі скриншотами та кількістю.",
+    items: ["Публікація скриншотів", "Облік кількості продукції", "Редагування власних записів"]
   },
   voice: {
     title: "Голосові кімнати",
@@ -731,7 +737,13 @@ export default async function PreviewSection({
 
         <div className="eyebrow">VERCETI · ПОПЕРЕДНІЙ ПЕРЕГЛЯД</div>
 
-        {section === "chat" ? (
+        {section === "products" ? (
+          <>
+            <h1>📦 Продукція VERCETI</h1>
+            <p className="muted">Спільний список продукції учасників. Додавай скриншоти та кількість — записи з'являються в реальному часі.</p>
+            <ProductsBoard userId={user.id} />
+          </>
+        ) : section === "chat" ? (
           <>
             <h1>Чат</h1>
             <p className="muted">
