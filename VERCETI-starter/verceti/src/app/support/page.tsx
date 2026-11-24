@@ -14,6 +14,18 @@ async function sendSupportRequest(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const admin = createAdminClient();
+  const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const { count, error: rateLimitError } = await admin
+    .from("support_requests")
+    .select("id", { count: "exact", head: true })
+    .ilike("sender_email", email)
+    .gte("created_at", cutoff);
+  if (rateLimitError) {
+    console.error("Support rate limit check:", rateLimitError.message);
+    redirect("/support?error=1");
+  }
+  if ((count ?? 0) >= 3) redirect("/support?rate=1");
+
   const accessToken = crypto.randomUUID();
   const { data: ticket, error } = await admin.from("support_requests").insert({
     sender_name: name, sender_email: email, subject, message, user_id: user?.id ?? null, access_token: accessToken
@@ -22,12 +34,13 @@ async function sendSupportRequest(formData: FormData) {
   redirect("/support/chat?ticket=" + ticket.id + "&key=" + accessToken);
 }
 
-export default async function SupportPage({ searchParams }: { searchParams: Promise<{ sent?: string; error?: string }> }) {
+export default async function SupportPage({ searchParams }: { searchParams: Promise<{ sent?: string; error?: string; rate?: string }> }) {
   const params = await searchParams;
   return <main className="login-wrap"><section className="login-card" style={{ width: "100%", maxWidth: 620 }}>
     <div className="eyebrow">VERCETI · ПІДТРИМКА</div><h1>Зв’язок з адміністрацією</h1>
     <p className="muted" style={{ lineHeight: 1.7 }}>Напиши адміністрації навіть якщо акаунт заблоковано або ти не можеш увійти. Після відправлення відкриється приватний чат для подальшого листування.</p>
     {params.error === "1" && <div className="panel" style={{ marginTop: 16 }}>Не вдалося створити чат. Перевір поля та спробуй ще раз.</div>}
+    {params.rate === "1" && <div className="panel" style={{ marginTop: 16 }}>З цієї адреси вже надіслано кілька звернень. Спробуй ще раз через 10 хвилин.</div>}
     <form action={sendSupportRequest} className="member-list" style={{ marginTop: 22, gap: 10 }}>
       <label htmlFor="support-name">Ім’я або нікнейм</label><input id="support-name" name="name" required minLength={2} maxLength={80} />
       <label htmlFor="support-email">Email для відповіді</label><input id="support-email" name="email" type="email" required maxLength={160} />

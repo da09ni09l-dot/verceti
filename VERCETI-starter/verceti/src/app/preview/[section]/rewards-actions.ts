@@ -30,14 +30,42 @@ export async function deleteRewardPrize(formData: FormData) {
   if (error) { console.error("Delete rewards prize:", error.message); redirect("/preview/rewards?status=error"); }
   redirect("/preview/rewards?status=deleted");
 }
-export async function spinRewards() {
+export async function spinWeeklyRewards() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const { error } = await supabase.rpc("spin_verceti_rewards");
+  const { error } = await supabase.rpc("spin_verceti_weekly_rewards");
   if (error) {
-    const status = error.message.includes("daily_spin_used") ? "used" : error.message.includes("no_active_prizes") ? "empty" : "spin-error";
+    const status = error.message.includes("weekly_spin_used") ? "weekly_used" : error.message.includes("no_active_prizes") ? "empty" : "spin-error";
     redirect("/preview/rewards?status=" + status);
   }
-  redirect("/preview/rewards?status=won");
+  redirect("/preview/rewards?status=weekly_won");
+}
+
+export async function spinRewards(): Promise<
+  | { ok: true; prize: { id: string; title: string; description: string } }
+  | { ok: false; error: "used" | "empty" | "unauthorized" | "failed" }
+> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "unauthorized" };
+
+  const { data, error } = await supabase.rpc("spin_verceti_rewards");
+  if (error) {
+    if (error.message.includes("daily_spin_used")) return { ok: false, error: "used" };
+    if (error.message.includes("no_active_prizes")) return { ok: false, error: "empty" };
+    console.error("Spin rewards:", error.message);
+    return { ok: false, error: "failed" };
+  }
+
+  const prize = data as { id?: string; title?: string; description?: string } | null;
+  if (!prize?.id || !prize.title) return { ok: false, error: "failed" };
+  return {
+    ok: true,
+    prize: {
+      id: prize.id,
+      title: prize.title,
+      description: prize.description ?? "",
+    },
+  };
 }

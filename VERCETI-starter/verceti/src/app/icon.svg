@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="verceti" x1="8" y1="5" x2="57" y2="61" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#d8baff"/>
+      <stop offset=".52" stop-color="#a855ff"/>
+      <stop offset="1" stop-color="#6725bd"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="17" fill="#0e0b18"/>
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="none" stroke="#a855ff" stroke-opacity=".42" stroke-width="1.5"/>
+  <path d="M13 17h10l9 23 9-23h10L36 49H28L13 17Z" fill="url(#verceti)"/>
+  <path d="M22 13h20" stroke="#e6d2ff" stroke-linecap="round" stroke-width="2" opacity=".75"/>
+</svg>

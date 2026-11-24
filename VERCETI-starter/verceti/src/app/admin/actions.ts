@@ -86,15 +86,15 @@ export async function createMember(formData: FormData) {
   const role = String(formData.get("role") ?? "junior");
 
   if (!/^[a-zA-Z0-9_]{3,20}$/.test(nickname)) {
-    redirect("/admin?error=nickname");
+    redirect("/admin?tab=accounts&error=nickname");
   }
 
   if (password.length < 8) {
-    redirect("/admin?error=password");
+    redirect("/admin?tab=accounts&error=password");
   }
 
   if (!allowedRoles.includes(role as (typeof allowedRoles)[number])) {
-    redirect("/admin?error=role");
+    redirect("/admin?tab=accounts&error=role");
   }
 
   const { supabase } = await requireAdmin();
@@ -113,7 +113,7 @@ export async function createMember(formData: FormData) {
 
   if (error || !data.user) {
     console.error("Create member error:", error?.message);
-    redirect("/admin?error=create");
+    redirect("/admin?tab=accounts&error=create");
   }
 
   if (role !== "junior") {
@@ -131,7 +131,7 @@ export async function createMember(formData: FormData) {
 
       await admin.auth.admin.deleteUser(data.user.id);
 
-      redirect("/admin?error=role_assignment");
+      redirect("/admin?tab=accounts&error=role_assignment");
     }
   }
 
@@ -143,20 +143,41 @@ export async function createMember(formData: FormData) {
     "/"
   );
 
-  redirect("/admin?created=1");
+  redirect("/admin?tab=accounts&created=1");
+}
+
+
+export async function resetMemberPassword(formData: FormData) {
+  const memberId = String(formData.get("member_id") ?? "").trim();
+  const password = String(formData.get("new_password") ?? "");
+  if (!memberId || !/^[0-9a-f-]{36}$/i.test(memberId)) redirect("/admin?tab=members&error=member");
+  if (password.length < 8 || password.length > 128) redirect("/admin?tab=members&error=password");
+  const { user } = await requireAdmin();
+  if (memberId === user.id) redirect("/admin?tab=members&error=self_password");
+  const admin = createAdminClient();
+  const { data: member, error: memberError } = await admin.from("profiles").select("id, role").eq("id", memberId).single();
+  if (memberError || !member) redirect("/admin?tab=members&error=member");
+  if (member.role === "admin") redirect("/admin?tab=members&error=protected");
+  const { error } = await admin.auth.admin.updateUserById(memberId, { password });
+  if (error) {
+    console.error("Reset member password error:", error.message);
+    redirect("/admin?tab=members&error=password_reset");
+  }
+  await notifyMember(memberId, "Пароль оновлено", "Адміністрація оновила пароль твого акаунта. Звернися до адміністратора, щоб отримати новий пароль.", "security", "/");
+  redirect("/admin?tab=members&password_reset=1");
 }
 
 export async function banMember(formData: FormData) {
   const memberId = String(formData.get("member_id") ?? "").trim();
 
   if (!memberId || !/^[0-9a-f-]{36}$/i.test(memberId)) {
-    redirect("/admin?error=member");
+    redirect("/admin?tab=members&error=member");
   }
 
   const { user } = await requireAdmin();
 
   if (memberId === user.id) {
-    redirect("/admin?error=self_ban");
+    redirect("/admin?tab=members&error=self_ban");
   }
 
   const admin = createAdminClient();
@@ -169,15 +190,15 @@ export async function banMember(formData: FormData) {
 
   if (memberError || !member) {
     console.error("Find member for ban error:", memberError?.message);
-    redirect("/admin?error=member");
+    redirect("/admin?tab=members&error=member");
   }
 
   if (member.role === "admin") {
-    redirect("/admin?error=protected");
+    redirect("/admin?tab=members&error=protected");
   }
 
   if (member.is_banned) {
-    redirect("/admin?updated=1");
+    redirect("/admin?tab=members&updated=1");
   }
 
   const { data: updatedMember, error } = await admin
@@ -189,7 +210,7 @@ export async function banMember(formData: FormData) {
 
   if (error || !updatedMember) {
     console.error("Ban member error:", error?.message);
-    redirect("/admin?error=ban");
+    redirect("/admin?tab=members&error=ban");
   }
 
   await notifyMember(
@@ -200,20 +221,42 @@ export async function banMember(formData: FormData) {
     "/"
   );
 
-  redirect("/admin?updated=1");
+  redirect("/admin?tab=members&updated=1");
+}
+
+
+export async function changeMemberRole(formData: FormData) {
+  const memberId = String(formData.get("member_id") ?? "").trim();
+  const role = String(formData.get("role") ?? "");
+  if (!memberId || !/^[0-9a-f-]{36}$/i.test(memberId)) redirect("/admin?tab=members&error=member");
+  if (!allowedRoles.includes(role as (typeof allowedRoles)[number])) redirect("/admin?tab=members&error=role");
+  const { supabase, user } = await requireAdmin();
+  if (memberId === user.id) redirect("/admin?tab=members&error=self_role");
+  const { data: member, error: memberError } = await supabase.from("profiles").select("id, role").eq("id", memberId).single();
+  if (memberError || !member) redirect("/admin?tab=members&error=member");
+  if (member.role === "admin") redirect("/admin?tab=members&error=protected");
+  const { error } = await supabase.rpc("change_member_role", {
+    p_member_id: memberId, p_new_role: role, p_reason: "Зміна ролі адміністратором"
+  });
+  if (error) {
+    console.error("Change member role error:", error.message);
+    redirect("/admin?tab=members&error=role_assignment");
+  }
+  await notifyMember(memberId, "Змінено роль у VERCETI", "Адміністрація змінила твою роль у спільноті.", "system", "/preview/stats");
+  redirect("/admin?tab=members&updated=1");
 }
 
 export async function unbanMember(formData: FormData) {
   const memberId = String(formData.get("member_id") ?? "").trim();
 
   if (!memberId || !/^[0-9a-f-]{36}$/i.test(memberId)) {
-    redirect("/admin?error=member");
+    redirect("/admin?tab=members&error=member");
   }
 
   const { user } = await requireAdmin();
 
   if (memberId === user.id) {
-    redirect("/admin?error=protected");
+    redirect("/admin?tab=members&error=protected");
   }
 
   const admin = createAdminClient();
@@ -226,15 +269,15 @@ export async function unbanMember(formData: FormData) {
 
   if (memberError || !member) {
     console.error("Find member for unban error:", memberError?.message);
-    redirect("/admin?error=member");
+    redirect("/admin?tab=members&error=member");
   }
 
   if (member.role === "admin") {
-    redirect("/admin?error=protected");
+    redirect("/admin?tab=members&error=protected");
   }
 
   if (!member.is_banned) {
-    redirect("/admin?updated=1");
+    redirect("/admin?tab=members&updated=1");
   }
 
   const { data: updatedMember, error } = await admin
@@ -246,7 +289,7 @@ export async function unbanMember(formData: FormData) {
 
   if (error || !updatedMember) {
     console.error("Unban member error:", error?.message);
-    redirect("/admin?error=unban");
+    redirect("/admin?tab=members&error=unban");
   }
 
   await notifyMember(
@@ -257,7 +300,7 @@ export async function unbanMember(formData: FormData) {
     "/"
   );
 
-  redirect("/admin?updated=1");
+  redirect("/admin?tab=members&updated=1");
 }
 
 export async function deleteMember(formData: FormData) {
@@ -267,17 +310,17 @@ export async function deleteMember(formData: FormData) {
   ).trim();
 
   if (!memberId || !/^[0-9a-f-]{36}$/i.test(memberId)) {
-    redirect("/admin?error=member");
+    redirect("/admin?tab=members&error=member");
   }
 
   if (confirmation !== "DELETE") {
-    redirect("/admin?error=confirmation");
+    redirect("/admin?tab=members&error=confirmation");
   }
 
   const { user } = await requireAdmin();
 
   if (memberId === user.id) {
-    redirect("/admin?error=self_delete");
+    redirect("/admin?tab=members&error=self_delete");
   }
 
   const admin = createAdminClient();
@@ -290,11 +333,11 @@ export async function deleteMember(formData: FormData) {
 
   if (memberError || !member) {
     console.error("Find member error:", memberError?.message);
-    redirect("/admin?error=member");
+    redirect("/admin?tab=members&error=member");
   }
 
   if (member.role === "admin") {
-    redirect("/admin?error=protected");
+    redirect("/admin?tab=members&error=protected");
   }
 
   const detachOperations = [
@@ -348,7 +391,32 @@ export async function deleteMember(formData: FormData) {
       "Detach member references error:",
       detachError.error.message
     );
-    redirect("/admin?error=delete_cleanup");
+    redirect("/admin?tab=members&error=delete_cleanup");
+  }
+
+  // Remove the account's private chat uploads before deleting its Auth identity.
+  const chatMediaPaths: string[] = [];
+  for (let offset = 0; ; offset += 100) {
+    const { data: files, error: listError } = await admin.storage
+      .from("chat-media")
+      .list(memberId, { limit: 100, offset });
+    if (listError) {
+      console.error("List member chat media error:", listError.message);
+      redirect("/admin?tab=members&error=delete_cleanup");
+    }
+    const page = (files ?? []).filter((file) => !!file.id);
+    chatMediaPaths.push(...page.map((file) => `${memberId}/${file.name}`));
+    if (!files || files.length < 100) break;
+  }
+
+  for (let offset = 0; offset < chatMediaPaths.length; offset += 100) {
+    const { error: mediaError } = await admin.storage
+      .from("chat-media")
+      .remove(chatMediaPaths.slice(offset, offset + 100));
+    if (mediaError) {
+      console.error("Delete member chat media error:", mediaError.message);
+      redirect("/admin?tab=members&error=delete_cleanup");
+    }
   }
 
   const { error: resultsError } = await admin
@@ -358,7 +426,7 @@ export async function deleteMember(formData: FormData) {
 
   if (resultsError) {
     console.error("Delete test results error:", resultsError.message);
-    redirect("/admin?error=delete_cleanup");
+    redirect("/admin?tab=members&error=delete_cleanup");
   }
 
   const { error: deleteError } =
@@ -366,10 +434,10 @@ export async function deleteMember(formData: FormData) {
 
   if (deleteError) {
     console.error("Delete auth user error:", deleteError.message);
-    redirect("/admin?error=delete_auth");
+    redirect("/admin?tab=members&error=delete_auth");
   }
 
-  redirect("/admin?deleted=1");
+  redirect("/admin?tab=members&deleted=1");
 }
 
 // ==========================================
@@ -399,7 +467,7 @@ export async function createNews(formData: FormData) {
   ).trim();
 
   if (!title || !content) {
-    redirect("/admin?error=news_fields");
+    redirect("/admin?tab=news&error=news_fields");
   }
 
   const categories = [
@@ -410,7 +478,7 @@ export async function createNews(formData: FormData) {
   ];
 
   if (!categories.includes(category)) {
-    redirect("/admin?error=news_category");
+    redirect("/admin?tab=news&error=news_category");
   }
 
   const showFrom = fromValue ? new Date(fromValue) : null;
@@ -424,7 +492,7 @@ export async function createNews(formData: FormData) {
     (showUntil && Number.isNaN(showUntil.getTime())) ||
     (eventDate && Number.isNaN(eventDate.getTime()))
   ) {
-    redirect("/admin?error=news_date");
+    redirect("/admin?tab=news&error=news_date");
   }
 
   if (
@@ -432,7 +500,7 @@ export async function createNews(formData: FormData) {
     showUntil &&
     showUntil.getTime() <= showFrom.getTime()
   ) {
-    redirect("/admin?error=news_period");
+    redirect("/admin?tab=news&error=news_period");
   }
 
   const { data: news, error } = await supabase
@@ -452,8 +520,16 @@ export async function createNews(formData: FormData) {
 
   if (error || !news) {
     console.error("Create news error:", error?.message);
-    redirect("/admin?error=news_create");
+    redirect("/admin?tab=news&error=news_create");
   }
+
+  const returnTo = formData.get("return_to") === "/preview/news" ? "/preview/news" : "/admin";
+  const successRedirect = returnTo === "/preview/news" ? "/preview/news?status=created" : "/admin?tab=news&news_created=1";
+  const isVisibleNow =
+    (!showFrom || showFrom.getTime() <= Date.now()) &&
+    (!showUntil || showUntil.getTime() > Date.now());
+
+  if (!isVisibleNow) redirect(successRedirect);
 
   const admin = createAdminClient();
 
@@ -465,7 +541,7 @@ export async function createNews(formData: FormData) {
 
   if (membersError) {
     console.error("Load members for news notification:", membersError.message);
-    redirect("/admin?error=news_notification");
+    redirect("/admin?tab=news&error=news_notification");
   }
 
   if (members && members.length > 0) {
@@ -487,19 +563,18 @@ export async function createNews(formData: FormData) {
         "Create news notifications error:",
         notificationError.message
       );
-      redirect("/admin?error=news_notification");
+      redirect("/admin?tab=news&error=news_notification");
     }
   }
 
-  const returnTo = formData.get("return_to") === "/preview/news" ? "/preview/news" : "/admin";
-  redirect(returnTo === "/preview/news" ? "/preview/news?status=created" : "/admin?news_created=1");
+  redirect(successRedirect);
 }
 
 export async function deleteNews(formData: FormData) {
   const newsId = String(formData.get("news_id") ?? "").trim();
 
   if (!newsId || !/^[0-9a-f-]{36}$/i.test(newsId)) {
-    redirect("/admin?error=news");
+    redirect("/admin?tab=news&error=news");
   }
 
   const { supabase } = await requireStaff();
@@ -511,18 +586,18 @@ export async function deleteNews(formData: FormData) {
 
   if (error) {
     console.error("Delete news error:", error.message);
-    redirect("/admin?error=news_delete");
+    redirect("/admin?tab=news&error=news_delete");
   }
 
   const returnTo = formData.get("return_to") === "/preview/news" ? "/preview/news" : "/admin";
-  redirect(returnTo === "/preview/news" ? "/preview/news?status=deleted" : "/admin?news_deleted=1");
+  redirect(returnTo === "/preview/news" ? "/preview/news?status=deleted" : "/admin?tab=news&news_deleted=1");
 }
 
 export async function toggleNewsPin(formData: FormData) {
   const newsId = String(formData.get("news_id") ?? "").trim();
 
   if (!newsId || !/^[0-9a-f-]{36}$/i.test(newsId)) {
-    redirect("/admin?error=news");
+    redirect("/admin?tab=news&error=news");
   }
 
   const { supabase } = await requireAdmin();
@@ -535,7 +610,7 @@ export async function toggleNewsPin(formData: FormData) {
 
   if (findError || !news) {
     console.error("Find news error:", findError?.message);
-    redirect("/admin?error=news");
+    redirect("/admin?tab=news&error=news");
   }
 
   const { error } = await supabase
@@ -545,8 +620,8 @@ export async function toggleNewsPin(formData: FormData) {
 
   if (error) {
     console.error("Toggle news pin error:", error.message);
-    redirect("/admin?error=news_update");
+    redirect("/admin?tab=news&error=news_update");
   }
 
-  redirect("/admin?news_updated=1");
+  redirect("/admin?tab=news&news_updated=1");
 }

@@ -46,27 +46,10 @@ export default async function Home() {
     redirect("/login");
   }
 
-  const { data: staffStatus, error: staffError } =
-    await supabase.rpc("is_verceti_staff");
-
-  const isStaff = !staffError && staffStatus === true;
-
-  if (!isStaff) {
-    const { data: applications, error: applicationError } =
-      await supabase
-        .from("applications")
-        .select("status")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-    const isApproved =
-      !applicationError &&
-      applications?.[0]?.status === "approved";
-
-    if (!isApproved) {
-      redirect("/preview/forms");
-    }
+  const { data: membershipStatus, error: membershipError } =
+    await supabase.rpc("is_verceti_member");
+  if (membershipError || membershipStatus !== true) {
+    redirect("/preview/forms");
   }
 
   const { data: adminRole, error: adminRoleError } =

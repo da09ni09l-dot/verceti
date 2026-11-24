@@ -1,11 +1,14 @@
 
 import Link from "next/link";
+import { LayoutDashboard, Users, Newspaper, UserPlus, UserRound } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   createMember,
   banMember,
   unbanMember,
+  changeMemberRole,
+  resetMemberPassword,
   deleteMember,
   createNews,
   deleteNews,
@@ -17,12 +20,14 @@ export default async function AdminPage({
 }: {
   searchParams: Promise<{
     created?: string;
+    password_reset?: string;
     updated?: string;
     deleted?: string;
     news_created?: string;
     news_deleted?: string;
     news_updated?: string;
     error?: string;
+    tab?: string;
   }>;
 }) {
   const supabase = await createClient();
@@ -42,6 +47,10 @@ export default async function AdminPage({
   }
 
   const params = await searchParams;
+  const allowedTabs = ["overview", "accounts", "news", "members"] as const;
+  const activeTab = allowedTabs.includes(params.tab as (typeof allowedTabs)[number])
+    ? (params.tab as (typeof allowedTabs)[number])
+    : "overview";
 
   const { data: members, error: membersError } = await supabase
     .from("profiles")
@@ -60,7 +69,10 @@ export default async function AdminPage({
     password: "Пароль має містити щонайменше 8 символів.",
     role: "Вибрано неправильну роль.",
     create: "Не вдалося створити акаунт. Можливо, такий нікнейм уже існує.",
-    role_assignment: "Не вдалося призначити роль. Акаунт не створено.",
+    role_assignment: "Не вдалося призначити або змінити роль.",
+    self_role: "Не можна змінювати власну роль.",
+    self_password: "Для зміни власного пароля скористайся налаштуваннями профілю.",
+    password_reset: "Не вдалося оновити пароль учасника.",
     member: "Учасника не знайдено.",
     self_ban: "Не можна заблокувати власний акаунт.",
     self_delete: "Не можна видалити власний акаунт.",
@@ -110,7 +122,7 @@ export default async function AdminPage({
     <main className="login-wrap workspace-wrap">
       <section
         className="login-card workspace-card"
-        style={{ width: "100%", maxWidth: 760 }}
+        style={{ width: "100%", maxWidth: 1180 }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div className="brand" style={{ padding: 0 }}>
@@ -127,13 +139,59 @@ export default async function AdminPage({
         </h1>
 
         <p className="muted" style={{ fontSize: 13, lineHeight: 1.7 }}>
-          Створення облікових записів, керування учасниками та новинами спільноти.
+          Керування сайтом у розділах — відкривай лише потрібний інструмент, без довгого списку на одній сторінці.
         </p>
+
+        <nav className="admin-tabs" aria-label="Розділи панелі адміністратора">
+          {([
+            ["overview", "Огляд", LayoutDashboard],
+            ["accounts", "Акаунти", UserPlus],
+            ["members", "Учасники", Users],
+            ["news", "Новини", Newspaper],
+          ] as const).map(([tab, label, Icon]) => (
+            <Link
+              key={tab}
+              href={`/admin?tab=${tab}`}
+              className={`admin-tab ${activeTab === tab ? "active" : ""}`}
+              aria-current={activeTab === tab ? "page" : undefined}
+            >
+              <Icon size={18} strokeWidth={1.9} aria-hidden="true" />
+              {label}
+            </Link>
+          ))}
+        </nav>
+
+        {activeTab === "overview" && (
+          <div className="admin-overview">
+            <div className="admin-overview-card">
+              <span className="admin-overview-icon"><UserRound size={22} strokeWidth={1.9} aria-hidden="true" /></span>
+              <span className="muted">Учасники</span>
+              <strong>{members?.length ?? 0}</strong>
+              <Link href="/admin?tab=members">Керувати учасниками →</Link>
+            </div>
+            <div className="admin-overview-card">
+              <span className="admin-overview-icon"><Newspaper size={22} strokeWidth={1.9} aria-hidden="true" /></span>
+              <span className="muted">Новини</span>
+              <strong>{newsList?.length ?? 0}</strong>
+              <Link href="/admin?tab=news">Керувати новинами →</Link>
+            </div>
+            <div className="admin-overview-card">
+              <span className="admin-overview-icon"><UserPlus size={22} strokeWidth={1.9} aria-hidden="true" /></span>
+              <span className="muted">Новий акаунт</span>
+              <strong>Створити</strong>
+              <Link href="/admin?tab=accounts">Перейти до створення →</Link>
+            </div>
+          </div>
+        )}
 
         {params.created === "1" && (
           <p style={{ color: "#8ee6a5", fontSize: 13 }}>
             Акаунт успішно створено!
           </p>
+        )}
+
+        {params.password_reset === "1" && (
+          <p style={{ color: "#8ee6a5", fontSize: 13 }}>Пароль учасника оновлено. Передай новий пароль користувачу безпечним способом.</p>
         )}
 
         {params.updated === "1" && (
@@ -173,8 +231,9 @@ export default async function AdminPage({
         )}
 
         {/* Створення акаунта */}
-        <details className="panel" style={{ marginTop: 24 }}>
-          <summary style={{ cursor: "pointer", fontWeight: 700, padding: 8 }}>📁 Керування акаунтами</summary>
+        {activeTab === "accounts" && (
+        <section className="panel admin-section" style={{ marginTop: 24 }}>
+          <h2>Керування акаунтами</h2>
 
         <div className="panel" style={{ marginTop: 24 }}>
           <h2>Створити акаунт</h2>
@@ -228,11 +287,13 @@ export default async function AdminPage({
           </form>
         </div>
 
-        </details>
+        </section>
+        )}
 
         {/* Керування новинами */}
-        <details className="panel" style={{ marginTop: 16 }}>
-          <summary style={{ cursor: "pointer", fontWeight: 700, padding: 8 }}>📁 Новини та оголошення</summary>
+        {activeTab === "news" && (
+        <section className="panel admin-section" style={{ marginTop: 16 }}>
+          <h2>Новини та оголошення</h2>
 
         <div className="panel" style={{ marginTop: 24 }}>
           <h2>Створити новину</h2>
@@ -444,11 +505,13 @@ export default async function AdminPage({
           )}
         </div>
 
-        </details>
+        </section>
+        )}
 
         {/* Учасники спільноти */}
-        <details className="panel" style={{ marginTop: 16 }}>
-          <summary style={{ cursor: "pointer", fontWeight: 700, padding: 8 }}>📁 Учасники та модерація</summary>
+        {activeTab === "members" && (
+        <section className="panel admin-section" style={{ marginTop: 16 }}>
+          <h2>Учасники та модерація</h2>
 
         <div style={{ marginTop: 32 }}>
           <h2>Учасники спільноти</h2>
@@ -510,6 +573,24 @@ export default async function AdminPage({
                     </p>
                   ) : (
                     <>
+                      <form action={changeMemberRole} style={{ marginTop: 12 }}>
+                        <input type="hidden" name="member_id" value={member.id} />
+                        <label htmlFor={`member-role-${member.id}`}>Змінити роль</label>
+                        <select id={`member-role-${member.id}`} name="role" defaultValue={member.role} style={{ width: "100%", marginTop: 6 }}>
+                          <option value="junior">Молодший учасник</option>
+                          <option value="local">Учасник</option>
+                          <option value="senior">Старший учасник</option>
+                          <option value="moderator">Модератор</option>
+                          <option value="leader">Лідер</option>
+                        </select>
+                        <button className="btn secondary" type="submit" style={{ width: "100%", marginTop: 8 }}>Зберегти роль</button>
+                      </form>
+                      <form action={resetMemberPassword} style={{ marginTop: 14 }}>
+                        <input type="hidden" name="member_id" value={member.id} />
+                        <label htmlFor={`member-password-${member.id}`}>Встановити новий пароль</label>
+                        <input id={`member-password-${member.id}`} name="new_password" type="password" required minLength={8} maxLength={128} autoComplete="new-password" placeholder="Мінімум 8 символів" style={{ marginTop: 6 }} />
+                        <button className="btn secondary" type="submit" style={{ width: "100%", marginTop: 8 }}>Оновити пароль</button>
+                      </form>
                       {member.is_banned ? (
                         <form action={unbanMember}>
                           <input
@@ -624,7 +705,8 @@ export default async function AdminPage({
           )}
         </div>
 
-        </details>
+        </section>
+        )}
 
         <p className="page-note">
           Доступ до цієї сторінки має лише адміністратор.

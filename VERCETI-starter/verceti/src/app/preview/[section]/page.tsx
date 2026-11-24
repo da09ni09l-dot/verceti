@@ -15,10 +15,11 @@ import SectionNavigation from "./SectionNavigation";
 import NotificationBell from "./NotificationBell";
 import ChatRoom from "./ChatRoom";
 import VoiceRoom from "./VoiceRoom";
+import RewardsWheel from "./RewardsWheel";
 import MediaRoom from "./MediaRoom";
 import ApplicationsSection from "./ApplicationsSection";
 import StatsSection from "./StatsSection";
-import { createRewardPrize, deleteRewardPrize, spinRewards } from "./rewards-actions";
+import { createRewardPrize, deleteRewardPrize, spinWeeklyRewards } from "./rewards-actions";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: {
@@ -163,23 +164,11 @@ export default async function PreviewSection({
 
   const isStaff = !staffError && staffStatus === true;
 
-  let applicationApproved = false;
+  const { data: membershipStatus, error: membershipError } =
+    await supabase.rpc("is_verceti_member");
+  const hasCommunityAccess = !membershipError && membershipStatus === true;
 
-  if (!isStaff) {
-    const { data: applications, error: applicationError } =
-      await supabase
-        .from("applications")
-        .select("status")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-    applicationApproved =
-      !applicationError &&
-      applications?.[0]?.status === "approved";
-  }
-
-  if (!isStaff && !applicationApproved && section !== "forms") {
+  if (!hasCommunityAccess && section !== "forms") {
     redirect("/preview/forms");
   }
 
@@ -196,15 +185,17 @@ export default async function PreviewSection({
     category: string;
     event_date: string | null;
     created_at: string;
+    show_from: string | null;
+    show_until: string | null;
   }[] = [];
 
   let newsError = false;
 
-  let memberItems: { id: string; nickname: string; role: string; created_at: string; is_banned: boolean }[] = [];
+  let memberItems: { id: string; nickname: string; game_id: string | null; role: string; created_at: string; is_banned: boolean }[] = [];
   let membersError = false;
   let activityItems: { user_id: string; nickname: string; role: string; total_seconds: number }[] = [];
   let activityError = false;
-  let eventItems: { id: string; title: string; content: string; event_date: string | null; created_at: string }[] = [];
+  let eventItems: { id: string; title: string; content: string; event_date: string | null; created_at: string; show_from: string | null; show_until: string | null }[] = [];
   let eventsError = false;
 
   let ruleItems: {
@@ -495,7 +486,7 @@ export default async function PreviewSection({
   if (section === "members") {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, nickname, role, created_at, is_banned")
+      .select("id, nickname, game_id, role, created_at, is_banned")
       .eq("is_banned", false)
       .order("nickname", { ascending: true })
       .limit(500);
@@ -508,7 +499,8 @@ export default async function PreviewSection({
       memberItems = (data ?? []).filter((member) =>
         !normalizedQuery ||
         member.nickname.toLocaleLowerCase("uk-UA").includes(normalizedQuery) ||
-        member.role.toLocaleLowerCase("uk-UA").includes(normalizedQuery)
+        member.role.toLocaleLowerCase("uk-UA").includes(normalizedQuery) ||
+        (member.game_id ?? "").toLocaleLowerCase("uk-UA").includes(normalizedQuery)
       );
     }
   }
@@ -557,7 +549,7 @@ export default async function PreviewSection({
   if (section === "events") {
     const { data, error } = await supabase
       .from("news")
-      .select("id, title, content, event_date, created_at")
+      .select("id, title, content, event_date, created_at, show_from, show_until")
       .eq("category", "event")
       .order("event_date", { ascending: true, nullsFirst: false })
       .limit(100);
@@ -567,7 +559,10 @@ export default async function PreviewSection({
       eventsError = true;
     } else {
       const now = Date.now();
-      eventItems = (data ?? []).sort((a, b) => {
+      eventItems = (data ?? []).filter((item) =>
+        (!item.show_from || new Date(item.show_from).getTime() <= now) &&
+        (!item.show_until || new Date(item.show_until).getTime() > now)
+      ).sort((a, b) => {
         const aTime = a.event_date ? new Date(a.event_date).getTime() : Number.POSITIVE_INFINITY;
         const bTime = b.event_date ? new Date(b.event_date).getTime() : Number.POSITIVE_INFINITY;
         const aUpcoming = aTime >= now;
@@ -605,14 +600,18 @@ export default async function PreviewSection({
 
     const { data, error } = await supabase
       .from("news")
-      .select("id, title, content, category, event_date, created_at")
+      .select("id, title, content, category, event_date, created_at, show_from, show_until")
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("VERCETI news loading error:", error.message);
       newsError = true;
     } else {
-      newsItems = data ?? [];
+      const now = Date.now();
+      newsItems = (data ?? []).filter((item) =>
+        (!item.show_from || new Date(item.show_from).getTime() <= now) &&
+        (!item.show_until || new Date(item.show_until).getTime() > now)
+      );
     }
   }
 
@@ -621,18 +620,28 @@ export default async function PreviewSection({
   let canManageRewards = false;
   let rewardsRole: string | null = null;
   let lastRewardSpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
+  let lastWeeklySpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
+  let weeklySpinUsed = false;
+  let dailySpinUsed = false;
   if (section === "rewards") {
     const { data: role } = await supabase.rpc("current_verceti_role");
     rewardsRole = typeof role === "string" ? role : null;
     canManageRewards = rewardsRole === "admin" || rewardsRole === "leader";
-    const [{ data, error }, { data: spinData, error: spinError }] = await Promise.all([
+    const now = new Date();
+    const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - ((now.getUTCDay() + 6) % 7)));
+    const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const [{ data, error }, { data: spinData, error: spinError }, { data: weeklyData, error: weeklyError }] = await Promise.all([
       supabase.from("rewards_prizes").select("id, title, description, weight, created_by").order("created_at", { ascending: true }),
-      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).order("spun_at", { ascending: false }).limit(1).maybeSingle()
+      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "daily").gte("spun_at", dayStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "weekly").gte("spun_at", weekStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle()
     ]);
     rewardError = !!error;
-    if (spinError) console.error("VERCETI rewards spin history loading error:", spinError.message);
+    if (spinError || weeklyError) console.error("VERCETI rewards spin history loading error:", spinError?.message ?? weeklyError?.message);
     rewardPrizes = data ?? [];
     lastRewardSpin = spinData as typeof lastRewardSpin;
+    lastWeeklySpin = weeklyData as typeof lastWeeklySpin;
+    weeklySpinUsed = !!weeklyData;
+    dailySpinUsed = !!spinData;
   }
 
   if (section === "rules") {
@@ -764,7 +773,7 @@ export default async function PreviewSection({
             <h1>Учасники VERCETI</h1>
             <p className="muted">Список активних профілів спільноти та їхні ролі.</p>
             <form method="get" className="member-search-form" style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
-              <input name="q" type="search" defaultValue={q} placeholder="Пошук за нікнеймом або роллю" aria-label="Пошук учасників" style={{ flex: "1 1 240px" }} />
+              <input name="q" type="search" defaultValue={q} placeholder="Пошук за нікнеймом, роллю або ігровим ID" aria-label="Пошук учасників" style={{ flex: "1 1 240px" }} />
               <button className="btn" type="submit">Знайти</button>
               {q && <Link className="btn secondary" href="/preview/members">Скинути</Link>}
             </form>
@@ -782,7 +791,9 @@ export default async function PreviewSection({
                     <div className="avatar">{member.nickname.slice(0, 1).toUpperCase()}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <strong style={{ overflowWrap: "anywhere" }}>{member.nickname}</strong>
-                      <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>У спільноті з {new Date(member.created_at).toLocaleDateString("uk-UA")}</div>
+                      <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+                        {member.game_id ? `Ігровий ID: ${member.game_id} · ` : ""}У спільноті з {new Date(member.created_at).toLocaleDateString("uk-UA")}
+                      </div>
                     </div>
                     <span className={`role ${member.role === "admin" || member.role === "leader" ? "orange" : member.role === "moderator" ? "purple" : member.role === "senior" ? "blue" : member.role === "local" ? "green" : "muted"}`}>{({ admin: "АДМІН", leader: "ЗАСНОВНИК", moderator: "МОДЕРАТОР", senior: "СТАРШИЙ", local: "УЧАСНИК", junior: "МОЛОДШИЙ" } as Record<string, string>)[member.role] ?? member.role}</span>
                   </div>
@@ -1375,22 +1386,25 @@ export default async function PreviewSection({
             <p className="muted">Спільна рулетка VERCETI — призи доступні всім учасникам.</p>
             {status === "created" && <div className="panel" style={{ marginTop: 14 }}>Приз додано до загальної рулетки.</div>}
             {status === "deleted" && <div className="panel" style={{ marginTop: 14 }}>Приз видалено.</div>}
-            {status === "won" && <div className="panel" style={{ marginTop: 14 }}><strong>🎉 Твій результат</strong><p style={{ marginTop: 8 }}>{lastRewardSpin?.prize?.title ?? "Оберт успішно зафіксовано."}</p>{lastRewardSpin?.prize?.description && <p className="muted" style={{ marginTop: 6 }}>{lastRewardSpin.prize.description}</p>}</div>}
+            {(status === "won" || status === "weekly_won") && <div className="panel" style={{ marginTop: 14 }}><strong>🎉 Твій результат</strong><p style={{ marginTop: 8 }}>{(status === "weekly_won" ? (lastWeeklySpin as { prize: { title: string; description: string } | null } | null)?.prize?.title : (lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.title) ?? "Оберт успішно зафіксовано."}</p>{(status === "weekly_won" ? (lastWeeklySpin as { prize: { title: string; description: string } | null } | null)?.prize?.description : (lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.description) && <p className="muted" style={{ marginTop: 6 }}>{status === "weekly_won" ? (lastWeeklySpin as { prize: { title: string; description: string } | null } | null)?.prize?.description : (lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.description}</p>}</div>}
             {status === "used" && <div className="panel" style={{ marginTop: 14 }}>Ти вже використав(ла) безкоштовний оберт сьогодні. Повертайся завтра!</div>}
+            {status === "weekly_used" && <div className="panel" style={{ marginTop: 14 }}>Щотижневий бонус уже використано. Новий буде доступний наступного понеділка.</div>}
             {status === "empty" && <div className="panel" style={{ marginTop: 14 }}>Активних призів поки немає.</div>}
             {status === "forbidden" && <div className="panel" style={{ marginTop: 14 }}>Керувати призами можуть лише адміністратор і лідер.</div>}
             {(status === "invalid" || status === "error" || status === "spin-error") && <div className="panel" style={{ marginTop: 14 }}>Не вдалося виконати дію. Перевір дані та налаштування бази.</div>}
             <div className="panel" style={{ marginTop: 20 }}>
-              <h2>Щоденний безкоштовний оберт</h2>
-              <p className="muted">Один оберт на день. Вибір призу та перевірка повторного оберту виконуються на сервері.</p>
-              {status === "used" ? (
-                <p className="page-note" style={{ marginTop: 14 }}>Ти вже використав(ла) безкоштовний оберт за сьогодні. Спробуй знову завтра.</p>
+              <RewardsWheel prizes={rewardPrizes} alreadySpun={dailySpinUsed || status === "used"} />
+            </div>
+            <div className="panel" style={{ marginTop: 16 }}>
+              <h2>🎁 Щотижневий бонусний оберт</h2>
+              <p className="muted">Один додатковий оберт на календарний тиждень, окремо від щоденного.</p>
+              {weeklySpinUsed || status === "weekly_used" ? (
+                <p className="page-note" style={{ marginTop: 12 }}>Тижневий бонус уже використано. Наступний доступний із понеділка.</p>
               ) : (
-                <form action={spinRewards} style={{ marginTop: 14 }}>
-                  <button className="btn" type="submit" disabled={rewardPrizes.length === 0} style={{ width: "100%" }}>🎡 Крутити рулетку</button>
+                <form action={spinWeeklyRewards} style={{ marginTop: 12 }}>
+                  <button className="btn secondary" type="submit" disabled={rewardPrizes.length === 0} style={{ width: "100%" }}>Забрати тижневий бонус</button>
                 </form>
               )}
-              <p className="page-note">Додаткові оберти за бали й тижневі нагороди підключимо після створення безпечного балансу балів.</p>
             </div>
             <div className="panel" style={{ marginTop: 20 }}>
               <h2>Загальні призи</h2>

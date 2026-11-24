@@ -350,10 +350,16 @@ begin
     raise exception 'authentication_required';
   end if;
   if not exists (
-    select 1 from public.profiles
-    where id = v_user and is_banned = false
+    select 1 from public.profiles p
+    where p.id = v_user and p.is_banned = false
+      and (p.role in ('admin', 'leader', 'moderator', 'senior', 'local') or (
+        select a.status from public.applications a
+        where a.user_id = p.id
+        order by a.created_at desc
+        limit 1
+      ) = 'approved')
   ) then
-    raise exception 'account_inactive';
+    raise exception 'account_not_approved';
   end if;
   if seconds_to_add is null or seconds_to_add < 1 or seconds_to_add > 60 then
     raise exception 'invalid_activity_increment';
@@ -395,7 +401,7 @@ create or replace function public.get_verceti_top_members()
 returns table (
   user_id uuid,
   nickname text,
-  role public.verceti_role,
+  role text,
   total_seconds bigint
 )
 language sql
@@ -403,7 +409,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select p.id, p.nickname, p.role, a.total_seconds
+  select p.id, p.nickname, p.role::text, a.total_seconds
   from public.member_activity a
   join public.profiles p on p.id = a.user_id
   where coalesce(p.is_banned, false) = false
@@ -411,6 +417,16 @@ as $$
       select 1 from public.profiles current_profile
       where current_profile.id = auth.uid()
         and current_profile.is_banned = false
+        and (
+          current_profile.role in ('admin', 'leader', 'moderator', 'senior', 'local')
+          or (
+            select current_application.status
+            from public.applications current_application
+            where current_application.user_id = current_profile.id
+            order by current_application.created_at desc
+            limit 1
+          ) = 'approved'
+        )
     )
   order by a.total_seconds desc, p.nickname asc
   limit 10;
@@ -735,8 +751,54 @@ as restrictive for all to authenticated
 using (public.is_verceti_account_active())
 with check (public.is_verceti_account_active());
 
+
+-- Approved members and staff only: protect private community tables and storage.
+create or replace function public.is_verceti_member()
+returns boolean language sql stable security definer set search_path = public as $verceti_member$
+  select exists (
+    select 1 from public.profiles p
+    where p.id = (select auth.uid()) and p.is_banned = false
+      and (p.role in ('admin','leader','moderator','senior','local') or (
+        select a.status from public.applications a
+        where a.user_id = p.id
+        order by a.created_at desc
+        limit 1
+      ) = 'approved')
+  );
+$verceti_member$;
+revoke all on function public.is_verceti_member() from public;
+grant execute on function public.is_verceti_member() to authenticated;
+
+do $verceti_member_guard$
+declare table_name text;
+begin
+  foreach table_name in array array[
+    'disciplinary_actions','role_history','news','notifications','chat_messages',
+    'direct_messages','community_rules','tests','test_questions','test_answers',
+    'test_permissions','test_results','music_tracks','music_favorites',
+    'music_recommendations','member_activity','moderation_actions',
+    'rewards_prizes','rewards_spins','voice_rooms','support_requests','support_messages'
+  ] loop
+    execute format('drop policy if exists %I on public.%I','approved_member_guard',table_name);
+    execute format(
+      'create policy %I on public.%I as restrictive for all to authenticated using (public.is_verceti_member()) with check (public.is_verceti_member())',
+      'approved_member_guard',table_name
+    );
+  end loop;
+end;
+$verceti_member_guard$;
+
+drop policy if exists approved_member_guard on public.profiles;
+create policy approved_member_guard on public.profiles as restrictive for all to authenticated
+using (public.is_verceti_member() or id = (select auth.uid()))
+with check (public.is_verceti_member() or id = (select auth.uid()));
+
+drop policy if exists approved_member_guard on storage.objects;
+create policy approved_member_guard on storage.objects as restrictive for all to authenticated
+using (public.is_verceti_member()) with check (public.is_verceti_member());
+
 -- Realtime publication for live chat and live unread counters.
-do $$
+do $realtime_direct_messages$
 begin
   alter publication supabase_realtime add table public.direct_messages;
 exception when duplicate_object then
@@ -744,7 +806,7 @@ exception when duplicate_object then
 when undefined_object then
   null;
 end;
-$$;
+$realtime_direct_messages$;
 do $$
 begin
   alter publication supabase_realtime add table public.notifications;

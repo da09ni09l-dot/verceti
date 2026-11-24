@@ -206,15 +206,7 @@ export default function VoiceRoom({ isStaff }: VoiceRoomProps) {
   }
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "minmax(0, 260px) minmax(0, 1fr)",
-        gap: 16,
-        marginTop: 24,
-        alignItems: "start",
-      }}
-    >
+    <div className="voice-room-layout" style={{ marginTop: 24 }}>
       <aside className="panel" style={{ minWidth: 0 }}>
         <h2 style={{ marginTop: 0 }}>🎙️ Голосові канали</h2>
 
