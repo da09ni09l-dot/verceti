@@ -7,6 +7,7 @@ import PinnedNewsCarousel from "./PinnedNewsCarousel";
 import MembersOnlinePanel from "./MembersOnlinePanel";
 import TopMembersPanel from "./TopMembersPanel";
 import { logout } from "./logout/actions";
+import NewsBell from "./NewsBell";
 
 const roleLabels: Record<string, string> = {
   leader: "ЗАСНОВНИК",
@@ -154,6 +155,7 @@ export default async function Home() {
             >
               📰 Новини
             </Link>
+            <NewsBell userId={user.id} />
           </nav>
 
           <div
