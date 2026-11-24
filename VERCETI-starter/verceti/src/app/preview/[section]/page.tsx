@@ -175,8 +175,6 @@ export default async function PreviewSection({
   } = await supabase.rpc("is_verceti_staff");
 
   const isStaff = !staffError && staffStatus === true;
-  const { data: voiceRole } = await supabase.rpc("current_verceti_role");
-  const canModerateVoice = ["admin", "leader", "moderator"].includes(voiceRole);
 
   const { data: membershipStatus, error: membershipError } =
     await supabase.rpc("is_verceti_member");
@@ -897,7 +895,7 @@ export default async function PreviewSection({
             disciplinaryMembersError={disciplinaryMembersError}
             activityRanking={activityRanking}
             activityRankingError={activityRankingError}
-            isStaff={isStaff} canModerateVoice={canModerateVoice}
+            isStaff={isStaff}
             status={status}
           />
         ) : section === "events" ? (
