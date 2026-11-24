@@ -17,6 +17,42 @@ function isTrustedAppUrl(rawUrl) {
   }
 }
 
+function installKeyboardShortcuts(window) {
+  window.webContents.on("before-input-event", (event, input) => {
+    if (input.type !== "keyDown") return;
+
+    const key = input.key.toLowerCase();
+    const command = input.control || input.meta;
+
+    if (input.key === "F5" || (command && key === "r")) {
+      event.preventDefault();
+      if (command && input.shift) {
+        window.webContents.reloadIgnoringCache();
+      } else {
+        window.webContents.reload();
+      }
+      return;
+    }
+
+    if (command && key === "0") {
+      event.preventDefault();
+      window.webContents.setZoomLevel(0);
+    } else if (command && (key === "+" || key === "=")) {
+      event.preventDefault();
+      window.webContents.setZoomLevel(window.webContents.getZoomLevel() + 0.5);
+    } else if (command && key === "-") {
+      event.preventDefault();
+      window.webContents.setZoomLevel(window.webContents.getZoomLevel() - 0.5);
+    } else if (input.alt && input.key === "ArrowLeft" && window.webContents.canGoBack()) {
+      event.preventDefault();
+      window.webContents.goBack();
+    } else if (input.alt && input.key === "ArrowRight" && window.webContents.canGoForward()) {
+      event.preventDefault();
+      window.webContents.goForward();
+    }
+  });
+}
+
 async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1440,
@@ -33,6 +69,8 @@ async function createWindow() {
       sandbox: true,
     },
   });
+
+  installKeyboardShortcuts(mainWindow);
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith("https://")) shell.openExternal(url);
