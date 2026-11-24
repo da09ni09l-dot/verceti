@@ -54,11 +54,17 @@ export default function WorkshopBooking({ userId }: { userId: string }) {
   }, [supabase, date]);
 
   useEffect(() => {
-    setDate(localDateKey());
+    const refreshDate = () => setDate(localDateKey());
+    refreshDate();
+    const now = new Date();
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+    const timer = window.setTimeout(refreshDate, Math.max(1000, nextMidnight - now.getTime() + 500));
+    const onVisible = () => { if (document.visibilityState === "visible") refreshDate(); };
+    document.addEventListener("visibilitychange", onVisible);
     const channel = supabase.channel("workshop-bookings-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "workshop_bookings" }, () => { void load(); })
       .subscribe();
-    return () => { void supabase.removeChannel(channel); };
+    return () => { window.clearTimeout(timer); document.removeEventListener("visibilitychange", onVisible); void supabase.removeChannel(channel); };
   }, [supabase, load]);
 
   useEffect(() => { void load(); }, [load]);
