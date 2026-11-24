@@ -134,6 +134,7 @@ export default function MusicRoom() {
   const [musicLoading, setMusicLoading] = useState(false);
 
   const [playing, setPlaying] = useState<PlayingTrack | null>(null);
+  const [queue, setQueue] = useState<PlayingTrack[]>([]);
   const [resolvedId, setResolvedId] = useState("");
   const [resolving, setResolving] = useState(false);
 
@@ -399,24 +400,6 @@ export default function MusicRoom() {
     setTab(nextTab);
     setMessage("");
     setAudioError("");
-  }
-
-  function playCatalogTrack(track: CatalogTrack) {
-    setAudioError("");
-    setResolvedId("");
-
-    if (!track.url) {
-      setAudioError("Для цієї композиції немає доступного аудіопотоку.");
-      return;
-    }
-
-    setPlaying({
-      id: track.id,
-      title: track.title,
-      artist: track.artist,
-      source: track.source,
-      url: track.url,
-    });
   }
 
   async function saveCatalogTrack(
@@ -688,6 +671,29 @@ export default function MusicRoom() {
     };
   }, [playing]);
 
+  function playQueue(nextQueue: PlayingTrack[], index = 0) {
+    const nextTrack = nextQueue[index];
+    if (!nextTrack) return;
+    setQueue(nextQueue);
+    setAudioError("");
+    setResolvedId("");
+    setPlaying(nextTrack);
+  }
+
+  function playPrevious() {
+    if (queue.length < 2 || !playing) return;
+    const currentIndex = queue.findIndex((track) => track.id === playing.id);
+    const previousIndex = currentIndex <= 0 ? queue.length - 1 : currentIndex - 1;
+    playQueue(queue, previousIndex);
+  }
+
+  function playNext() {
+    if (queue.length < 2 || !playing) return;
+    const currentIndex = queue.findIndex((track) => track.id === playing.id);
+    const nextIndex = currentIndex < 0 || currentIndex === queue.length - 1 ? 0 : currentIndex + 1;
+    playQueue(queue, nextIndex);
+  }
+
   function stopPlaying() {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -695,6 +701,7 @@ export default function MusicRoom() {
     }
 
     setPlaying(null);
+    setQueue([]);
     setResolvedId("");
     setAudioError("");
     setResolving(false);
@@ -726,7 +733,7 @@ export default function MusicRoom() {
         display: "grid",
         gap: 18,
         marginTop: 24,
-        paddingBottom: pathname === "/preview/music" ? 260 : 0,
+        paddingBottom: pathname === "/preview/music" ? 120 : 0,
       }}
     >
       {pathname === "/preview/music" ? (
@@ -823,17 +830,22 @@ export default function MusicRoom() {
                   <button
                     className="btn"
                     type="button"
-                    onClick={() => {
-                      setAudioError("");
-                      setResolvedId("");
-                      setPlaying({
-                        id: item.id,
-                        title: item.title,
-                        artist: item.artist,
-                        source: item.source,
-                        url: item.url,
-                      });
-                    }}
+                    onClick={() =>
+                      playQueue(
+                        recommendations
+                          .filter((track) => track.source === "Audius" || track.source === "Jamendo" || track.source === "SoundCloud")
+                          .map((track) => ({
+                            id: track.id,
+                            title: track.title,
+                            artist: track.artist,
+                            source: track.source,
+                            url: track.url,
+                          })),
+                        recommendations
+                          .filter((track) => track.source === "Audius" || track.source === "Jamendo" || track.source === "SoundCloud")
+                          .findIndex((track) => track.id === item.id)
+                      )
+                    }
                   >
                     ▶ Слухати
                   </button>
@@ -901,17 +913,22 @@ export default function MusicRoom() {
 
               <button
                 type="button"
-                onClick={() => {
-                  setAudioError("");
-                  setResolvedId("");
-                  setPlaying({
-                    id: track.id,
-                    title: track.title,
-                    artist: track.artist,
-                    source: track.source,
-                    url: track.url,
-                  });
-                }}
+                onClick={() =>
+                  playQueue(
+                    visibleTracks
+                      .filter((item) => item.source === "Audius" || item.source === "Jamendo" || item.source === "SoundCloud")
+                      .map((item) => ({
+                        id: item.id,
+                        title: item.title,
+                        artist: item.artist,
+                        source: item.source,
+                        url: item.url,
+                      })),
+                    visibleTracks
+                      .filter((item) => item.source === "Audius" || item.source === "Jamendo" || item.source === "SoundCloud")
+                      .findIndex((item) => item.id === track.id)
+                  )
+                }
                 style={{
                   flex: 1,
                   minWidth: 0,
@@ -1123,7 +1140,20 @@ export default function MusicRoom() {
                     className="btn"
                     type="button"
                     disabled={!track.url}
-                    onClick={() => playCatalogTrack(track)}
+                    onClick={() =>
+                      playQueue(
+                        catalogTracks
+                          .filter((item) => Boolean(item.url))
+                          .map((item) => ({
+                            id: item.id,
+                            title: item.title,
+                            artist: item.artist,
+                            source: item.source,
+                            url: item.url,
+                          })),
+                        catalogTracks.filter((item) => Boolean(item.url)).findIndex((item) => item.id === track.id)
+                      )
+                    }
                     title="Слухати"
                   >
                     ▶
@@ -1183,29 +1213,34 @@ export default function MusicRoom() {
             style={{
               position: "fixed",
               bottom: "max(12px, env(safe-area-inset-bottom))",
-              left: 12,
-              right: 12,
+              left: "auto",
+              right: "max(12px, env(safe-area-inset-right))",
               zIndex: 10000,
-              width: "auto",
-              maxWidth: 900,
-              margin: "0 auto",
-              background: "rgba(25, 20, 38, 0.97)",
+              width: "min(390px, calc(100vw - 24px))",
+              maxWidth: 390,
+              margin: 0,
+              padding: 12,
+              borderRadius: 16,
+              background: "rgba(18, 13, 29, 0.97)",
               border: "1px solid rgba(187,138,255,0.5)",
               boxShadow: "0 0 25px rgba(0,0,0,0.4)",
               backdropFilter: "blur(16px)",
               WebkitBackdropFilter: "blur(16px)",
-              maxHeight: "45vh",
-              overflowY: "auto",
+              maxHeight: "none",
+              overflow: "hidden",
             }}
           >
-            <h2 style={{ marginTop: 0 }}>▶ Музичний плеєр</h2>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+              <span style={{ color: "#c9a4ff", fontSize: 10, fontWeight: 800, letterSpacing: ".12em" }}>VERCETTI PLAYER</span>
+              <button className="btn secondary" type="button" onClick={stopPlaying} style={{ minHeight: 28, padding: "4px 9px", fontSize: 11 }}>Закрити</button>
+            </div>
 
             {playing ? (
               <>
-                <h3>{playing.title}</h3>
-                <p className="muted">
-                  {playing.artist} · {playing.source}
-                </p>
+                <div style={{ minWidth: 0, marginBottom: 8 }}>
+                  <div title={playing.title} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 14, fontWeight: 800 }}>{playing.title}</div>
+                  <div className="muted" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 11 }}>{playing.artist} · {playing.source}</div>
+                </div>
 
                 {playing.source === "Audius" ? (
                   resolving ? (
@@ -1226,7 +1261,8 @@ export default function MusicRoom() {
                         );
                       }}
                       onCanPlay={() => setAudioError("")}
-                      style={{ width: "100%", marginTop: 12 }}
+                      style={{ width: "100%", height: 34, marginTop: 4 }}
+                      onEnded={playNext}
                     >
                       Твій браузер не підтримує аудіоплеєр.
                     </audio>
@@ -1245,7 +1281,8 @@ export default function MusicRoom() {
                       );
                     }}
                     onCanPlay={() => setAudioError("")}
-                    style={{ width: "100%", marginTop: 12 }}
+                    style={{ width: "100%", height: 34, marginTop: 4 }}
+                    onEnded={playNext}
                   >
                     Твій браузер не підтримує аудіоплеєр.
                   </audio>
@@ -1272,21 +1309,13 @@ export default function MusicRoom() {
                   </p>
                 )}
 
-                {playing.source === "Audius" && (
-                  <p>
-                    <a
-                      href={playing.url.split("#")[0]}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Відкрити сторінку композиції в Audius
-                    </a>
-                  </p>
-                )}
-
-                <button className="btn" type="button" onClick={stopPlaying}>
-                  ■ Зупинити
-                </button>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8 }}>
+                  <button className="btn secondary" type="button" onClick={playPrevious} disabled={queue.length < 2} style={{ minHeight: 34, padding: "7px 10px", fontSize: 11 }}>⏮ Попередня</button>
+                  <span className="muted" style={{ fontSize: 10, whiteSpace: "nowrap" }}>
+                    {queue.length > 1 ? `${queue.findIndex((track) => track.id === playing.id) + 1} / ${queue.length}` : "Одна композиція"}
+                  </span>
+                  <button className="btn" type="button" onClick={playNext} disabled={queue.length < 2} style={{ minHeight: 34, padding: "7px 10px", fontSize: 11 }}>Наступна ⏭</button>
+                </div>
               </>
             ) : (
               <p className="muted">
