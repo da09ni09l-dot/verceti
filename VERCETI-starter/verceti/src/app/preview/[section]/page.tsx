@@ -14,6 +14,7 @@ import {
 import SectionNavigation from "./SectionNavigation";
 import NotificationBell from "./NotificationBell";
 import ChatRoom from "./ChatRoom";
+import AvatarUploader from "../../AvatarUploader";
 import RewardsWheel from "./RewardsWheel";
 import MediaRoom from "./MediaRoom";
 import ApplicationsSection from "./ApplicationsSection";
@@ -147,7 +148,7 @@ export default async function PreviewSection({
   // Перевірка блокування акаунта
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("is_banned, nickname")
+    .select("is_banned, nickname, avatar_url")
     .eq("id", user.id)
     .single();
 
@@ -1127,6 +1128,7 @@ export default async function PreviewSection({
             <p className="muted">Керуй власним нікнеймом і паролем облікового запису.</p>
             <div className="panel" style={{ marginTop: 20 }}>
               <h2>Особисті дані</h2>
+              <AvatarUploader userId={user.id} initialUrl={profile.avatar_url ?? null} />
               <form action={async (formData: FormData) => {
                 "use server";
                 const nickname = String(formData.get("nickname") ?? "").trim();
