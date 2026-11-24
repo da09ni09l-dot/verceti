@@ -590,7 +590,12 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
   useEffect(() => {
     if (!initialRecipientId || selectedPlayer) return;
     const recipient = players.find((player) => player.id === initialRecipientId);
-    if (recipient && recipient.id !== userId) openPrivateChat(recipient);
+    if (!recipient || recipient.id === userId) return;
+    setSelectedPlayer(recipient);
+    setContent("");
+    setError("");
+    setShowStickers(false);
+    setDirectMessages([]);
   }, [initialRecipientId, players, selectedPlayer, userId]);
 
   function openGeneralChat() {
