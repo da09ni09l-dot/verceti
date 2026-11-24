@@ -1,5 +1,6 @@
 
 import Link from "next/link";
+import { LayoutDashboard, Users, Newspaper, UserPlus, UserRound } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -143,18 +144,18 @@ export default async function AdminPage({
 
         <nav className="admin-tabs" aria-label="Розділи панелі адміністратора">
           {([
-            ["overview", "Огляд", "⌂"],
-            ["accounts", "Акаунти", "♙"],
-            ["members", "Учасники", "♧"],
-            ["news", "Новини", "▤"],
-          ] as const).map(([tab, label, icon]) => (
+            ["overview", "Огляд", LayoutDashboard],
+            ["accounts", "Акаунти", UserPlus],
+            ["members", "Учасники", Users],
+            ["news", "Новини", Newspaper],
+          ] as const).map(([tab, label, Icon]) => (
             <Link
               key={tab}
               href={`/admin?tab=${tab}`}
               className={`admin-tab ${activeTab === tab ? "active" : ""}`}
               aria-current={activeTab === tab ? "page" : undefined}
             >
-              <span aria-hidden="true">{icon}</span>
+              <Icon size={18} strokeWidth={1.9} aria-hidden="true" />
               {label}
             </Link>
           ))}
@@ -163,19 +164,19 @@ export default async function AdminPage({
         {activeTab === "overview" && (
           <div className="admin-overview">
             <div className="admin-overview-card">
-              <span className="admin-overview-icon">♙</span>
+              <span className="admin-overview-icon"><UserRound size={22} strokeWidth={1.9} aria-hidden="true" /></span>
               <span className="muted">Учасники</span>
               <strong>{members?.length ?? 0}</strong>
               <Link href="/admin?tab=members">Керувати учасниками →</Link>
             </div>
             <div className="admin-overview-card">
-              <span className="admin-overview-icon">▤</span>
+              <span className="admin-overview-icon"><Newspaper size={22} strokeWidth={1.9} aria-hidden="true" /></span>
               <span className="muted">Новини</span>
               <strong>{newsList?.length ?? 0}</strong>
               <Link href="/admin?tab=news">Керувати новинами →</Link>
             </div>
             <div className="admin-overview-card">
-              <span className="admin-overview-icon">＋</span>
+              <span className="admin-overview-icon"><UserPlus size={22} strokeWidth={1.9} aria-hidden="true" /></span>
               <span className="muted">Новий акаунт</span>
               <strong>Створити</strong>
               <Link href="/admin?tab=accounts">Перейти до створення →</Link>
