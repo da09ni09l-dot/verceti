@@ -59,12 +59,18 @@ export default function VoiceRoom({ isStaff }: VoiceRoomProps) {
   }, []);
 
   useEffect(() => {
+    // The global layout mounts this component on every route. Avoid polling
+    // the protected voice API unless the voice page is open or a room is active.
+    if (!isVoicePage && !token) {
+      setLoadingRooms(false);
+      return;
+    }
     void loadRooms();
     const interval = window.setInterval(() => {
       if (document.visibilityState === "visible") void loadRooms();
     }, 10000);
     return () => window.clearInterval(interval);
-  }, [loadRooms]);
+  }, [isVoicePage, token, loadRooms]);
 
   async function joinRoom(id: number) {
     const selectedRoom = rooms.find((room) => room.id === id);
