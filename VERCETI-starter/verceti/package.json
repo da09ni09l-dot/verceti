@@ -1,50 +1,23 @@
 {
-  "name": "vercetti",
+  "name": "vercetti-launcher",
   "version": "2026.1.0",
   "private": true,
+  "description": "VERCETTI desktop launcher for Windows",
   "main": "electron/main.cjs",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
     "desktop": "electron .",
-    "dist:win": "npm run build && electron-builder --win nsis --x64"
-  },
-  "dependencies": {
-    "@supabase/ssr": "^0.6.1",
-    "@supabase/supabase-js": "^2.49.4",
-    "@livekit/components-react": "^2.9.26",
-    "@livekit/components-styles": "^1.2.0",
-    "livekit-client": "^2.25.0",
-    "livekit-server-sdk": "^2.20.1",
-    "lucide-react": "^0.468.0",
-    "next": "^15.2.4",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "dist:win": "electron-builder --win nsis --x64"
   },
   "devDependencies": {
-    "@types/node": "^22.13.10",
-    "@types/react": "^19.0.10",
-    "@types/react-dom": "^19.0.4",
-    "@eslint/eslintrc": "^3.3.0",
     "electron": "^37.2.6",
-    "electron-builder": "^26.0.12",
-    "eslint": "^9.22.0",
-    "eslint-config-next": "^15.2.4",
-    "typescript": "^5.8.2"
+    "electron-builder": "^26.0.12"
   },
   "build": {
     "appId": "com.vercetti.launcher",
-    "productName": "VERCETTI LAUNCHER",
+    "productName": "VERCETTI",
     "asar": true,
     "directories": { "output": "release" },
     "files": ["electron/**/*", "package.json"],
-    "extraResources": [
-      { "from": ".next/standalone", "to": "app", "filter": ["**/*"] },
-      { "from": ".next/static", "to": "app/.next/static", "filter": ["**/*"] }
-    ],
     "win": {
       "target": ["nsis"],
       "artifactName": "VERCETTI-LAUNCHER-2026-Setup-${version}.${ext}"
@@ -55,7 +28,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "VERCETTI LAUNCHER"
+      "shortcutName": "VERCETTI"
     }
   }
 }

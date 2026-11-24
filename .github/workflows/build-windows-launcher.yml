@@ -2,6 +2,13 @@ name: Build VERCETTI Windows Launcher
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - "launcher/**"
+    paths:
+      - "VERCETI-starter/verceti/electron/**"
+      - "VERCETI-starter/verceti/package.json"
+      - ".github/workflows/build-windows-launcher.yml"
 
 permissions:
   contents: read
@@ -12,21 +19,17 @@ jobs:
     defaults:
       run:
         working-directory: VERCETI-starter/verceti
-    env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      NEXT_PUBLIC_LIVEKIT_URL: ${{ secrets.NEXT_PUBLIC_LIVEKIT_URL }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install dependencies
+      - name: Install launcher dependencies
         run: npm install
-      - name: Build standalone web app
-        run: npm run build
-      - name: Package Windows installer
-        run: npx electron-builder --win nsis --x64
+      - name: Build Windows installer
+        run: npm run dist:win
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
