@@ -787,8 +787,14 @@ export default async function PreviewSection({
                 {memberItems.length === 0 ? (
                   <div className="panel"><p className="muted">За цим запитом учасників не знайдено.</p></div>
                 ) : memberItems.map((member) => (
-                  <div className="member-row" key={member.id} style={{ gap: 12 }}>
-                    {member.avatar_url ? <img src={member.avatar_url} alt="" className="avatar" style={{ width: 42, height: 42, borderRadius: "50%", objectFit: "cover" }} /> : <div className="avatar">{member.nickname.slice(0, 1).toUpperCase()}</div>}
+                  <Link
+                    href={`/preview/members/${member.id}`}
+                    className="member-row"
+                    key={member.id}
+                    aria-label={`Відкрити профіль ${member.nickname}`}
+                    style={{ gap: 12, display: "flex", alignItems: "center", color: "inherit", textDecoration: "none", cursor: "pointer" }}
+                  >
+                    {member.avatar_url ? <img src={member.avatar_url} alt="" className="avatar" style={{ width: 42, height: 42, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} /> : <div className="avatar">{member.nickname.slice(0, 1).toUpperCase()}</div>}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <strong style={{ overflowWrap: "anywhere" }}>{member.nickname}</strong>
                       <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
@@ -796,7 +802,8 @@ export default async function PreviewSection({
                       </div>
                     </div>
                     <span className={`role ${member.role === "admin" || member.role === "leader" ? "orange" : member.role === "moderator" ? "purple" : member.role === "senior" ? "blue" : member.role === "local" ? "green" : "muted"}`}>{({ admin: "АДМІН", leader: "ЗАСНОВНИК", moderator: "МОДЕРАТОР", senior: "СТАРШИЙ", local: "УЧАСНИК", junior: "МОЛОДШИЙ" } as Record<string, string>)[member.role] ?? member.role}</span>
-                  </div>
+                    <span aria-hidden="true" style={{ color: "#bb8aff", fontSize: 18 }}>↗</span>
+                  </Link>
                 ))}
               </div>
             )}
