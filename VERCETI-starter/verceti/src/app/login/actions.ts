@@ -9,10 +9,7 @@ function normalizeNickname(value: FormDataEntryValue | null) {
 }
 
 function escapeLikePattern(value: string) {
-  return value.replace(/[\\%_]/g, "\\function normalizeNickname(value: FormDataEntryValue | null) {
-  return String(value ?? "").trim().replace(/\s+/g, " ");
-}
-");
+  return value.replace(/[\\%_]/g, (character) => "\\" + character);
 }
 
 export async function loginWithNickname(formData: FormData) {
