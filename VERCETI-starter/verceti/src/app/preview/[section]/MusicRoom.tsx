@@ -833,7 +833,7 @@ export default function MusicRoom() {
                     onClick={() =>
                       playQueue(
                         recommendations
-                          .filter((track) => track.source === "Audius" || track.source === "Jamendo")
+                          .filter((track) => track.source === "Audius" || track.source === "Jamendo" || track.source === "SoundCloud")
                           .map((track) => ({
                             id: track.id,
                             title: track.title,
@@ -842,7 +842,7 @@ export default function MusicRoom() {
                             url: track.url,
                           })),
                         recommendations
-                          .filter((track) => track.source === "Audius" || track.source === "Jamendo")
+                          .filter((track) => track.source === "Audius" || track.source === "Jamendo" || track.source === "SoundCloud")
                           .findIndex((track) => track.id === item.id)
                       )
                     }
@@ -916,7 +916,7 @@ export default function MusicRoom() {
                 onClick={() =>
                   playQueue(
                     visibleTracks
-                      .filter((item) => item.source === "Audius" || item.source === "Jamendo")
+                      .filter((item) => item.source === "Audius" || item.source === "Jamendo" || item.source === "SoundCloud")
                       .map((item) => ({
                         id: item.id,
                         title: item.title,
@@ -925,7 +925,7 @@ export default function MusicRoom() {
                         url: item.url,
                       })),
                     visibleTracks
-                      .filter((item) => item.source === "Audius" || item.source === "Jamendo")
+                      .filter((item) => item.source === "Audius" || item.source === "Jamendo" || item.source === "SoundCloud")
                       .findIndex((item) => item.id === track.id)
                   )
                 }
