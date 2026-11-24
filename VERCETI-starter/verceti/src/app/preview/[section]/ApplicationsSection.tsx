@@ -6,6 +6,7 @@ import {
   updateApplicationQuestion,
   deleteApplicationQuestion,
   submitApplication,
+  saveBirthday,
   editApplicationAnswers,
   reviewApplication,
   deleteApplication,
@@ -85,6 +86,12 @@ export default async function ApplicationsSection({
     (application) => application.user_id === user.id
   );
 
+  const { data: myProfile } = await supabase
+    .from("profiles")
+    .select("birth_day, birth_month")
+    .eq("id", user.id)
+    .maybeSingle();
+
   const profileById = new Map(
     profiles.map((profile) => [profile.id, profile])
   );
@@ -96,6 +103,28 @@ export default async function ApplicationsSection({
       <p className="muted">
         Заповнення анкет та перевірка заявок учасників спільноти.
       </p>
+
+      <div className="panel" style={{ marginTop: 18 }}>
+        <h2>🎂 Дата народження</h2>
+        <p className="muted">Вкажи день і місяць, щоб усі учасники отримували сповіщення у твій день народження. Рік не потрібен.</p>
+        <form action={saveBirthday} className="member-list" style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 10, alignItems: "end" }}>
+          <div>
+            <label htmlFor="profile_birth_day">День</label>
+            <select id="profile_birth_day" name="birth_day" required defaultValue={myProfile?.birth_day ?? ""}>
+              <option value="">День</option>
+              {Array.from({ length: 31 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="profile_birth_month">Місяць</label>
+            <select id="profile_birth_month" name="birth_month" required defaultValue={myProfile?.birth_month ?? ""}>
+              <option value="">Місяць</option>
+              {["Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень", "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"].map((month, index) => <option key={month} value={index + 1}>{month}</option>)}
+            </select>
+          </div>
+          <button className="btn" type="submit">Зберегти</button>
+        </form>
+      </div>
 
       {status === "question-created" && (
         <div className="panel">Запитання успішно додано.</div>
@@ -133,7 +162,7 @@ export default async function ApplicationsSection({
         <div className="panel">Керівництво ще не створило запитань.</div>
       )}
 
-      {status === "birthday-required" && (
+      {status === "birthday-saved" && (\n        <div className="panel">Дату народження збережено.</div>\n      )}\n\n      {status === "birthday-required" && (
         <div className="panel">Обери день і місяць народження. Рік не потрібен.</div>
       )}
 
