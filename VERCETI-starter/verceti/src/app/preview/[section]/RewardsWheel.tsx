@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useFormStatus } from "react-dom";
 import { spinRewards } from "./rewards-actions";
 
 type Prize = {
@@ -13,21 +12,6 @@ type Prize = {
 
 const COLORS = ["#7c3aed", "#db2777", "#2563eb", "#0891b2", "#16a34a", "#d97706", "#9333ea", "#be123c"];
 
-function SpinButton({ disabled }: { disabled: boolean }) {
-  const { pending } = useFormStatus();
-
-  return (
-    <button
-      className="btn rewards-spin-button"
-      type="submit"
-      disabled={disabled || pending}
-      style={{ width: "100%" }}
-    >
-      {pending ? "Колесо крутиться..." : "🎡 Крутити рулетку"}
-    </button>
-  );
-}
-
 export default function RewardsWheel({
   prizes,
   alreadySpun,
@@ -35,7 +19,12 @@ export default function RewardsWheel({
   prizes: Prize[];
   alreadySpun: boolean;
 }) {
-  const [spinning, setSpinning] = useState(false);
+  const [hasSpun, setHasSpun] = useState(alreadySpun);
+  const [busy, setBusy] = useState(false);
+  const [rotation, setRotation] = useState(0);
+  const [wonPrize, setWonPrize] = useState<{ title: string; description: string } | null>(null);
+  const [error, setError] = useState("");
+
   const totalWeight = prizes.reduce((total, prize) => total + prize.weight, 0);
   let angle = 0;
   const slices = prizes.map((prize, index) => {
@@ -53,13 +42,59 @@ export default function RewardsWheel({
     ? `conic-gradient(${slices.map((slice) => `${slice.color} ${slice.start}deg ${slice.end}deg`).join(", ")})`
     : "conic-gradient(#393044 0deg 360deg)";
 
+  async function handleSpin() {
+    if (busy || hasSpun || prizes.length === 0) return;
+    setBusy(true);
+    setError("");
+    setWonPrize(null);
+
+    try {
+      const result = await spinRewards();
+      if (!result.ok) {
+        setError(
+          result.error === "used"
+            ? "Ти вже використав(ла) щоденний оберт."
+            : result.error === "empty"
+              ? "Активних призів поки немає."
+              : result.error === "unauthorized"
+                ? "Увійди до акаунта, щоб крутити рулетку."
+                : "Не вдалося виконати оберт. Спробуй ще раз."
+        );
+        if (result.error === "used") setHasSpun(true);
+        setBusy(false);
+        return;
+      }
+
+      const winningSlice = slices.find((slice) => slice.id === result.prize.id);
+      if (!winningSlice) {
+        setError("Приз отримано, але його сектор не знайдено на колесі. Онови сторінку.");
+        setHasSpun(true);
+        setBusy(false);
+        return;
+      }
+
+      const center = (winningSlice.start + winningSlice.end) / 2;
+      const alignment = (360 - (center % 360) + 360) % 360;
+      setRotation((current) => current + 360 * 5 + alignment);
+      setWonPrize({ title: result.prize.title, description: result.prize.description });
+      setHasSpun(true);
+      setBusy(false);
+    } catch {
+      setError("Не вдалося зв’язатися із сервером. Спробуй ще раз.");
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="rewards-wheel-panel">
       <div className="rewards-wheel-layout">
         <div className="rewards-wheel-stage">
           <div
-            className={`rewards-wheel ${prizes.length ? "" : "rewards-wheel-empty"} ${spinning ? "is-spinning" : ""}`}
-            style={{ background: gradient }}
+            className={`rewards-wheel ${prizes.length ? "" : "rewards-wheel-empty"}`}
+            style={{ background: gradient, transform: `rotate(${rotation}deg)` }}
+            onTransitionEnd={(event) => {
+              if (event.propertyName === "transform") setBusy(false);
+            }}
             aria-label="Колесо фортуни з доступними призами"
             role="img"
           >
@@ -72,16 +107,29 @@ export default function RewardsWheel({
           <h2>Щоденне колесо фортуни</h2>
           <p className="muted">
             Один безкоштовний оберт на день. Переможець визначається сервером,
-            а вага кожного призу впливає на ймовірність випадіння.
+            а колесо зупиняється на секторі саме того призу, який випав.
           </p>
           {prizes.length === 0 ? (
             <p className="page-note">Активних призів поки немає.</p>
-          ) : alreadySpun ? (
+          ) : hasSpun ? (
             <p className="page-note">Ти вже використав(ла) щоденний оберт. Новий буде доступний завтра.</p>
           ) : (
-            <form action={spinRewards} className="rewards-wheel-form" onSubmit={() => setSpinning(true)}>
-              <SpinButton disabled={prizes.length === 0} />
-            </form>
+            <button
+              className="btn rewards-spin-button"
+              type="button"
+              disabled={busy}
+              onClick={handleSpin}
+              style={{ width: "100%", marginTop: 18, minHeight: 48 }}
+            >
+              {busy ? "Визначаємо результат..." : "🎡 Крутити рулетку"}
+            </button>
+          )}
+          {error && <p className="page-note" role="alert" style={{ marginTop: 12 }}>{error}</p>}
+          {wonPrize && (
+            <div className="panel" role="status" aria-live="polite" style={{ marginTop: 14 }}>
+              <strong>🎉 Твій приз: {wonPrize.title}</strong>
+              {wonPrize.description && <p className="muted" style={{ marginTop: 6 }}>{wonPrize.description}</p>}
+            </div>
           )}
           <p className="rewards-wheel-security">
             Результат і перевірка повторного оберту зберігаються на сервері.
