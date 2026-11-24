@@ -3249,3 +3249,22 @@ td {
   .voice-spin { animation:none; }
   .voice-room-row,.voice-icon-button,.voice-add-room { transition:none; }
 }
+
+
+/* Broadcast-style voice controls and staff moderation */
+.voice-action-group { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:9px; }
+.voice-action-button { display:inline-flex; align-items:center; justify-content:center; gap:9px; min-height:44px; padding:10px 15px; border:1px solid #a855ff66; border-radius:12px; color:#f3e8ff; background:linear-gradient(135deg,#a855ff2b,#6d28d922); font-size:11px; font-weight:800; cursor:pointer; transition:background .18s,border-color .18s,transform .18s; }
+.voice-action-button:hover { border-color:#c18aff; background:#a855ff35; transform:translateY(-1px); }
+.voice-action-button.is-muted { border-color:#ff557766; color:#ffadba; background:#ff426d18; }
+.voice-action-button.is-sharing { border-color:#39e6a077; color:#8cf0c2; background:#39e6a018; }
+.voice-action-button:focus-visible,.voice-moderation-button:focus-visible { outline:2px solid #c18aff; outline-offset:3px; }
+.voice-moderation-button { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:30px; padding:5px 8px; border:1px solid #ff557755; border-radius:8px; color:#ffb0bd; background:#ff426d12; font-size:9px; font-weight:800; white-space:nowrap; cursor:pointer; }
+.voice-moderation-button:hover { border-color:#ff7890; background:#ff426d25; }
+.voice-moderation-button.is-muted { border-color:#39e6a066; color:#8cebc0; background:#39e6a012; }
+.voice-moderation-button:disabled { opacity:.55; cursor:wait; }
+@media (max-width:560px) {
+ .voice-action-group { width:100%; flex-direction:column; }
+ .voice-action-button { width:100%; min-height:46px; }
+ .voice-participant { flex-wrap:wrap; }
+ .voice-moderation-button { margin-left:auto; }
+}
