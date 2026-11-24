@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -277,7 +277,7 @@ function VoiceRoomContent({ roomName, displayRoomName, onLeave, compact = false,
   const [dockPosition, setDockPosition] = useState<{ left: number; top: number } | null>(null);
   const dragOrigin = useRef<{ pointerX: number; pointerY: number; left: number; top: number } | null>(null);
 
-  function startDockDrag(event: React.PointerEvent<HTMLDivElement>) {
+  function startDockDrag(event: PointerEvent<HTMLDivElement>) {
     if ((event.target as HTMLElement).closest("button, a")) return;
     const rect = event.currentTarget.closest(".voice-floating-dock")?.getBoundingClientRect();
     if (!rect) return;
