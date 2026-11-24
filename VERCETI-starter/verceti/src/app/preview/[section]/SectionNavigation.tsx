@@ -1,6 +1,7 @@
 
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import NewsBell from "../../NewsBell";
 
 export default async function SectionNavigation() {
   const supabase = await createClient();
@@ -51,6 +52,7 @@ export default async function SectionNavigation() {
           📋 Моя анкета
         </Link>
       )}
+      {user && <NewsBell userId={user.id} />}
     </nav>
   );
 }
