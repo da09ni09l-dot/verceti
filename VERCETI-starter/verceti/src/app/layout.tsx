@@ -1,6 +1,7 @@
 
 import type { Metadata } from "next";
 import "./globals.css";
+import "@livekit/components-styles";
 import OnlinePresenceProvider from "./OnlinePresenceProvider";
 import MusicRoom from "./preview/[section]/MusicRoom";
 import PinnedSiteActions from "./PinnedSiteActions";
