@@ -8,6 +8,13 @@ function normalizeNickname(value: FormDataEntryValue | null) {
   return String(value ?? "").trim().replace(/\s+/g, " ");
 }
 
+function escapeLikePattern(value: string) {
+  return value.replace(/[\\%_]/g, "\\function normalizeNickname(value: FormDataEntryValue | null) {
+  return String(value ?? "").trim().replace(/\s+/g, " ");
+}
+");
+}
+
 export async function loginWithNickname(formData: FormData) {
   const nickname = normalizeNickname(formData.get("nickname"));
   const password = String(formData.get("password") ?? "");
@@ -17,16 +24,15 @@ export async function loginWithNickname(formData: FormData) {
 
   try {
     const admin = createAdminClient();
-    const { data: profiles, error: profileError } = await admin
-      .from("profiles").select("id, nickname, is_banned");
+    const { data: profile, error: profileError } = await admin
+      .from("profiles")
+      .select("id, nickname, is_banned")
+      .ilike("nickname", escapeLikePattern(nickname))
+      .maybeSingle();
     if (profileError) {
       console.error("Profile lookup error:", profileError.message);
       return { error: "Не вдалося знайти профіль." };
     }
-
-    const profile = profiles?.find(
-      (item) => item.nickname.toLowerCase() === nickname.toLowerCase()
-    );
     if (!profile || profile.is_banned) {
       return { error: profile?.is_banned
         ? "Твій акаунт заблоковано. Звернися до адміністрації."
@@ -67,7 +73,7 @@ export async function registerWithNickname(formData: FormData) {
 
   const admin = createAdminClient();
   const { data: existing, error: lookupError } = await admin
-    .from("profiles").select("id").ilike("nickname", nickname).limit(1);
+    .from("profiles").select("id").ilike("nickname", escapeLikePattern(nickname)).limit(1);
   if (lookupError) {
     console.error("Nickname lookup error:", lookupError.message);
     return { error: "Не вдалося перевірити нікнейм. Спробуй ще раз." };
