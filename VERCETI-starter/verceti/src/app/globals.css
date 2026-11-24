@@ -2783,3 +2783,15 @@ td {
   .rewards-wheel { width: min(78vw, 290px); }
   .rewards-wheel-details { text-align: center; }
 }
+
+
+.rewards-wheel.is-spinning {
+  animation: verceti-wheel-spin 2.8s cubic-bezier(.12,.72,.08,1) both;
+}
+@keyframes verceti-wheel-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(1620deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rewards-wheel.is-spinning { animation-duration: .01ms; }
+}
