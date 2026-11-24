@@ -261,7 +261,7 @@ export default function VoiceRoom({ isStaff }: VoiceRoomProps) {
             style={{ width: "100%" }}
           >
             <RoomAudioRenderer />
-            <VoiceRoomContent roomName={currentRoom.name} onLeave={leaveRoom} compact={!isVoicePage} isStaffForRoom={isStaff} />
+            <VoiceRoomContent roomName={`verceti-voice-${currentRoom.id}`} displayRoomName={currentRoom.name} onLeave={leaveRoom} compact={!isVoicePage} isStaffForRoom={isStaff} />
           </LiveKitRoom>
         )}
       </section>
@@ -269,7 +269,7 @@ export default function VoiceRoom({ isStaff }: VoiceRoomProps) {
   );
 }
 
-function VoiceRoomContent({ roomName, onLeave, compact = false, isStaffForRoom = false }: { roomName: string; onLeave: () => void; compact?: boolean; isStaffForRoom?: boolean }) {
+function VoiceRoomContent({ roomName, displayRoomName, onLeave, compact = false, isStaffForRoom = false }: { roomName: string; displayRoomName: string; onLeave: () => void; compact?: boolean; isStaffForRoom?: boolean }) {
   const participants = useParticipants();
   const screenTracks = useTracks([Track.Source.ScreenShare]);
   const { localParticipant, isMicrophoneEnabled, isScreenShareEnabled } = useLocalParticipant();
@@ -313,7 +313,7 @@ function VoiceRoomContent({ roomName, onLeave, compact = false, isStaffForRoom =
   if (compact) {
     return (
       <div className="voice-mini-dock-inner">
-        <div className="voice-mini-status"><span className="voice-mini-indicator" /><strong>{roomName}</strong><span><Users size={13} /> {participants.length}</span></div>
+        <div className="voice-mini-status"><span className="voice-mini-indicator" /><strong>{displayRoomName}</strong><span><Users size={13} /> {participants.length}</span></div>
         <div className="voice-mini-actions">
           <button type="button" className={`voice-action-button ${isMicrophoneEnabled ? "" : "is-muted"}`} onClick={() => void toggleMicrophone()} title={isMicrophoneEnabled ? "Вимкнути мікрофон" : "Увімкнути мікрофон"}><>{isMicrophoneEnabled ? <Mic size={17} /> : <MicOff size={17} />}{isMicrophoneEnabled ? "Мікрофон" : "Мікрофон вимкнено"}</></button>
           <Link className="btn secondary" href="/preview/voice"><Radio size={15} /> Відкрити</Link>
@@ -328,7 +328,7 @@ function VoiceRoomContent({ roomName, onLeave, compact = false, isStaffForRoom =
       <div className="voice-session-top">
         <div className="voice-session-title">
           <div className="voice-session-avatar"><Headphones size={22} /></div>
-          <div><h2>{roomName}</h2><p><span className="voice-online-dot" /> Підключено · {participants.length} {participants.length === 1 ? "учасник" : "учасників"}</p></div>
+          <div><h2>{displayRoomName}</h2><p><span className="voice-online-dot" /> Підключено · {participants.length} {participants.length === 1 ? "учасник" : "учасників"}</p></div>
         </div>
         <span className="voice-connected-badge"><CheckCircle2 size={14} /> На зв’язку</span>
       </div>
@@ -338,13 +338,30 @@ function VoiceRoomContent({ roomName, onLeave, compact = false, isStaffForRoom =
           <div className="voice-card-heading"><Users size={17} /><h3>Учасники</h3><span>{participants.length}</span></div>
           {participants.length ? (
             <div className="voice-participant-list">
-              {participants.map((participant) => (
-                <div className={`voice-participant ${participant.isSpeaking ? "is-speaking" : ""}`} key={participant.identity}>
-                  <span className="voice-participant-avatar">{(participant.name || participant.identity).slice(0, 1).toUpperCase()}</span>
-                  <span className="voice-participant-name">{participant.name || participant.identity}</span>
-                  {participant.isSpeaking ? <span className="voice-speaking-label"><Radio size={13} /> Говорить</span> : <span className="voice-participant-dot" />}
-                </div>
-              ))}
+              {participants.map((participant) => {
+                const microphone = participant.getTrackPublication(Track.Source.Microphone);
+                const canModerate = isStaffForRoom && participant.identity !== localParticipant.identity && Boolean(microphone?.trackSid);
+                return (
+                  <div className={`voice-participant ${participant.isSpeaking ? "is-speaking" : ""}`} key={participant.identity}>
+                    <span className="voice-participant-avatar">{(participant.name || participant.identity).slice(0, 1).toUpperCase()}</span>
+                    <span className="voice-participant-name">{participant.name || participant.identity}</span>
+                    {participant.isSpeaking ? <span className="voice-speaking-label"><RadioTower size={13} /> Говорить</span> : <span className="voice-participant-dot" />}
+                    {canModerate && microphone?.trackSid && (
+                      <button
+                        type="button"
+                        className={`voice-moderation-button ${microphone.isMuted ? "is-muted" : ""}`}
+                        disabled={moderating === participant.identity}
+                        onClick={() => void toggleParticipantMute(participant.identity, microphone.trackSid!, !microphone.isMuted)}
+                        title={microphone.isMuted ? "Увімкнути мікрофон учаснику" : "Вимкнути мікрофон учаснику"}
+                        aria-label={microphone.isMuted ? "Увімкнути мікрофон учаснику" : "Вимкнути мікрофон учаснику"}
+                      >
+                        {moderating === participant.identity ? <LoaderCircle size={15} className="voice-spin" /> : microphone.isMuted ? <Mic size={15} /> : <MicOff size={15} />}
+                        <span>{microphone.isMuted ? "Увімкнути" : "Вимкнути звук"}</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ) : <p className="voice-muted">Поки що нікого немає в кімнаті.</p>}
         </section>
