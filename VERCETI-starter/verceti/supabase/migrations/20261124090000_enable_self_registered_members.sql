@@ -2,6 +2,10 @@
 alter table public.profiles
   add column if not exists membership_approved boolean not null default true;
 
+-- Enforce case-insensitive nickname uniqueness even under concurrent registrations.
+create unique index if not exists profiles_nickname_lower_unique
+  on public.profiles (lower(nickname));
+
 create or replace function public.is_verceti_member()
 returns boolean
 language sql
