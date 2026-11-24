@@ -12,7 +12,6 @@ import {
 } from "./rule-actions";
 
 import SectionNavigation from "./SectionNavigation";
-import NotificationBell from "./NotificationBell";
 import ChatRoom from "./ChatRoom";
 import AvatarUploader from "../../AvatarUploader";
 import RewardsWheel from "./RewardsWheel";
@@ -729,8 +728,6 @@ export default async function PreviewSection({
             </button>
           </form>
         )}
-
-        <NotificationBell />
 
         <div className="eyebrow">VERCETI · ПОПЕРЕДНІЙ ПЕРЕГЛЯД</div>
 
