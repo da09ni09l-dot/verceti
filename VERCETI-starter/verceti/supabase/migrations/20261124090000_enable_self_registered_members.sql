@@ -43,3 +43,26 @@ create trigger sync_application_membership_approval
 after update of status on public.applications
 for each row
 execute function public.sync_application_membership_approval();
+
+-- A member may edit their own profile, but cannot self-approve membership.
+create or replace function public.prevent_self_membership_approval_change()
+returns trigger
+language plpgsql
+set search_path to 'public'
+as $function$
+begin
+  if auth.uid() = new.id
+     and new.membership_approved is distinct from old.membership_approved then
+    raise exception 'membership_approval_managed_by_application_review';
+  end if;
+  return new;
+end;
+$function$;
+
+drop trigger if exists prevent_self_membership_approval_change
+  on public.profiles;
+
+create trigger prevent_self_membership_approval_change
+before update of membership_approved on public.profiles
+for each row
+execute function public.prevent_self_membership_approval_change();
