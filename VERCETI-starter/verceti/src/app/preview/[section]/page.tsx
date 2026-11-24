@@ -740,7 +740,7 @@ export default async function PreviewSection({
         {section === "products" ? (
           <>
             <h1>📦 Продукція VERCETI</h1>
-            <p className="muted">Спільний список продукції учасників. Додавай скриншоти та кількість — записи з'являються в реальному часі.</p>
+            <p className="muted">Спільний список продукції учасників. Додавай скриншоти та кількість — записи з’являються в реальному часі.</p>
             <ProductsBoard userId={user.id} />
           </>
         ) : section === "chat" ? (
