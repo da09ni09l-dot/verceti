@@ -23,7 +23,9 @@ export default function RewardsWheel({
   const [busy, setBusy] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [wonPrize, setWonPrize] = useState<{ title: string; description: string } | null>(null);
-  const [error, setError] = useState("");\n  const [birthdayUsed, setBirthdayUsed] = useState(birthdayAlreadySpun);\n  const [birthdayPrize, setBirthdayPrize] = useState<{title:string;description:string}|null>(null);
+  const [error, setError] = useState("");
+  const [birthdayUsed, setBirthdayUsed] = useState(birthdayAlreadySpun);
+  const [birthdayPrize, setBirthdayPrize] = useState<{title:string;description:string}|null>(null);
 
   const totalWeight = prizes.reduce((total, prize) => total + prize.weight, 0);
   let angle = 0;
