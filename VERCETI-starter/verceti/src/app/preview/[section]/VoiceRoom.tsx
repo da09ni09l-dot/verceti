@@ -27,9 +27,9 @@ type Room = {
   created_by?: string | null;
 };
 
-type VoiceRoomProps = { isStaff: boolean };
+type VoiceRoomProps = { isStaff: boolean; canModerateVoice: boolean };
 
-export default function VoiceRoom({ isStaff }: VoiceRoomProps) {
+export default function VoiceRoom({ isStaff, canModerateVoice }: VoiceRoomProps) {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [activeRoom, setActiveRoom] = useState<number | null>(null);
   const [token, setToken] = useState("");
@@ -261,7 +261,7 @@ export default function VoiceRoom({ isStaff }: VoiceRoomProps) {
             style={{ width: "100%" }}
           >
             <RoomAudioRenderer />
-            <VoiceRoomContent roomName={`verceti-voice-${currentRoom.id}`} displayRoomName={currentRoom.name} onLeave={leaveRoom} compact={!isVoicePage} isStaffForRoom={isStaff} />
+            <VoiceRoomContent roomName={`verceti-voice-${currentRoom.id}`} displayRoomName={currentRoom.name} onLeave={leaveRoom} compact={!isVoicePage} isStaffForRoom={canModerateVoice} />
           </LiveKitRoom>
         )}
       </section>
