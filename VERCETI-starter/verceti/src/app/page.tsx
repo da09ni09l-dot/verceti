@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import MenuBadges from "./MenuBadges";
-import NewsBell from "./NewsBell";
 import PinnedNewsCarousel from "./PinnedNewsCarousel";
 import MembersOnlinePanel from "./MembersOnlinePanel";
 import TopMembersPanel from "./TopMembersPanel";
@@ -145,10 +144,6 @@ export default async function Home() {
               flexWrap: "wrap"
             }}
           >
-            <div className="topbar-action">
-              <NewsBell userId={user.id} />
-            </div>
-
             <Link
               href="/preview/news"
               className="btn secondary"
