@@ -14,7 +14,6 @@ import {
 import SectionNavigation from "./SectionNavigation";
 import NotificationBell from "./NotificationBell";
 import ChatRoom from "./ChatRoom";
-import VoiceRoom from "./VoiceRoom";
 import RewardsWheel from "./RewardsWheel";
 import MediaRoom from "./MediaRoom";
 import ApplicationsSection from "./ApplicationsSection";
@@ -748,7 +747,7 @@ export default async function PreviewSection({
             <p className="muted">
               Голосове спілкування та демонстрація екрана в одному місці.
             </p>
-            <VoiceRoom isStaff={isStaff} />
+            <p className="page-note">Підключена голосова кімната залишатиметься активною, навіть коли ти переходиш до інших розділів сайту.</p>
           </>
         ) : section === "music" ? (
           <>
