@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { spinRewards } from "./rewards-actions";
 
@@ -34,6 +35,7 @@ export default function RewardsWheel({
   prizes: Prize[];
   alreadySpun: boolean;
 }) {
+  const [spinning, setSpinning] = useState(false);
   const totalWeight = prizes.reduce((total, prize) => total + prize.weight, 0);
   let angle = 0;
   const slices = prizes.map((prize, index) => {
@@ -56,7 +58,7 @@ export default function RewardsWheel({
       <div className="rewards-wheel-layout">
         <div className="rewards-wheel-stage">
           <div
-            className={`rewards-wheel ${prizes.length ? "" : "rewards-wheel-empty"}`}
+            className={`rewards-wheel ${prizes.length ? "" : "rewards-wheel-empty"} ${spinning ? "is-spinning" : ""}`}
             style={{ background: gradient }}
             aria-label="Колесо фортуни з доступними призами"
             role="img"
@@ -77,7 +79,7 @@ export default function RewardsWheel({
           ) : alreadySpun ? (
             <p className="page-note">Ти вже використав(ла) щоденний оберт. Новий буде доступний завтра.</p>
           ) : (
-            <form action={spinRewards} className="rewards-wheel-form">
+            <form action={spinRewards} className="rewards-wheel-form" onSubmit={() => setSpinning(true)}>
               <SpinButton disabled={prizes.length === 0} />
             </form>
           )}
