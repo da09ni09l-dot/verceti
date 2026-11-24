@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 function normalizeNickname(value: FormDataEntryValue | null) {
-  return String(value ?? "").trim().replace(/\\s+/g, " ");
+  return String(value ?? "").trim().replace(/\s+/g, " ");
 }
 
 export async function loginWithNickname(formData: FormData) {
@@ -57,7 +57,7 @@ export async function registerWithNickname(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
-  if (!/^[\\p{L}\\p{N}_. -]{3,32}$/u.test(nickname)) {
+  if (!/^[\p{L}\p{N}_. -]{3,32}$/u.test(nickname)) {
     return { error: "Нікнейм має містити 3–32 символи: літери, цифри, пробіл, крапку, дефіс або _." };
   }
   if (password.length < 8 || password.length > 72) {
