@@ -3499,3 +3499,40 @@ td {
     z-index: 1105;
   }
 }
+
+/* Responsive chat layout and always-visible mobile message composer. */
+.chat-room-layout {
+  grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
+}
+.chat-room-layout > *,
+.chat-room-panel { min-width: 0; }
+@media (max-width: 760px) {
+  .chat-room-layout { grid-template-columns: minmax(0, 1fr); }
+  .chat-room-participants { position: static !important; top: auto !important; }
+  .chat-room-participants > .panel { padding: 12px; }
+  .chat-room-participants [style*="max-height: 480px"] {
+    max-height: 180px !important;
+  }
+  .chat-room-panel { width: 100%; box-sizing: border-box; }
+  .chat-room-composer { gap: 8px !important; }
+  .chat-room-composer > .btn {
+    flex: 1 1 calc(33.333% - 8px);
+    min-width: 0;
+    justify-content: center;
+    padding: 9px 7px;
+    font-size: 11px;
+  }
+  .chat-room-composer > .chat-room-composer-input {
+    order: 4;
+    flex: 1 1 100% !important;
+    width: 100%;
+    min-width: 0 !important;
+    min-height: 48px;
+    box-sizing: border-box;
+  }
+  .chat-room-composer > .chat-room-send-button {
+    order: 5;
+    flex: 1 1 100%;
+    min-height: 46px;
+  }
+}
