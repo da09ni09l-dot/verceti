@@ -33,12 +33,12 @@ export default function WorkshopBooking({ userId }: { userId: string }) {
   const [busySlot, setBusySlot] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [canManageBookings, setCanManageBookings] = useState(false);
 
   useEffect(() => {
     let active = true;
     void supabase.rpc("current_verceti_role").then(({ data, error: roleError }) => {
-      if (active) setIsAdmin(!roleError && data === "admin");
+      if (active) setCanManageBookings(!roleError && ["founder", "admin", "leader"].includes(String(data)));
     });
     return () => { active = false; };
   }, [supabase]);
@@ -107,7 +107,7 @@ export default function WorkshopBooking({ userId }: { userId: string }) {
 
   async function remove(booking: BookingView) {
     const own = booking.user_id === userId;
-    if (!own && !isAdmin) return;
+    if (!own && !canManageBookings) return;
     setBusySlot(booking.hour_slot);
     setError("");
     const deletion = supabase.from("workshop_bookings").delete().eq("id", booking.id);
@@ -153,7 +153,7 @@ export default function WorkshopBooking({ userId }: { userId: string }) {
                 <div style={{ marginTop: 10 }}>
                   <strong>{booking.nickname}</strong>
                   <p className="muted" style={{ margin: "6px 0 0" }}>{[booking.alcohol ? "Алко" : "", booking.parsley ? "Петрушка" : ""].filter(Boolean).join(" · ")}</p>
-                  {isAdmin && <button className="btn secondary" type="button" disabled={busySlot === slot} style={{ marginTop: 10 }} onClick={() => void remove(booking)}>{busySlot === slot ? "..." : "Скасувати бронювання"}</button>}
+                  {canManageBookings && <button className="btn secondary" type="button" disabled={busySlot === slot} style={{ marginTop: 10 }} onClick={() => void remove(booking)}>{busySlot === slot ? "..." : "Скасувати бронювання"}</button>}
                 </div>
               ) : (
                 <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
