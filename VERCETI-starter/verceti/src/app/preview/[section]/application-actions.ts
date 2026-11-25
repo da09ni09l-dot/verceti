@@ -198,9 +198,13 @@ export async function submitApplication(formData: FormData) {
     .from("profiles").select("birth_day, birth_month").eq("id", user.id).single();
   if (birthdayReadError) redirect(`${formsPath}?status=application-error`);
   if (currentProfile.birth_day == null || currentProfile.birth_month == null) {
-    const { error: birthdayError } = await supabase.rpc("set_my_birthday_once", {
-      p_birth_day: birthDay, p_birth_month: birthMonth,
-    });
+    // Use the same authenticated profile update as the standalone birthday form.
+    // This avoids a dependency on the optional one-time RPC when submitting an application.
+    const { error: birthdayError } = await supabase
+      .from("profiles")
+      .update({ birth_day: birthDay, birth_month: birthMonth })
+      .eq("id", user.id);
+
     if (birthdayError) {
       console.error("Save member birthday:", birthdayError.message);
       redirect(`${formsPath}?status=birthday-required`);
