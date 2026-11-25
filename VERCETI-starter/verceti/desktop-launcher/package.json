@@ -1,8 +1,8 @@
 {
-  "name": "vercetti-launcher",
-  "version": "2026.1.0",
+  "name": "verceti-windows-launcher",
+  "version": "1.0.0",
   "private": true,
-  "description": "VERCETTI desktop launcher for Windows",
+  "description": "VERCETI desktop launcher for Windows",
   "main": "electron/main.cjs",
   "scripts": {
     "desktop": "electron .",
@@ -13,14 +13,21 @@
     "electron-builder": "^26.0.12"
   },
   "build": {
-    "appId": "com.vercetti.launcher",
-    "productName": "VERCETTI",
+    "appId": "com.verceti.launcher",
+    "productName": "VERCETI",
     "asar": true,
-    "directories": { "output": "release" },
-    "files": ["electron/**/*", "package.json"],
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
     "win": {
-      "target": ["nsis"],
-      "artifactName": "VERCETTI-LAUNCHER-2026-Setup-${version}.${ext}"
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "VERCETI-Launcher-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -28,7 +35,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "VERCETTI"
+      "shortcutName": "VERCETI"
     }
   }
 }
