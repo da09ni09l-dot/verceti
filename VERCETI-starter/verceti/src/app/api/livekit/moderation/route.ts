@@ -34,6 +34,14 @@ export async function POST(request: NextRequest) {
     if (identity === user.id) {
       return NextResponse.json({ error: "Власний мікрофон керується кнопкою у голосовій кімнаті." }, { status: 400 });
     }
+    // LiveKit remote unmute is disabled for this project. A participant must
+    // re-enable their own microphone after a moderator has muted it.
+    if (muted === false) {
+      return NextResponse.json(
+        { error: "Учасник має самостійно ввімкнути свій мікрофон." },
+        { status: 409 }
+      );
+    }
 
     const url = process.env.NEXT_PUBLIC_LIVEKIT_URL;
     const key = process.env.LIVEKIT_API_KEY;
