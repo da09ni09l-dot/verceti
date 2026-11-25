@@ -1468,7 +1468,7 @@ export default async function PreviewSection({
             <p className="muted">Спільна рулетка VERCETI — призи доступні всім учасникам.</p>
             {status === "created" && <div className="panel" style={{ marginTop: 14 }}>Приз додано до загальної рулетки.</div>}
             {status === "deleted" && <div className="panel" style={{ marginTop: 14 }}>Приз видалено.</div>}
-            {status === "won" && <div className="panel" style={{ marginTop: 14 }}><strong>🎉 Твій результат</strong><p style={{ marginTop: 8 }}>{lastRewardSpin?.prize?.title ?? "Оберт успішно зафіксовано."}</p>{lastRewardSpin?.prize?.description && <p className="muted" style={{ marginTop: 6 }}>{lastRewardSpin.prize.description}</p>}</div>}
+            {status === "won" && <div className="panel" style={{ marginTop: 14 }}><strong>🎉 Твій результат</strong><p style={{ marginTop: 8 }}>{(lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.title ?? "Оберт успішно зафіксовано."}</p>{(lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.description && <p className="muted" style={{ marginTop: 6 }}>{(lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.description}</p>}</div>}
             {status === "used" && <div className="panel" style={{ marginTop: 14 }}>Ти вже використав(ла) безкоштовний оберт сьогодні. Повертайся завтра!</div>}
             {status === "empty" && <div className="panel" style={{ marginTop: 14 }}>Активних призів поки немає.</div>}
             {status === "forbidden" && <div className="panel" style={{ marginTop: 14 }}>Керувати призами можуть лише адміністратор, лідер і модератор.</div>}
