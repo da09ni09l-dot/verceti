@@ -297,7 +297,16 @@ function VoiceRoomContent({ roomName, displayRoomName, onLeave, compact = false,
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const [moderating, setModerating] = useState<string | null>(null);
   const [moderationError, setModerationError] = useState("");
+  const [screenShareSupported, setScreenShareSupported] = useState(false);
   const [dockPosition, setDockPosition] = useState<{ left: number; top: number } | null>(null);
+
+  useEffect(() => {
+    setScreenShareSupported(
+      typeof window !== "undefined" &&
+      window.isSecureContext &&
+      typeof navigator.mediaDevices?.getDisplayMedia === "function"
+    );
+  }, []);
   const dragOrigin = useRef<{ pointerX: number; pointerY: number; left: number; top: number } | null>(null);
 
   function startDockDrag(event: PointerEvent<HTMLDivElement>) {
@@ -342,10 +351,22 @@ function VoiceRoomContent({ roomName, displayRoomName, onLeave, compact = false,
   }
 
   async function toggleScreenShare() {
+    setModerationError("");
+    if (!screenShareSupported) {
+      setModerationError("Цей мобільний браузер не підтримує демонстрацію екрана на сайті. Спробуй відкрити VERCETI у підтримуваному браузері на комп’ютері.");
+      return;
+    }
     try {
       await localParticipant.setScreenShareEnabled(!isScreenShareEnabled);
-    } catch {
-      setModerationError("Не вдалося запустити демонстрацію екрана.");
+    } catch (error) {
+      const name = error instanceof Error ? error.name : "";
+      if (name === "NotAllowedError" || name === "AbortError") {
+        setModerationError("Демонстрацію екрана скасовано або браузер не надав дозвіл.");
+      } else if (name === "NotFoundError" || name === "NotReadableError") {
+        setModerationError("Браузер не зміг отримати доступ до екрана. Перезапусти сторінку та спробуй ще раз.");
+      } else {
+        setModerationError("Не вдалося запустити демонстрацію екрана. Перевір підтримку браузера та дозвіл на захоплення екрана.");
+      }
     }
   }
 
@@ -468,7 +489,7 @@ function VoiceRoomContent({ roomName, displayRoomName, onLeave, compact = false,
 
       <div className="voice-controls-panel">
         <div><strong>Керування звуком і відео</strong><small>Мікрофон, камера та демонстрація екрана</small></div>
-        <div className="voice-action-group"><button type="button" className={`voice-action-button ${isMicrophoneEnabled ? "" : "is-muted"}`} onClick={() => void toggleMicrophone()}><>{isMicrophoneEnabled ? <Mic size={18} /> : <MicOff size={18} />}{isMicrophoneEnabled ? "Мікрофон увімкнено" : "Мікрофон вимкнено"}</></button><button type="button" className={`voice-action-button ${isCameraEnabled ? "is-sharing" : ""}`} onClick={() => void toggleCamera()}><>{isCameraEnabled ? <CameraOff size={18} /> : <Camera size={18} />}{isCameraEnabled ? "Вимкнути камеру" : "Увімкнути камеру"}</></button><button type="button" className={`voice-action-button ${isScreenShareEnabled ? "is-sharing" : ""}`} onClick={() => void toggleScreenShare()}><>{isScreenShareEnabled ? <ScreenShareOff size={18} /> : <ScreenShare size={18} />}{isScreenShareEnabled ? "Зупинити трансляцію" : "Транслювати екран"}</></button></div>
+        <div className="voice-action-group"><button type="button" className={`voice-action-button ${isMicrophoneEnabled ? "" : "is-muted"}`} onClick={() => void toggleMicrophone()}><>{isMicrophoneEnabled ? <Mic size={18} /> : <MicOff size={18} />}{isMicrophoneEnabled ? "Мікрофон увімкнено" : "Мікрофон вимкнено"}</></button><button type="button" className={`voice-action-button ${isCameraEnabled ? "is-sharing" : ""}`} onClick={() => void toggleCamera()}><>{isCameraEnabled ? <CameraOff size={18} /> : <Camera size={18} />}{isCameraEnabled ? "Вимкнути камеру" : "Увімкнути камеру"}</></button><button type="button" className={`voice-action-button ${isScreenShareEnabled ? "is-sharing" : ""}`} onClick={() => void toggleScreenShare()} disabled={!screenShareSupported && !isScreenShareEnabled} title={!screenShareSupported ? "Демонстрація екрана недоступна в цьому браузері" : undefined}><>{isScreenShareEnabled ? <ScreenShareOff size={18} /> : <ScreenShare size={18} />}{isScreenShareEnabled ? "Зупинити трансляцію" : screenShareSupported ? "Транслювати екран" : "Екран недоступний у браузері"}</></button></div>
         <button className="voice-leave-button" type="button" onClick={onLeave}><DoorOpen size={17} /> Вийти з кімнати</button>
       </div>
       {moderationError && <p className="voice-error" role="alert">{moderationError}</p>}
