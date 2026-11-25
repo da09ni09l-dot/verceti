@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { LiveKitRoom, RoomAudioRenderer, VideoTrack, useLocalParticipant, useParticipants, useTracks } from "@livekit/components-react";
 import { Track } from "livekit-client";
-import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, X } from "lucide-react";
+import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, X, Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type CallInvite = { callId: string; callerId: string; callerName: string; mode: "audio" | "video"; targetId: string };
@@ -93,7 +93,7 @@ async function waitForBroadcast(channel: ReturnType<typeof supabase.channel>) {
       {targetId && <><button className="btn" type="button" disabled={busy || !!session} onClick={() => void startCall("audio")}><Phone size={16}/> Зателефонувати</button><button className="btn" type="button" disabled={busy || !!session} onClick={() => void startCall("video")}><Video size={16}/> Відеодзвінок</button></>}
       {status && <p className="voice-error" role="alert">{status}</p>}
       {invite && !session && <div className="call-incoming panel" role="dialog" aria-label="Вхідний дзвінок"><strong>{invite.callerName} телефонує</strong><p>{invite.mode === "video" ? "Відеодзвінок" : "Аудіодзвінок"}</p><button className="btn" disabled={busy} onClick={() => void answerCall()}><Phone size={16}/> Прийняти</button><button className="tag" onClick={() => void rejectCall()}><PhoneOff size={16}/> Відхилити</button></div>}
-      {session && <div className="call-session panel"><div className="call-session-head"><strong>{session.mode === "video" ? "Відеодзвінок" : "Аудіодзвінок"}</strong><button className="tag" onClick={() => void endCall()}><X size={16}/> Завершити</button></div><LiveKitRoom token={session.token} serverUrl={session.serverUrl} connect audio video={session.mode === "video"} onDisconnected={() => setSession(null)}><RoomAudioRenderer/><CallMedia mode={session.mode}/></LiveKitRoom></div>}
+      {session && <div className="call-session panel"><div className="call-session-head"><strong>{session.mode === "video" ? "Відеодзвінок" : "Аудіодзвінок"}</strong><button className="tag" onClick={() => void endCall()}><X size={16}/> Завершити</button></div><LiveKitRoom token={session.token} serverUrl={session.serverUrl} connect audio={{ echoCancellation: true, noiseSuppression: true, autoGainControl: true }} video={session.mode === "video"} onDisconnected={() => setSession(null)}><RoomAudioRenderer/><CallMedia mode={session.mode}/><CallTextChat callId={session.callId} currentUserId={currentUserId} supabase={supabase}/></LiveKitRoom></div>}
     </div>
   );
 }
@@ -124,4 +124,62 @@ function CallMedia({ mode }: { mode: "audio" | "video" }) {
   }
   useEffect(() => { if (mode === "video") void localParticipant.setCameraEnabled(true).catch(() => undefined); }, [mode, localParticipant]);
   return <div className="call-media"><p>У дзвінку: {participants.length}</p>{microphoneError && <p className="voice-error" role="alert">{microphoneError}</p>}{mode === "video" && <div className="voice-camera-grid">{tracks.map((track) => <div className="voice-camera-track" key={track.publication.trackSid}><VideoTrack trackRef={track}/><p>{track.participant.name || track.participant.identity}</p></div>)}</div>}<div className="voice-action-group"><button className="voice-action-button" onClick={() => void toggleCallMicrophone()}>{isMicrophoneEnabled ? <MicOff size={17}/> : <Mic size={17}/>} {isMicrophoneEnabled ? "Вимкнути мікрофон" : "Увімкнути мікрофон"}</button>{mode === "video" && <button className="voice-action-button" onClick={() => void localParticipant.setCameraEnabled(!isCameraEnabled)}>{isCameraEnabled ? <VideoOff size={17}/> : <Video size={17}/>} Камера</button>}</div></div>;
+}
+
+
+type CallChatMessage = { id: string; senderId: string; text: string };
+
+function CallTextChat({ callId, currentUserId, supabase }: { callId: string; currentUserId: string; supabase: ReturnType<typeof createClient> }) {
+  const [messages, setMessages] = useState<CallChatMessage[]>([]);
+  const [draft, setDraft] = useState("");
+  const [ready, setReady] = useState(false);
+  const [sending, setSending] = useState(false);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  useEffect(() => {
+    const channel = supabase.channel("call-chat:" + callId);
+    channelRef.current = channel;
+    channel.on("broadcast", { event: "message" }, ({ payload }) => {
+      const item = payload as CallChatMessage;
+      if (!item || typeof item.id !== "string" || typeof item.text !== "string" || typeof item.senderId !== "string") return;
+      setMessages((current) => current.some((entry) => entry.id === item.id) ? current : [...current, item].slice(-100));
+    });
+    channel.subscribe((status) => setReady(status === "SUBSCRIBED"));
+    return () => {
+      channelRef.current = null;
+      void supabase.removeChannel(channel);
+    };
+  }, [callId, supabase]);
+
+  async function sendMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const text = draft.trim();
+    const channel = channelRef.current;
+    if (!text || text.length > 1000 || !channel || !ready || sending) return;
+    setSending(true);
+    const item = { id: crypto.randomUUID(), senderId: currentUserId, text };
+    try {
+      const result = await channel.send({ type: "broadcast", event: "message", payload: item });
+      if (result !== "ok") throw new Error("Broadcast failed");
+      setMessages((current) => [...current, item].slice(-100));
+      setDraft("");
+    } catch (error) {
+      console.error("Call chat send failed:", error);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <section className="call-text-chat" aria-label="Текстовий чат дзвінка">
+      <strong>Чат дзвінка</strong>
+      <div className="call-text-chat-messages" aria-live="polite">
+        {messages.length === 0 ? <p>Повідомлень поки немає.</p> : messages.map((item) => <p key={item.id}><b>{item.senderId === currentUserId ? "Я" : "Співрозмовник"}:</b> {item.text}</p>)}
+      </div>
+      <form onSubmit={(event) => void sendMessage(event)}>
+        <input value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={1000} placeholder="Повідомлення…" disabled={!ready || sending} aria-label="Повідомлення" />
+        <button className="btn" type="submit" disabled={!ready || sending || !draft.trim()} aria-label="Надіслати"><Send size={16}/></button>
+      </form>
+    </section>
+  );
 }
