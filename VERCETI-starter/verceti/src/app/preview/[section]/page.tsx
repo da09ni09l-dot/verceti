@@ -1471,7 +1471,7 @@ export default async function PreviewSection({
             {status === "won" && <div className="panel" style={{ marginTop: 14 }}><strong>🎉 Твій результат</strong><p style={{ marginTop: 8 }}>{lastRewardSpin?.prize?.title ?? "Оберт успішно зафіксовано."}</p>{lastRewardSpin?.prize?.description && <p className="muted" style={{ marginTop: 6 }}>{lastRewardSpin.prize.description}</p>}</div>}
             {status === "used" && <div className="panel" style={{ marginTop: 14 }}>Ти вже використав(ла) безкоштовний оберт сьогодні. Повертайся завтра!</div>}
             {status === "empty" && <div className="panel" style={{ marginTop: 14 }}>Активних призів поки немає.</div>}
-            {status === "forbidden" && <div className="panel" style={{ marginTop: 14 }}>Керувати призами можуть лише адміністратор і лідер.</div>}
+            {status === "forbidden" && <div className="panel" style={{ marginTop: 14 }}>Керувати призами можуть лише адміністратор, лідер і модератор.</div>}
             {(status === "invalid" || status === "error" || status === "spin-error") && <div className="panel" style={{ marginTop: 14 }}>Не вдалося виконати дію. Перевір дані та налаштування бази.</div>}
             <div className="panel" style={{ marginTop: 20 }}>
               <RewardsWheel prizes={rewardPrizes} alreadySpun={dailySpinUsed || status === "used"} />
