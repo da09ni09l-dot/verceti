@@ -725,8 +725,8 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
             style={{
               width: "100%",
               textAlign: "left",
-              background: !selectedPlayer ? "rgba(155,92,255,0.2)" : undefined,
-              borderColor: !selectedPlayer ? "#9b5cff" : undefined
+              background: !selectedPlayer && !selectedGroupId ? "rgba(155,92,255,0.2)" : undefined,
+              borderColor: !selectedPlayer && !selectedGroupId ? "#9b5cff" : undefined
             }}
           >
             📌 Загальний чат
