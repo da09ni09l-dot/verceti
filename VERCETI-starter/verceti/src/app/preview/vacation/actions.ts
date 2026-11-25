@@ -75,3 +75,21 @@ export async function reviewVacationRequest(formData: FormData) {
   revalidatePath("/preview/vacation");
   redirect("/preview/vacation?status=reviewed");
 }
+
+
+export async function deleteVacationRequest(formData: FormData) {
+  const id = String(formData.get("id") ?? "").trim();
+  if (!UUID_PATTERN.test(id)) redirect("/preview/vacation?status=invalid");
+  const supabase = await createClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) redirect("/login");
+  const { data: isStaff, error: staffError } = await supabase.rpc("is_verceti_staff");
+  if (staffError || isStaff !== true) redirect("/preview/vacation?status=forbidden");
+  const { error } = await supabase.from("vacation_requests").delete().eq("id", id);
+  if (error) {
+    console.error("VERCETI vacation deletion error:", error.message);
+    redirect("/preview/vacation?status=error");
+  }
+  revalidatePath("/preview/vacation");
+  redirect("/preview/vacation?status=deleted");
+}
