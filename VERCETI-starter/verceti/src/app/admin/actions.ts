@@ -29,7 +29,7 @@ async function requireAdmin() {
   const { data: currentRole, error: roleError } =
     await supabase.rpc("current_verceti_role");
 
-  if (roleError || !["founder", "admin", "leader"].includes(String(currentRole))) {
+  if (roleError || currentRole !== "founder") {
     redirect("/");
   }
 
@@ -194,7 +194,7 @@ export async function banMember(formData: FormData) {
     redirect("/admin?tab=members&error=member");
   }
 
-  if (member.role === "admin") {
+  if (["founder", "admin", "leader"].includes(String(member.role))) {
     redirect("/admin?tab=members&error=protected");
   }
 
@@ -235,7 +235,7 @@ export async function changeMemberRole(formData: FormData) {
   if (memberId === user.id) redirect("/admin?tab=members&error=self_role");
   const { data: member, error: memberError } = await supabase.from("profiles").select("id, role").eq("id", memberId).single();
   if (memberError || !member) redirect("/admin?tab=members&error=member");
-  if (member.role === "admin") redirect("/admin?tab=members&error=protected");
+  if (["founder", "admin", "leader"].includes(String(member.role))) redirect("/admin?tab=members&error=protected");
   const { error } = await supabase.rpc("change_member_role", {
     p_member_id: memberId, p_new_role: role, p_reason: "Зміна ролі адміністратором"
   });
