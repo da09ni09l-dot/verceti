@@ -48,12 +48,25 @@ export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: Voice
   const loadRooms = useCallback(async () => {
     try {
       const response = await fetch("/api/livekit/rooms", { cache: "no-store" });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Не вдалося завантажити кімнати.");
+      const responseText = await response.text();
+      let data: { rooms?: Room[]; error?: string } = {};
+      try {
+        data = responseText ? JSON.parse(responseText) as { rooms?: Room[]; error?: string } : {};
+      } catch {
+        throw new Error("Сервер голосових кімнат повернув некоректну відповідь. Спробуй оновити сторінку.");
+      }
+      if (!response.ok) {
+        throw new Error(data.error || `Не вдалося завантажити кімнати (HTTP ${response.status}).`);
+      }
       setRooms(data.rooms || []);
       setError((current) => current === "Не вдалося завантажити кімнати." ? "" : current);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Помилка завантаження кімнат.");
+      const message = err instanceof Error ? err.message : "";
+      setError(
+        message === "Failed to fetch" || message === "NetworkError when attempting to fetch resource."
+          ? "Не вдалося зв’язатися із сервером голосових кімнат. Перевір з’єднання та онови сторінку."
+          : message || "Помилка завантаження кімнат."
+      );
     } finally {
       setLoadingRooms(false);
     }
