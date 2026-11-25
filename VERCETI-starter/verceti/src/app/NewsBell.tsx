@@ -151,7 +151,7 @@ export default function NewsBell({ userId }: NewsBellProps) {
   };
 
   return (
-    <div style={{ position: "relative", display: "inline-flex", alignItems: "center", zIndex: 20, flexShrink: 0 }}>
+    <div style={{ position: "relative", display: "inline-flex", alignItems: "center", zIndex: isOpen ? 1200 : 20, flexShrink: 0 }}>
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
@@ -237,11 +237,12 @@ export default function NewsBell({ userId }: NewsBellProps) {
 
           <div
             style={{
-              position: "absolute",
-              top: 50,
-              right: 0,
-              width: "min(360px, calc(100vw - 32px))",
-              maxHeight: 470,
+              position: "fixed",
+              top: "max(58px, env(safe-area-inset-top) + 58px)",
+              right: "max(12px, env(safe-area-inset-right))",
+              left: "auto",
+              width: "min(360px, calc(100vw - 24px))",
+              maxHeight: "min(470px, calc(100dvh - 76px))",
               overflowY: "auto",
               zIndex: 100,
               border: "1px solid rgba(216,186,255,0.2)",
