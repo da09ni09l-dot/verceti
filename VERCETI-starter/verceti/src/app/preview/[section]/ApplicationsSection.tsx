@@ -57,6 +57,15 @@ export default async function ApplicationsSection({
   );
 
   const isAdmin = currentRole === "admin";
+  const canViewDatabase = isAdmin || currentRole === "leader";
+
+  if (showDatabaseOnly && !canViewDatabase) {
+    return (
+      <div className="panel" role="alert">
+        Перегляд бази анкет доступний лише адміністратору та лідеру.
+      </div>
+    );
+  }
 
   const { data: questionsData, error: questionsError } = await supabase
     .from("application_questions")
@@ -109,7 +118,7 @@ export default async function ApplicationsSection({
 
   return (
     <>
-      <h1>{showPendingOnly ? "Анкети на підтвердження" : "Анкети VERCETI"}</h1>
+      <h1>{showPendingOnly ? "Анкети на підтвердження" : showDatabaseOnly ? "База анкет" : "Анкети VERCETI"}</h1>
 
       <p className="muted">
         Заповнення анкет та перевірка заявок учасників спільноти.
