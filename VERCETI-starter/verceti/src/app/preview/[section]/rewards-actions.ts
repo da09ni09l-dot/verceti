@@ -7,7 +7,7 @@ async function requireRewardsManager() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const { data: role, error } = await supabase.rpc("current_verceti_role");
-  if (error || !["admin", "leader"].includes(String(role))) redirect("/preview/rewards?status=forbidden");
+  if (error || !["admin", "leader", "moderator"].includes(String(role))) redirect("/preview/rewards?status=forbidden");
   return { supabase, user, role };
 }
 export async function createRewardPrize(formData: FormData) {
@@ -48,18 +48,6 @@ export async function restoreRewardPrize(formData: FormData) {
   redirect("/preview/rewards?status=restored");
 }
 
-export async function spinWeeklyRewards() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const { error } = await supabase.rpc("spin_verceti_weekly_rewards");
-  if (error) {
-    const status = error.message.includes("weekly_spin_used") ? "weekly_used" : error.message.includes("no_active_prizes") ? "empty" : "spin-error";
-    redirect("/preview/rewards?status=" + status);
-  }
-  redirect("/preview/rewards?status=weekly_won");
-}
-
 export async function spinRewards(): Promise<
   | { ok: true; prize: { id: string; title: string; description: string } }
   | { ok: false; error: "used" | "empty" | "unauthorized" | "failed" }
@@ -86,25 +74,4 @@ export async function spinRewards(): Promise<
       description: prize.description ?? "",
     },
   };
-}
-
-
-export async function spinBirthdayRewards(): Promise<
-  | { ok: true; prize: { id: string; title: string; description: string } }
-  | { ok: false; error: "used" | "not_birthday" | "empty" | "unauthorized" | "failed" }
-> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "unauthorized" };
-  const { data, error } = await supabase.rpc("spin_verceti_birthday_rewards");
-  if (error) {
-    if (error.message.includes("birthday_spin_used")) return { ok: false, error: "used" };
-    if (error.message.includes("not_birthday")) return { ok: false, error: "not_birthday" };
-    if (error.message.includes("no_active_prizes")) return { ok: false, error: "empty" };
-    console.error("Birthday spin:", error.message);
-    return { ok: false, error: "failed" };
-  }
-  const prize = data as { id?: string; title?: string; description?: string } | null;
-  if (!prize?.id || !prize.title) return { ok: false, error: "failed" };
-  return { ok: true, prize: { id: prize.id, title: prize.title, description: prize.description ?? "" } };
 }

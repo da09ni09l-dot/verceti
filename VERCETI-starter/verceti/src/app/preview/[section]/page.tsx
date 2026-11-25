@@ -20,7 +20,7 @@ import ApplicationsSection from "./ApplicationsSection";
 import StatsSection from "./StatsSection";
 import ProductsBoard from "./ProductsBoard";
 import WorkshopBooking from "./WorkshopBooking";
-import { createRewardPrize, deleteRewardPrize, spinWeeklyRewards } from "./rewards-actions";
+import { createRewardPrize, deleteRewardPrize } from "./rewards-actions";
 import { requestPasswordChange, completeApprovedPasswordChange } from "./password-actions";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
@@ -72,7 +72,7 @@ const descriptions: Record<string, { title: string; text: string; items: string[
   rewards: {
     title: "Рулетка та бонуси",
     text: "Розважальна система віртуальних балів.",
-    items: ["Один безкоштовний оберт на день", "Додаткові оберти за бали", "Щотижневі нагороди активності"]
+    items: ["Один безкоштовний оберт щодня", "Спільний список призів", "Оновлення спроби щодня"]
   },
   activity: {
     title: "Онлайн-активність",
@@ -646,15 +646,11 @@ export default async function PreviewSection({
   let canManageRewards = false;
   let rewardsRole: string | null = null;
   let lastRewardSpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
-  let lastWeeklySpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
-  let weeklySpinUsed = false;
   let dailySpinUsed = false;
-  let birthdaySpinUsed = false;
-  let birthdayEligible = false;
   if (section === "rewards") {
     const { data: role } = await supabase.rpc("current_verceti_role");
     rewardsRole = typeof role === "string" ? role : null;
-    canManageRewards = rewardsRole === "admin" || rewardsRole === "leader";
+    canManageRewards = ["admin", "leader", "moderator"].includes(rewardsRole ?? "");
 
     const now = new Date();
     const kyivParts = new Intl.DateTimeFormat("en-CA", {
@@ -676,33 +672,22 @@ export default async function PreviewSection({
     const kyivSecond = part("second");
     const kyivOffsetMs = Math.round((Date.UTC(kyivYear, kyivMonth - 1, kyivDay, kyivHour, kyivMinute, kyivSecond) - now.getTime()) / 60000) * 60000;
     const kyivDayStart = new Date(Date.UTC(kyivYear, kyivMonth - 1, kyivDay) - kyivOffsetMs);
-    const daysSinceMonday = (new Date(Date.UTC(kyivYear, kyivMonth - 1, kyivDay)).getUTCDay() + 6) % 7;
-    const kyivWeekStart = new Date(Date.UTC(kyivYear, kyivMonth - 1, kyivDay - daysSinceMonday) - kyivOffsetMs);
-    const kyivYearStart = new Date(Date.UTC(kyivYear, 0, 1) - 2 * 60 * 60 * 1000);
-    birthdayEligible = Number(profile.birth_day) === kyivDay && Number(profile.birth_month) === kyivMonth;
 
     const [
       { data, error },
-      { data: spinData, error: spinError },
-      { data: weeklyData, error: weeklyError },
-      { data: birthdayData, error: birthdayError }
+      { data: spinData, error: spinError }
     ] = await Promise.all([
       supabase.from("rewards_prizes").select("id, title, description, weight, created_by").order("created_at", { ascending: true }),
-      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "daily").gte("spun_at", kyivDayStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "weekly").gte("spun_at", kyivWeekStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("rewards_spins").select("spun_at").eq("user_id", user.id).eq("spin_type", "birthday").gte("spun_at", kyivYearStart.toISOString()).limit(1).maybeSingle()
+      supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "daily").gte("spun_at", kyivDayStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle()
     ]);
 
     rewardError = !!error;
-    if (spinError || weeklyError || birthdayError) {
-      console.error("VERCETI rewards spin history loading error:", spinError?.message ?? weeklyError?.message ?? birthdayError?.message);
+    if (spinError) {
+      console.error("VERCETI rewards spin history loading error:", spinError.message);
     }
     rewardPrizes = data ?? [];
     lastRewardSpin = spinData as typeof lastRewardSpin;
-    lastWeeklySpin = weeklyData as typeof lastWeeklySpin;
-    weeklySpinUsed = !!weeklyData;
     dailySpinUsed = !!spinData;
-    birthdaySpinUsed = !!birthdayData;
   }
 
   if (section === "rules") {
@@ -1483,25 +1468,13 @@ export default async function PreviewSection({
             <p className="muted">Спільна рулетка VERCETI — призи доступні всім учасникам.</p>
             {status === "created" && <div className="panel" style={{ marginTop: 14 }}>Приз додано до загальної рулетки.</div>}
             {status === "deleted" && <div className="panel" style={{ marginTop: 14 }}>Приз видалено.</div>}
-            {(status === "won" || status === "weekly_won") && <div className="panel" style={{ marginTop: 14 }}><strong>🎉 Твій результат</strong><p style={{ marginTop: 8 }}>{(status === "weekly_won" ? (lastWeeklySpin as { prize: { title: string; description: string } | null } | null)?.prize?.title : (lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.title) ?? "Оберт успішно зафіксовано."}</p>{(status === "weekly_won" ? (lastWeeklySpin as { prize: { title: string; description: string } | null } | null)?.prize?.description : (lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.description) && <p className="muted" style={{ marginTop: 6 }}>{status === "weekly_won" ? (lastWeeklySpin as { prize: { title: string; description: string } | null } | null)?.prize?.description : (lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.description}</p>}</div>}
+            {status === "won" && <div className="panel" style={{ marginTop: 14 }}><strong>🎉 Твій результат</strong><p style={{ marginTop: 8 }}>{(lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.title ?? "Оберт успішно зафіксовано."}</p>{(lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.description && <p className="muted" style={{ marginTop: 6 }}>{(lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.description}</p>}</div>}
             {status === "used" && <div className="panel" style={{ marginTop: 14 }}>Ти вже використав(ла) безкоштовний оберт сьогодні. Повертайся завтра!</div>}
-            {status === "weekly_used" && <div className="panel" style={{ marginTop: 14 }}>Щотижневий бонус уже використано. Новий буде доступний наступного понеділка.</div>}
             {status === "empty" && <div className="panel" style={{ marginTop: 14 }}>Активних призів поки немає.</div>}
-            {status === "forbidden" && <div className="panel" style={{ marginTop: 14 }}>Керувати призами можуть лише адміністратор і лідер.</div>}
+            {status === "forbidden" && <div className="panel" style={{ marginTop: 14 }}>Керувати призами можуть лише адміністратор, лідер і модератор.</div>}
             {(status === "invalid" || status === "error" || status === "spin-error") && <div className="panel" style={{ marginTop: 14 }}>Не вдалося виконати дію. Перевір дані та налаштування бази.</div>}
             <div className="panel" style={{ marginTop: 20 }}>
-              <RewardsWheel prizes={rewardPrizes} alreadySpun={dailySpinUsed || status === "used"} birthdayEligible={birthdayEligible} birthdayAlreadySpun={birthdaySpinUsed} />
-            </div>
-            <div className="panel" style={{ marginTop: 16 }}>
-              <h2>🎁 Щотижневий бонусний оберт</h2>
-              <p className="muted">Один додатковий оберт на календарний тиждень, окремо від щоденного.</p>
-              {weeklySpinUsed || status === "weekly_used" ? (
-                <p className="page-note" style={{ marginTop: 12 }}>Тижневий бонус уже використано. Наступний доступний із понеділка.</p>
-              ) : (
-                <form action={spinWeeklyRewards} style={{ marginTop: 12 }}>
-                  <button className="btn secondary" type="submit" disabled={rewardPrizes.length === 0} style={{ width: "100%" }}>Забрати тижневий бонус</button>
-                </form>
-              )}
+              <RewardsWheel prizes={rewardPrizes} alreadySpun={dailySpinUsed || status === "used"} />
             </div>
             <div className="panel" style={{ marginTop: 20 }}>
               <h2>Загальні призи</h2>
