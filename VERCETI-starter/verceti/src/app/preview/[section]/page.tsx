@@ -205,7 +205,7 @@ export default async function PreviewSection({
 
   let newsError = false;
 
-  let memberItems: { id: string; nickname: string; game_id: string | null; role: string; created_at: string; is_banned: boolean; avatar_url: string | null }[] = [];
+  let memberItems: { id: string; nickname: string; game_id: string | null; role: string; created_at: string; is_banned: boolean; avatar_url: string | null; nickname_color?: string | null; nickname_font?: string | null }[] = [];
   let membersError = false;
   let activityItems: { user_id: string; nickname: string; role: string; total_seconds: number }[] = [];
   let activityError = false;
