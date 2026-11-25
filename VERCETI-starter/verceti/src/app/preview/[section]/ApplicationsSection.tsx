@@ -608,35 +608,38 @@ export default async function ApplicationsSection({
                     </div>
                   ))}
 
-                  <details style={{ marginTop: 18 }}>
-                    <summary style={{ cursor: "pointer" }}>
-                      Редагувати відповіді
-                    </summary>
-
-                    <form
-                      action={editApplicationAnswers}
-                      className="member-list"
-                      style={{ marginTop: 12, gap: 10 }}
-                    >
-                      <input
-                        type="hidden"
-                        name="id"
-                        value={application.id}
-                      />
-
-                      <label>Відповіді у форматі JSON</label>
-                      <textarea
-                        name="answers"
-                        rows={10}
-                        required
-                        defaultValue={JSON.stringify(answers, null, 2)}
-                      />
-
-                      <button className="btn" type="submit">
-                        Зберегти відповіді
-                      </button>
-                    </form>
-                  </details>
+                  {isFounder && (
+                    <details style={{ marginTop: 18 }}>
+                      <summary style={{ cursor: "pointer" }}>
+                        Редагувати відповіді
+                      </summary>
+  
+                      <form
+                        action={editApplicationAnswers}
+                        className="member-list"
+                        style={{ marginTop: 12, gap: 10 }}
+                      >
+                        <input
+                          type="hidden"
+                          name="id"
+                          value={application.id}
+                        />
+  
+                        <label>Відповіді у форматі JSON</label>
+                        <textarea
+                          name="answers"
+                          rows={10}
+                          required
+                          defaultValue={JSON.stringify(answers, null, 2)}
+                        />
+  
+                        <button className="btn" type="submit">
+                          Зберегти відповіді
+                        </button>
+                      </form>
+                    </details>
+  
+                    )}
 
                   {!showDatabaseOnly && application.status === "pending" && (
                     <div
