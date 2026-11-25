@@ -9,6 +9,7 @@ type NewsItem = {
   title: string;
   content: string;
   category: string;
+  authorProfile?: { nickname: string; nickname_color: string | null; nickname_font: string | null } | null;
 };
 
 export default function PinnedNewsCarousel({
@@ -66,6 +67,8 @@ export default function PinnedNewsCarousel({
         <span className="hero-category">
           {categoryLabels[current.category] ?? current.category.toUpperCase()}
         </span>
+
+        {current.authorProfile && <div style={{ marginTop: 12, color: current.authorProfile.nickname_color ?? undefined, fontFamily: current.authorProfile.nickname_font === "orbitron" ? "Orbitron, Arial, sans-serif" : current.authorProfile.nickname_font === "rajdhani" ? "Rajdhani, Arial, sans-serif" : current.authorProfile.nickname_font === "nunito" ? "Nunito Sans, Arial, sans-serif" : current.authorProfile.nickname_font === "georgia" ? "Georgia, serif" : current.authorProfile.nickname_font === "mono" ? "monospace" : undefined, fontWeight: 700 }}>{current.authorProfile.nickname}</div>}
 
         <h1>{current.title}</h1>
 

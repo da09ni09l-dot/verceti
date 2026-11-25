@@ -12,6 +12,10 @@ type ChatMessage = {
   nickname: string;
   role: string;
   avatar_url: string | null;
+  nickname_color?: string | null;
+  nickname_font?: string | null;
+  message_color?: string | null;
+  message_font?: string | null;
 };
 
 type DirectMessage = {
@@ -21,6 +25,10 @@ type DirectMessage = {
   content: string;
   created_at: string;
   is_read: boolean;
+  sender_nickname_color?: string | null;
+  sender_nickname_font?: string | null;
+  message_color?: string | null;
+  message_font?: string | null;
 };
 
 type Player = {
@@ -28,6 +36,10 @@ type Player = {
   nickname: string | null;
   role: string;
   avatar_url: string | null;
+  nickname_color?: string | null;
+  nickname_font?: string | null;
+  message_color?: string | null;
+  message_font?: string | null;
 };
 
 const roleLabels: Record<string, string> = {
@@ -169,7 +181,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
 
     const { data: profileData, error: profilesError } = await supabase
       .from("profiles")
-      .select("id, nickname, role, avatar_url")
+      .select("id, nickname, role, avatar_url, nickname_color, nickname_font, message_color, message_font")
       .order("nickname", { ascending: true });
 
     if (profilesError) {
@@ -194,6 +206,10 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
             ...item,
             content: await resolveMediaContent(item.content),
             nickname: profile?.nickname || "Учасник",
+            nickname_color: profile?.nickname_color ?? null,
+            nickname_font: profile?.nickname_font ?? null,
+            message_color: profile?.message_color ?? null,
+            message_font: profile?.message_font ?? null,
             role: profile?.role || "junior",
             avatar_url: profile?.avatar_url ?? null
           };
@@ -258,6 +274,10 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
         (data ?? []).map(async (message) => ({
           ...message,
           content: await resolveMediaContent(message.content),
+          sender_nickname_color: players.find((player) => player.id === message.sender_id)?.nickname_color ?? null,
+          sender_nickname_font: players.find((player) => player.id === message.sender_id)?.nickname_font ?? null,
+          message_color: players.find((player) => player.id === message.sender_id)?.message_color ?? null,
+          message_font: players.find((player) => player.id === message.sender_id)?.message_font ?? null,
           is_read:
             message.recipient_id === currentUserId
               ? true
@@ -268,7 +288,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
 
     setError("");
     setDirectLoading(false);
-  }, [supabase, selectedPlayer, resolveMediaContent]);
+  }, [supabase, selectedPlayer, resolveMediaContent, players]);
 
   useEffect(() => {
     void loadMessages();
@@ -721,7 +741,9 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
                           style={{
                             display: "block",
                             fontSize: 13,
-                            overflowWrap: "anywhere"
+                            overflowWrap: "anywhere",
+                            color: player.nickname_color ?? undefined,
+                            fontFamily: player.nickname_font === "orbitron" ? "Orbitron, Arial, sans-serif" : player.nickname_font === "rajdhani" ? "Rajdhani, Arial, sans-serif" : player.nickname_font === "nunito" ? "Nunito Sans, Arial, sans-serif" : player.nickname_font === "georgia" ? "Georgia, serif" : player.nickname_font === "mono" ? "monospace" : undefined
                           }}
                         >
                           {player.nickname || "Без нікнейму"}
@@ -835,7 +857,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           {message.avatar_url ? <img src={message.avatar_url} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }} /> : <span style={{ width: 28, height: 28, borderRadius: "50%", display: "grid", placeItems: "center", background: "rgba(187,138,255,.16)", fontSize: 11 }}>{message.nickname.slice(0, 1).toUpperCase()}</span>}
-                          <strong>{message.nickname}</strong>
+                          <strong style={{ color: message.nickname_color ?? undefined, fontFamily: message.nickname_font === "orbitron" ? "Orbitron, Arial, sans-serif" : message.nickname_font === "rajdhani" ? "Rajdhani, Arial, sans-serif" : message.nickname_font === "nunito" ? "Nunito Sans, Arial, sans-serif" : message.nickname_font === "georgia" ? "Georgia, serif" : message.nickname_font === "mono" ? "monospace" : undefined }}>{message.nickname}</strong>
                           <span
                             style={{
                               marginLeft: 8,
@@ -887,7 +909,9 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
                           style={{
                             whiteSpace: "pre-wrap",
                             overflowWrap: "anywhere",
-                            margin: 0
+                            margin: 0,
+                            color: message.message_color ?? undefined,
+                            fontFamily: message.message_font === "orbitron" ? "Orbitron, Arial, sans-serif" : message.message_font === "rajdhani" ? "Rajdhani, Arial, sans-serif" : message.message_font === "nunito" ? "Nunito Sans, Arial, sans-serif" : message.message_font === "georgia" ? "Georgia, serif" : message.message_font === "mono" ? "monospace" : undefined
                           }}
                         >
                           {message.content}
@@ -997,7 +1021,9 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
                           style={{
                             whiteSpace: "pre-wrap",
                             overflowWrap: "anywhere",
-                            margin: 0
+                            margin: 0,
+                            color: message.message_color ?? undefined,
+                            fontFamily: message.message_font === "orbitron" ? "Orbitron, Arial, sans-serif" : message.message_font === "rajdhani" ? "Rajdhani, Arial, sans-serif" : message.message_font === "nunito" ? "Nunito Sans, Arial, sans-serif" : message.message_font === "georgia" ? "Georgia, serif" : message.message_font === "mono" ? "monospace" : undefined
                           }}
                         >
                           {message.content}

@@ -61,7 +61,7 @@ export default async function Home() {
 
   const { data: pinnedNews } = await supabase
     .from("news")
-    .select("id, title, content, category")
+    .select("id, title, content, category, created_by")
     .eq("is_pinned", true)
     .or(`show_from.is.null,show_from.lte.${now}`)
     .or(`show_until.is.null,show_until.gt.${now}`)
@@ -69,12 +69,18 @@ export default async function Home() {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, nickname, role, is_banned, avatar_url")
+    .select("id, nickname, role, is_banned, avatar_url, nickname_color, nickname_font")
     .order("created_at", { ascending: true });
+
+  const profileById = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
+  const pinnedNewsWithAuthors = (pinnedNews ?? []).map((item) => ({
+    ...item,
+    authorProfile: item.created_by ? profileById.get(item.created_by) ?? null : null
+  }));
 
   const { data: currentProfile } = await supabase
     .from("profiles")
-    .select("nickname, role, avatar_url")
+    .select("nickname, role, avatar_url, nickname_color, nickname_font")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -173,7 +179,7 @@ export default async function Home() {
               {currentProfile?.avatar_url ? <img src={currentProfile.avatar_url} alt="" className="avatar" style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover" }} /> : <div className="avatar">{nickname.slice(0, 1).toUpperCase()}</div>}
 
               <div>
-                <strong>{nickname}</strong>
+                <strong style={{ color: currentProfile?.nickname_color ?? undefined, fontFamily: currentProfile?.nickname_font === "orbitron" ? "Orbitron, Arial, sans-serif" : currentProfile?.nickname_font === "rajdhani" ? "Rajdhani, Arial, sans-serif" : currentProfile?.nickname_font === "nunito" ? "Nunito Sans, Arial, sans-serif" : currentProfile?.nickname_font === "georgia" ? "Georgia, serif" : currentProfile?.nickname_font === "mono" ? "monospace" : undefined }}>{nickname}</strong>
                 <div className={`role ${roleColor}`}>
                   {roleLabel}
                 </div>
@@ -194,7 +200,7 @@ export default async function Home() {
           </div>
 
           {pinnedNews && pinnedNews.length > 0 ? (
-            <PinnedNewsCarousel news={pinnedNews} />
+            <PinnedNewsCarousel news={pinnedNewsWithAuthors} />
           ) : (
             <>
               <h1>ТВОЯ СПІЛЬНОТА. ТВОЇ ПРАВИЛА.</h1>

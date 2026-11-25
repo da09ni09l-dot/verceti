@@ -22,6 +22,7 @@ import ProductsBoard from "./ProductsBoard";
 import WorkshopBooking from "./WorkshopBooking";
 import { createRewardPrize, deleteRewardPrize } from "./rewards-actions";
 import { requestPasswordChange, completeApprovedPasswordChange } from "./password-actions";
+import UserStyleSettings from "./UserStyleSettings";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: {
@@ -160,7 +161,7 @@ export default async function PreviewSection({
   // Перевірка блокування акаунта
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("is_banned, nickname, avatar_url, birth_day, birth_month")
+    .select("is_banned, nickname, avatar_url, birth_day, birth_month, nickname_color, nickname_font, message_color, message_font")
     .eq("id", user.id)
     .single();
 
@@ -200,11 +201,12 @@ export default async function PreviewSection({
     created_at: string;
     show_from: string | null;
     show_until: string | null;
+    created_by: string | null;
   }[] = [];
 
   let newsError = false;
 
-  let memberItems: { id: string; nickname: string; game_id: string | null; role: string; created_at: string; is_banned: boolean; avatar_url: string | null }[] = [];
+  let memberItems: { id: string; nickname: string; game_id: string | null; role: string; created_at: string; is_banned: boolean; avatar_url: string | null; nickname_color?: string | null; nickname_font?: string | null }[] = [];
   let membersError = false;
   let activityItems: { user_id: string; nickname: string; role: string; total_seconds: number }[] = [];
   let activityError = false;
@@ -499,7 +501,7 @@ export default async function PreviewSection({
   if (section === "members") {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, nickname, game_id, role, created_at, is_banned, avatar_url")
+      .select("id, nickname, game_id, role, created_at, is_banned, avatar_url, nickname_color, nickname_font")
       .eq("is_banned", false)
       .order("nickname", { ascending: true })
       .limit(500);
@@ -613,7 +615,7 @@ export default async function PreviewSection({
 
     const { data, error } = await supabase
       .from("news")
-      .select("id, title, content, category, event_date, is_pinned, created_at, show_from, show_until")
+      .select("id, title, content, category, event_date, is_pinned, created_at, show_from, show_until, created_by")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -627,6 +629,12 @@ export default async function PreviewSection({
       );
     }
   }
+
+  const newsAuthorIds = [...new Set(newsItems.map((item) => item.created_by).filter((id): id is string => Boolean(id)))];
+  const { data: newsAuthors } = newsAuthorIds.length
+    ? await supabase.from("profiles").select("id, nickname, nickname_color, nickname_font").in("id", newsAuthorIds)
+    : { data: [] as { id: string; nickname: string; nickname_color: string | null; nickname_font: string | null }[] };
+  const newsAuthorById = new Map((newsAuthors ?? []).map((author) => [author.id, author]));
 
   let passwordRequestStatus: string | null = null;
   if (section === "settings") {
@@ -852,7 +860,7 @@ export default async function PreviewSection({
                   >
                     {member.avatar_url ? <img src={member.avatar_url} alt="" className="avatar" style={{ width: 42, height: 42, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} /> : <div className="avatar">{member.nickname.slice(0, 1).toUpperCase()}</div>}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <strong style={{ overflowWrap: "anywhere" }}>{member.nickname}</strong>
+                      <strong style={{ overflowWrap: "anywhere", color: member.nickname_color ?? undefined, fontFamily: member.nickname_font === "orbitron" ? "Orbitron, Arial, sans-serif" : member.nickname_font === "rajdhani" ? "Rajdhani, Arial, sans-serif" : member.nickname_font === "nunito" ? "Nunito Sans, Arial, sans-serif" : member.nickname_font === "georgia" ? "Georgia, serif" : member.nickname_font === "mono" ? "monospace" : undefined }}>{member.nickname}</strong>
                       <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
                         {member.game_id ? `Ігровий ID: ${member.game_id} · ` : ""}У спільноті з {new Date(member.created_at).toLocaleDateString("uk-UA")}
                       </div>
@@ -1233,6 +1241,14 @@ export default async function PreviewSection({
               {status === "nickname_error" && <p className="page-note">Перевір формат нікнейму: 3–20 дозволених символів.</p>}
               {status === "save_error" && <p className="page-note">Не вдалося зберегти нікнейм. Можливо, він уже зайнятий.</p>}
             </div>
+            <UserStyleSettings
+              userId={user.id}
+              nickname={profile.nickname ?? ""}
+              nicknameColor={profile.nickname_color ?? "#ff4fd8"}
+              nicknameFont={profile.nickname_font ?? "manrope"}
+              messageColor={profile.message_color ?? "#f7f3ff"}
+              messageFont={profile.message_font ?? "manrope"}
+            />
             <div className="panel" style={{ marginTop: 18 }}>
               <h2>Безпека акаунта</h2>
               <p className="muted">Зміна пароля виконується лише після схвалення адміністратором.</p>
