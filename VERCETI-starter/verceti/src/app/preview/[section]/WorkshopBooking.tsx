@@ -38,7 +38,7 @@ export default function WorkshopBooking({ userId }: { userId: string }) {
   useEffect(() => {
     let active = true;
     void supabase.rpc("current_verceti_role").then(({ data, error: roleError }) => {
-      if (active) setCanManageBookings(!roleError && ["founder", "admin", "leader"].includes(String(data)));
+      if (active) setCanManageBookings(!roleError && data === "founder");
     });
     return () => { active = false; };
   }, [supabase]);
