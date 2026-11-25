@@ -33,6 +33,15 @@ export default function WorkshopBooking({ userId }: { userId: string }) {
   const [busySlot, setBusySlot] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [canManageBookings, setCanManageBookings] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void supabase.rpc("current_verceti_role").then(({ data, error: roleError }) => {
+      if (active) setCanManageBookings(!roleError && data === "founder");
+    });
+    return () => { active = false; };
+  }, [supabase]);
 
   const load = useCallback(async () => {
     const { data, error: queryError } = await supabase
@@ -96,13 +105,15 @@ export default function WorkshopBooking({ userId }: { userId: string }) {
     setBusySlot(null);
   }
 
-  async function remove(slot: number) {
-    const existing = bookings.find((item) => item.hour_slot === slot && item.user_id === userId);
-    if (!existing) return;
-    setBusySlot(slot);
-    const { error: deleteError } = await supabase.from("workshop_bookings").delete().eq("id", existing.id).eq("user_id", userId);
+  async function remove(booking: BookingView) {
+    const own = booking.user_id === userId;
+    if (!own && !canManageBookings) return;
+    setBusySlot(booking.hour_slot);
+    setError("");
+    const deletion = supabase.from("workshop_bookings").delete().eq("id", booking.id);
+    const { error: deleteError } = own ? await deletion.eq("user_id", userId) : await deletion;
     if (deleteError) setError("Не вдалося скасувати бронювання.");
-    else { setNotice("Бронювання скасовано."); await load(); }
+    else { setNotice("Бронювання скасовано. Час знову вільний."); await load(); }
     setBusySlot(null);
   }
 
@@ -142,6 +153,7 @@ export default function WorkshopBooking({ userId }: { userId: string }) {
                 <div style={{ marginTop: 10 }}>
                   <strong>{booking.nickname}</strong>
                   <p className="muted" style={{ margin: "6px 0 0" }}>{[booking.alcohol ? "Алко" : "", booking.parsley ? "Петрушка" : ""].filter(Boolean).join(" · ")}</p>
+                  {canManageBookings && <button className="btn secondary" type="button" disabled={busySlot === slot} style={{ marginTop: 10 }} onClick={() => void remove(booking)}>{busySlot === slot ? "..." : "Скасувати бронювання"}</button>}
                 </div>
               ) : (
                 <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
@@ -157,7 +169,7 @@ export default function WorkshopBooking({ userId }: { userId: string }) {
                   </div>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <button className="btn" type="button" disabled={busySlot === slot} onClick={() => void save(slot)}>{busySlot === slot ? "..." : own ? "Оновити" : "Забронювати"}</button>
-                    {own && <button className="btn secondary" type="button" disabled={busySlot === slot} onClick={() => void remove(slot)}>Скасувати</button>}
+                    {own && <button className="btn secondary" type="button" disabled={busySlot === slot} onClick={() => void remove(booking)}>Скасувати</button>}
                   </div>
                 </div>
               )}

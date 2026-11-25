@@ -25,8 +25,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: hasCommunityAccess, error: membershipError } = await supabase.rpc("is_verceti_member");
-    if (membershipError || hasCommunityAccess !== true) {
+    const [{ data: hasCommunityAccess, error: membershipError }, { data: hasStaffAccess, error: staffError }] = await Promise.all([
+      supabase.rpc("is_verceti_member"),
+      supabase.rpc("is_verceti_staff"),
+    ]);
+    if ((membershipError || hasCommunityAccess !== true) && (staffError || hasStaffAccess !== true)) {
       return NextResponse.json(
         { error: "Голосові кімнати доступні після схвалення анкети." },
         { status: 403 }
@@ -47,7 +50,7 @@ export async function POST(request: NextRequest) {
     // Перевірка існування кімнати в Supabase
     const { data: room, error: roomError } = await supabase
       .from("voice_rooms")
-      .select("id, name, max_participants")
+      .select("id, name, max_participants, is_hidden")
       .eq("id", roomId)
       .maybeSingle();
 
@@ -65,6 +68,31 @@ export async function POST(request: NextRequest) {
         { error: "Голосову кімнату не знайдено." },
         { status: 404 }
       );
+    }
+
+    if (room.is_hidden) {
+      const { data: staff } = await supabase.rpc("is_verceti_staff");
+      if (staff !== true) {
+        const { data: assignment, error: assignmentError } = await supabase
+          .from("voice_room_assignments").select("room_id").eq("user_id", user.id).maybeSingle();
+        if (assignmentError) {
+          console.error("Hidden voice room assignment lookup:", assignmentError);
+          return NextResponse.json({ error: "Не вдалося перевірити доступ до прихованої кімнати." }, { status: 500 });
+        }
+        if (assignment?.room_id !== roomId) {
+          return NextResponse.json({ error: "Ця голосова кімната прихована. Доступ має надати керівництво." }, { status: 403 });
+        }
+      }
+    }
+
+    const { data: assignedRoom, error: assignedRoomError } = await supabase
+      .from("voice_room_assignments").select("room_id").eq("user_id", user.id).maybeSingle();
+    if (assignedRoomError) {
+      console.error("Voice room assignment lookup:", assignedRoomError);
+      return NextResponse.json({ error: "Не вдалося перевірити призначену кімнату." }, { status: 500 });
+    }
+    if (assignedRoom && assignedRoom.room_id !== roomId) {
+      return NextResponse.json({ error: "Керівництво призначило тобі іншу голосову кімнату." }, { status: 403 });
     }
 
     // Перевірка налаштувань LiveKit

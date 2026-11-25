@@ -7,7 +7,7 @@ async function requireRewardsManager() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const { data: role, error } = await supabase.rpc("current_verceti_role");
-  if (error || !["admin", "leader", "moderator"].includes(String(role))) redirect("/preview/rewards?status=forbidden");
+  if (error || role !== "founder") redirect("/preview/rewards?status=forbidden");
   return { supabase, user, role };
 }
 export async function createRewardPrize(formData: FormData) {
@@ -25,7 +25,7 @@ export async function deleteRewardPrize(formData: FormData) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) redirect("/preview/rewards?status=invalid");
   const { supabase, user, role } = await requireRewardsManager();
   let archive = supabase.from("rewards_prizes").update({ is_active: false }).eq("id", id);
-  if (role === "leader") archive = archive.eq("created_by", user.id);
+  if (role !== "founder") archive = archive.eq("created_by", user.id);
   const { data, error } = await archive.select("id").maybeSingle();
   if (error || !data) {
     console.error("Archive rewards prize:", error?.message ?? "Prize not found or not permitted");
@@ -39,7 +39,7 @@ export async function restoreRewardPrize(formData: FormData) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) redirect("/preview/rewards?status=invalid");
   const { supabase, user, role } = await requireRewardsManager();
   let restore = supabase.from("rewards_prizes").update({ is_active: true }).eq("id", id);
-  if (role === "leader") restore = restore.eq("created_by", user.id);
+  if (role !== "founder") restore = restore.eq("created_by", user.id);
   const { data, error } = await restore.select("id").maybeSingle();
   if (error || !data) {
     console.error("Restore rewards prize:", error?.message ?? "Prize not found or not permitted");

@@ -10,9 +10,7 @@ import {
   editApplicationAnswers,
   reviewApplication,
   deleteApplication,
-  setMyBirthday,
-  adminUpdateBirthday,
-} from "./application-actions";
+  } from "./application-actions";
 
 const statusLabels: Record<string, string> = {
   pending: "На перевірці",
@@ -26,16 +24,19 @@ const roleLabels: Record<string, string> = {
   local: "Учасник",
   senior: "Старший учасник",
   moderator: "Модератор",
+  founder: "Засновник",
   leader: "Лідер",
-  admin: "Адміністратор",
+  admin: "Застаріла роль",
 };
 
 export default async function ApplicationsSection({
   status,
   showPendingOnly = false,
+  showDatabaseOnly = false,
 }: {
   status?: string;
   showPendingOnly?: boolean;
+  showDatabaseOnly?: boolean;
 }) {
   const supabase = await createClient();
 
@@ -54,12 +55,22 @@ export default async function ApplicationsSection({
     "current_verceti_role"
   );
 
-  const isAdmin = currentRole === "admin";
+  const isFounder = currentRole === "founder";
+  const isAdmin = isFounder;
+  const canViewDatabase = isFounder;
+  const effectivePendingOnly = showPendingOnly || (isStaff && !isFounder);
+
+  if (showDatabaseOnly && !canViewDatabase) {
+    return (
+      <div className="panel" role="alert">
+        Перегляд бази всіх анкет доступний лише Засновнику.
+      </div>
+    );
+  }
 
   const { data: questionsData, error: questionsError } = await supabase
     .from("application_questions")
     .select("*")
-    .eq("is_active", true)
     .order("position", { ascending: true });
 
   const questions = questionsData ?? [];
@@ -67,15 +78,16 @@ export default async function ApplicationsSection({
   const { data: myProfile } = await supabase.from("profiles")
     .select("birth_day, birth_month").eq("id", user.id).maybeSingle();
 
-  const { data: applicationsData, error: applicationsError } = await supabase
+  const applicationsQuery = supabase
     .from("applications")
     .select("*")
     .order("created_at", { ascending: false });
+  const { data: applicationsData, error: applicationsError } = effectivePendingOnly
+    ? await applicationsQuery.eq("status", "pending")
+    : await applicationsQuery;
 
   const allApplications = applicationsData ?? [];
-  const applications = showPendingOnly
-    ? allApplications.filter((application) => application.status === "pending")
-    : allApplications;
+  const applications = allApplications;
 
   const userIds = Array.from(
     new Set(applications.map((application) => application.user_id))
@@ -93,12 +105,7 @@ export default async function ApplicationsSection({
   }
 
 
-  const { data: birthdayProfilesData } = isAdmin
-    ? await supabase.from("profiles").select("id, nickname, birth_day, birth_month").order("nickname")
-    : { data: [] as { id: string; nickname: string; birth_day: number | null; birth_month: number | null }[] };
-  const birthdayProfiles = birthdayProfilesData ?? [];
-
-  const myApplication = applications.find(
+   const myApplication = applications.find(
     (application) => application.user_id === user.id
   );
 
@@ -108,13 +115,13 @@ export default async function ApplicationsSection({
 
   return (
     <>
-      <h1>{showPendingOnly ? "Анкети на підтвердження" : "Анкети VERCETI"}</h1>
+      <h1>{effectivePendingOnly ? "Анкети на підтвердження" : showDatabaseOnly ? "База анкет" : "Анкети VERCETI"}</h1>
 
       <p className="muted">
         Заповнення анкет та перевірка заявок учасників спільноти.
       </p>
 
-      {!showPendingOnly && (
+      {!effectivePendingOnly && !showDatabaseOnly && (
       <div className="panel" style={{ marginTop: 18 }}>
         <h2>🎂 Дата народження</h2>
         <p className="muted">Вкажи день і місяць, щоб усі учасники отримували сповіщення у твій день народження. Рік не потрібен.</p>
@@ -225,7 +232,7 @@ export default async function ApplicationsSection({
         </div>
       )}
 
-      {isStaff && !showPendingOnly && (
+      {isFounder && !effectivePendingOnly && !showDatabaseOnly && (
         <div className="panel" style={{ marginTop: 24 }}>
           <h2>Конструктор анкети</h2>
 
@@ -514,13 +521,13 @@ export default async function ApplicationsSection({
         </div>
       )}
 
-      {isStaff && showPendingOnly && (
+      {isStaff && (effectivePendingOnly || showDatabaseOnly) && (
         <div style={{ marginTop: 28 }}>
-          <h2>Список заявок, що очікують рішення</h2>
+          <h2>{showDatabaseOnly ? "Усі збережені анкети" : "Список заявок, що очікують рішення"}</h2>
 
           {applications.length === 0 ? (
             <div className="panel">
-              {showPendingOnly ? "Немає анкет, які очікують підтвердження." : "Поки що учасники не надсилали анкет."}
+              {showDatabaseOnly ? "У базі поки немає анкет." : "Немає анкет, які очікують підтвердження."}
             </div>
           ) : (
             applications.map((application) => {
@@ -594,37 +601,40 @@ export default async function ApplicationsSection({
                     </div>
                   ))}
 
-                  <details style={{ marginTop: 18 }}>
-                    <summary style={{ cursor: "pointer" }}>
-                      Редагувати відповіді
-                    </summary>
+                  {isFounder && (
+                    <details style={{ marginTop: 18 }}>
+                      <summary style={{ cursor: "pointer" }}>
+                        Редагувати відповіді
+                      </summary>
+  
+                      <form
+                        action={editApplicationAnswers}
+                        className="member-list"
+                        style={{ marginTop: 12, gap: 10 }}
+                      >
+                        <input
+                          type="hidden"
+                          name="id"
+                          value={application.id}
+                        />
+  
+                        <label>Відповіді у форматі JSON</label>
+                        <textarea
+                          name="answers"
+                          rows={10}
+                          required
+                          defaultValue={JSON.stringify(answers, null, 2)}
+                        />
+  
+                        <button className="btn" type="submit">
+                          Зберегти відповіді
+                        </button>
+                      </form>
+                    </details>
+  
+                    )}
 
-                    <form
-                      action={editApplicationAnswers}
-                      className="member-list"
-                      style={{ marginTop: 12, gap: 10 }}
-                    >
-                      <input
-                        type="hidden"
-                        name="id"
-                        value={application.id}
-                      />
-
-                      <label>Відповіді у форматі JSON</label>
-                      <textarea
-                        name="answers"
-                        rows={10}
-                        required
-                        defaultValue={JSON.stringify(answers, null, 2)}
-                      />
-
-                      <button className="btn" type="submit">
-                        Зберегти відповіді
-                      </button>
-                    </form>
-                  </details>
-
-                  {application.status === "pending" && (
+                  {!showDatabaseOnly && application.status === "pending" && (
                     <div
                       className="member-list"
                       style={{
@@ -661,7 +671,7 @@ export default async function ApplicationsSection({
                           <option value="local">Учасник</option>
                           <option value="senior">Старший учасник</option>
                           <option value="moderator">Модератор</option>
-                          <option value="leader">Лідер</option>
+                          {isFounder && <option value="leader">Лідер</option>}
                         </select>
 
                         <button className="btn" type="submit">

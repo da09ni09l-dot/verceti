@@ -46,7 +46,7 @@ export default async function AdminPage({
 
   const { data: role } = await supabase.rpc("current_verceti_role");
 
-  if (role !== "admin") {
+  if (role !== "founder") {
     redirect("/");
   }
 
@@ -98,7 +98,7 @@ export default async function AdminPage({
     self_ban: "Не можна заблокувати власний акаунт.",
     self_delete: "Не можна видалити власний акаунт.",
     confirmation: "Для підтвердження видалення введи DELETE.",
-    protected: "Адміністратора не можна заблокувати або видалити.",
+    protected: "Засновника та Лідера не можна заблокувати або видалити.",
     ban: "Не вдалося заблокувати учасника.",
     unban: "Не вдалося розблокувати учасника.",
     delete_cleanup: "Не вдалося підготувати дані до видалення. Акаунт не видалено.",
@@ -115,12 +115,13 @@ export default async function AdminPage({
   };
 
   const roleLabels: Record<string, string> = {
-    admin: "Адміністратор",
+    founder: "Засновник",
+    leader: "Лідер",
+    admin: "Застаріла роль",
     junior: "Молодший учасник",
     local: "Учасник",
     senior: "Старший учасник",
     moderator: "Модератор",
-    leader: "Лідер",
   };
 
   const categoryLabels: Record<string, string> = {
@@ -646,9 +647,9 @@ export default async function AdminPage({
                     {new Date(member.created_at).toLocaleDateString("uk-UA")}
                   </p>
 
-                  {member.role === "admin" ? (
+                  {["founder", "admin"].includes(String(member.role)) ? (
                     <p className="muted" style={{ fontSize: 12 }}>
-                      Захищений акаунт адміністратора.
+                      Захищений акаунт засновника.
                     </p>
                   ) : (
                     <>

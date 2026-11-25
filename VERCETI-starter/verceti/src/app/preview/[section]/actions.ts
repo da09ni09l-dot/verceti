@@ -20,11 +20,12 @@ async function checkStaff() {
     redirect("/login");
   }
 
-  const { data: isStaff, error } = await supabase.rpc(
-    "is_verceti_staff"
-  );
+  const [{ data: isStaff, error }, { data: role, error: roleError }] = await Promise.all([
+    supabase.rpc("is_verceti_staff"),
+    supabase.rpc("current_verceti_role"),
+  ]);
 
-  if (error || isStaff !== true) {
+  if (error || roleError || isStaff !== true || role === "leader") {
     redirect("/preview/news?status=forbidden");
   }
 

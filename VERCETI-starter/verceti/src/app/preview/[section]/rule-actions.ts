@@ -7,13 +7,10 @@ import { redirect } from "next/navigation";
 
 async function checkStaff() {
   const supabase = await createClient();
-
-  const { data, error } = await supabase.rpc("is_verceti_staff");
-
-  if (error || data !== true) {
-    throw new Error("У тебе немає прав для цієї дії.");
-  }
-
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const { data, error } = await supabase.rpc("current_verceti_role");
+  if (error || data !== "founder") throw new Error("Цю дію може виконати лише Засновник.");
   return supabase;
 }
 

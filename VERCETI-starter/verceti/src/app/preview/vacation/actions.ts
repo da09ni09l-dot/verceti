@@ -62,8 +62,8 @@ export async function reviewVacationRequest(formData: FormData) {
   const supabase = await createClient();
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) redirect("/login");
-  const { data: isStaff, error: staffError } = await supabase.rpc("is_verceti_staff");
-  if (staffError || isStaff !== true) redirect("/preview/vacation?status=forbidden");
+  const { data: reviewerRole, error: roleError } = await supabase.rpc("current_verceti_role");
+  if (roleError || reviewerRole !== "founder") redirect("/preview/vacation?status=forbidden");
 
   const { error } = await supabase.from("vacation_requests").update({
     status: decision, reviewed_by: user.id, reviewed_at: new Date().toISOString()
@@ -84,12 +84,19 @@ export async function deleteVacationRequest(formData: FormData) {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) redirect("/login");
   const { data: role, error: roleError } = await supabase.rpc("current_verceti_role");
-  if (roleError || !["admin", "leader"].includes(String(role ?? ""))) redirect("/preview/vacation?status=forbidden");
-  const { error } = await supabase.from("vacation_requests").delete().eq("id", id);
+  if (roleError || role !== "founder") redirect("/preview/vacation?status=forbidden");
+  const { data: deleted, error } = await supabase
+    .from("vacation_requests")
+    .delete()
+    .eq("id", id)
+    .eq("status", "approved")
+    .select("id")
+    .maybeSingle();
   if (error) {
     console.error("VERCETI vacation deletion error:", error.message);
     redirect("/preview/vacation?status=error");
   }
+  if (!deleted) redirect("/preview/vacation?status=not-approved");
   revalidatePath("/preview/vacation");
   redirect("/preview/vacation?status=deleted");
 }

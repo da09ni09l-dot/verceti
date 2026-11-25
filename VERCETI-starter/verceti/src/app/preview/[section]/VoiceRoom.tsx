@@ -24,12 +24,18 @@ type Room = {
   max_participants: number | null;
   participant_count: number;
   created_by?: string | null;
+  is_hidden?: boolean;
 };
+type VoiceMember = { id: string; nickname: string; role: string };
 
 type VoiceRoomProps = { isStaff: boolean; canModerateVoice?: boolean };
 
 export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: VoiceRoomProps) {
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [members, setMembers] = useState<VoiceMember[]>([]);
+  const [selectedMember, setSelectedMember] = useState("");
+  const [destinationRoom, setDestinationRoom] = useState("");
+  const [isHiddenRoom, setIsHiddenRoom] = useState(false);
   const [activeRoom, setActiveRoom] = useState<number | null>(null);
   const [token, setToken] = useState("");
   const [serverUrl, setServerUrl] = useState("");
@@ -68,6 +74,7 @@ export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: Voice
         throw new Error("Сервер повернув некоректний список голосових кімнат.");
       }
       setRooms(data.rooms);
+      setMembers(Array.isArray(data.members) ? data.members : []);
       setError("");
     } catch (err) {
       // Keep the last successful room list visible during a temporary outage.
@@ -126,6 +133,44 @@ export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: Voice
     }
   }
 
+
+  async function setRoomHidden(id: number, isHidden: boolean) {
+    if (!isStaff || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/livekit/rooms", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set-hidden", id, isHidden }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Не вдалося змінити видимість кімнати.");
+      await loadRooms();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Помилка зміни видимості кімнати.");
+    } finally { setBusy(false); }
+  }
+
+  async function moveMember() {
+    if (!isStaff || busy || !selectedMember || !destinationRoom) return;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/livekit/rooms", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "move-member", userId: selectedMember, destinationRoomId: Number(destinationRoom) }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Не вдалося перемістити учасника.");
+      setError(data.message || "Призначення учасника оновлено.");
+      await loadRooms();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Помилка переміщення учасника.");
+    } finally { setBusy(false); }
+  }
+
   function leaveRoom() {
     setToken("");
     setActiveRoom(null);
@@ -145,12 +190,13 @@ export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: Voice
       const response = await fetch("/api/livekit/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, maxParticipants: capacity === "unlimited" ? null : Number(capacity) }),
+        body: JSON.stringify({ name, maxParticipants: capacity === "unlimited" ? null : Number(capacity), isHidden: isHiddenRoom }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Не вдалося створити кімнату.");
       setNewRoom("");
       setCapacity("unlimited");
+      setIsHiddenRoom(false);
       setShowCreate(false);
       await loadRooms();
     } catch (err) {
@@ -218,13 +264,18 @@ export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: Voice
                   >
                     <span className="voice-room-symbol"><Volume2 size={17} /></span>
                     <span className="voice-room-copy">
-                      <strong>{room.name}</strong>
+                      <strong>{room.name}{room.is_hidden ? " · Прихована" : ""}</strong>
                       <small><Users size={12} /> {room.participant_count}{room.max_participants === null ? " / без ліміту" : ` / ${room.max_participants}`}</small>
                     </span>
                     <span className={`voice-room-state ${full ? "is-full" : selected ? "is-connected" : ""}`}>
                       {full ? "Заповнена" : selected ? "Ти тут" : "Приєднатись"}
                     </span>
                   </button>
+                  {isStaff && (
+                    <button type="button" className="voice-icon-button" onClick={() => void setRoomHidden(room.id, !room.is_hidden)} disabled={busy} title={room.is_hidden ? "Зробити кімнату видимою" : "Приховати кімнату"} aria-label={room.is_hidden ? "Зробити кімнату видимою" : "Приховати кімнату"}>
+                      {room.is_hidden ? "Показати" : "Приховати"}
+                    </button>
+                  )}
                   {isStaff && (
                     <button type="button" className="voice-icon-button is-danger" onClick={() => void deleteRoom(room.id)} disabled={busy} title="Видалити кімнату" aria-label={`Видалити кімнату ${room.name}`}>
                       <Trash2 size={15} />
@@ -238,11 +289,26 @@ export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: Voice
 
         {isStaff && (
           <div className="voice-create-wrap">
+            <div className="voice-create-form" style={{ marginBottom: 12 }}>
+              <strong>Перемістити учасника</strong>
+              <label htmlFor="voice-member-select">Учасник</label>
+              <select id="voice-member-select" value={selectedMember} onChange={(event) => setSelectedMember(event.target.value)}>
+                <option value="">Обери учасника</option>
+                {members.map((member) => <option key={member.id} value={member.id}>{member.nickname} · {member.role}</option>)}
+              </select>
+              <label htmlFor="voice-destination-select">Кімната призначення</label>
+              <select id="voice-destination-select" value={destinationRoom} onChange={(event) => setDestinationRoom(event.target.value)}>
+                <option value="">Обери кімнату</option>
+                {rooms.map((room) => <option key={room.id} value={room.id}>{room.name}{room.is_hidden ? " · Прихована" : ""}</option>)}
+              </select>
+              <button className="btn voice-create-submit" type="button" onClick={() => void moveMember()} disabled={busy || !selectedMember || !destinationRoom}>Перемістити / призначити</button>
+            </div>
             {showCreate ? (
               <div className="voice-create-form">
                 <div className="voice-create-title"><strong>Нова кімната</strong><button type="button" className="voice-icon-button" onClick={() => setShowCreate(false)} aria-label="Закрити"><X size={16} /></button></div>
                 <label htmlFor="voice-room-name">Назва каналу</label>
                 <input id="voice-room-name" value={newRoom} onChange={(event) => setNewRoom(event.target.value)} placeholder="Наприклад, Загальний чат" maxLength={40} />
+                <label className="voice-hidden-toggle"><input type="checkbox" checked={isHiddenRoom} onChange={(event) => setIsHiddenRoom(event.target.checked)} /> Прихована кімната (доступ лише за призначенням)</label>
                 <label htmlFor="voice-room-capacity">Ліміт учасників</label>
                 <select id="voice-room-capacity" value={capacity} onChange={(event) => setCapacity(event.target.value)}>
                   <option value="2">2 людини</option><option value="3">3 людини</option><option value="5">5 людей</option><option value="10">10 людей</option><option value="unlimited">Без обмеження</option>

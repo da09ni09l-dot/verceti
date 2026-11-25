@@ -45,7 +45,7 @@ export async function GET() {
       );
     }
 
-    if (!(await isCommunityMember(supabase))) {
+    if (!(await isCommunityMember(supabase)) && !(await checkStaff(supabase))) {
       return NextResponse.json(
         { error: "Голосові кімнати доступні після схвалення анкети." },
         { status: 403 }
@@ -54,7 +54,7 @@ export async function GET() {
 
     const { data: rooms, error } = await supabase
       .from("voice_rooms")
-      .select("id, name, max_participants, created_by, created_at")
+      .select("id, name, max_participants, created_by, created_at, is_hidden")
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -111,8 +111,23 @@ export async function GET() {
       })
     );
 
+    let members: { id: string; nickname: string; role: string }[] = [];
+    if (await checkStaff(supabase)) {
+      const { data: memberRows, error: membersError } = await supabase
+        .from("profiles")
+        .select("id, nickname, role")
+        .eq("membership_approved", true)
+        .eq("is_banned", false)
+        .order("nickname", { ascending: true });
+      if (membersError) {
+        console.error("Voice room member list:", membersError);
+        return NextResponse.json({ error: "Не вдалося завантажити список учасників." }, { status: 500 });
+      }
+      members = memberRows || [];
+    }
+
     return NextResponse.json(
-      { rooms: roomsWithCounts, presence_available: livekit !== null },
+      { rooms: roomsWithCounts, members, presence_available: livekit !== null },
       {
         headers: {
           "Cache-Control": "no-store, no-cache, must-revalidate",
@@ -146,7 +161,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!(await isCommunityMember(supabase))) {
+    if (!(await isCommunityMember(supabase)) && !(await checkStaff(supabase))) {
       return NextResponse.json(
         { error: "Немає доступу до спільноти." },
         { status: 403 }
@@ -195,8 +210,9 @@ export async function POST(request: NextRequest) {
         name,
         max_participants: maxParticipants ?? null,
         created_by: user.id,
+        is_hidden: body.isHidden === true,
       })
-      .select("id, name, max_participants, created_by, created_at")
+      .select("id, name, max_participants, created_by, created_at, is_hidden")
       .single();
 
     if (error) {
@@ -227,6 +243,134 @@ export async function POST(request: NextRequest) {
   }
 }
 
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) return NextResponse.json({ error: "Потрібно увійти в акаунт." }, { status: 401 });
+    if (!(await isCommunityMember(supabase)) && !(await checkStaff(supabase))) {
+      return NextResponse.json({ error: "Керувати голосовими кімнатами може тільки керівництво." }, { status: 403 });
+    }
+
+    const body = await request.json();
+    if (body.action === "set-hidden") {
+      const id = Number(body.id);
+      if (!Number.isSafeInteger(id) || id <= 0 || typeof body.isHidden !== "boolean") {
+        return NextResponse.json({ error: "Некоректні параметри кімнати." }, { status: 400 });
+      }
+      if (body.isHidden) {
+        try {
+          const livekit = getLiveKitService();
+          const participants = await livekit.listParticipants(`verceti-voice-${id}`);
+          if (participants.length > 0) {
+            return NextResponse.json({ error: "Спочатку перемісти всіх учасників з кімнати, а потім приховуй її." }, { status: 409 });
+          }
+        } catch (error) {
+          const liveKitError = error as { status?: number; code?: string };
+          if (liveKitError.status !== 404 && liveKitError.code !== "not_found") {
+            console.error("Check room before hiding:", error);
+            return NextResponse.json({ error: "Не вдалося перевірити учасників кімнати. Спробуй пізніше." }, { status: 503 });
+          }
+        }
+      }
+
+      const { data, error } = await supabase.from("voice_rooms")
+        .update({ is_hidden: body.isHidden }).eq("id", id)
+        .select("id, name, is_hidden").maybeSingle();
+      if (error) {
+        console.error("Voice room visibility update:", error);
+        return NextResponse.json({ error: "Не вдалося змінити видимість кімнати." }, { status: 500 });
+      }
+      if (!data) return NextResponse.json({ error: "Кімнату не знайдено." }, { status: 404 });
+      if (!body.isHidden) {
+        const { error: clearAssignmentsError } = await supabase
+          .from("voice_room_assignments").delete().eq("room_id", id);
+        if (clearAssignmentsError) {
+          console.error("Clear hidden room assignments:", clearAssignmentsError);
+          return NextResponse.json({ error: "Кімнату відкрито, але не вдалося очистити призначення." }, { status: 500 });
+        }
+      }
+      return NextResponse.json({ room: data });
+    }
+
+    if (body.action === "move-member") {
+      const userId = typeof body.userId === "string" ? body.userId : "";
+      const destinationRoomId = Number(body.destinationRoomId);
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId) ||
+          !Number.isSafeInteger(destinationRoomId) || destinationRoomId <= 0) {
+        return NextResponse.json({ error: "Некоректний учасник або кімната." }, { status: 400 });
+      }
+
+      const [{ data: member, error: memberError }, { data: destination, error: destinationError }] = await Promise.all([
+        supabase.from("profiles").select("id, nickname").eq("id", userId).eq("membership_approved", true).eq("is_banned", false).maybeSingle(),
+        supabase.from("voice_rooms").select("id, name, is_hidden").eq("id", destinationRoomId).maybeSingle(),
+      ]);
+      if (memberError || destinationError) {
+        console.error("Voice room move lookup:", memberError || destinationError);
+        return NextResponse.json({ error: "Не вдалося перевірити учасника або кімнату." }, { status: 500 });
+      }
+      if (!member) return NextResponse.json({ error: "Учасника не знайдено або він не має доступу до спільноти." }, { status: 404 });
+      if (!destination) return NextResponse.json({ error: "Кімнату не знайдено." }, { status: 404 });
+
+      if (destination.is_hidden) {
+        const { error: assignError } = await supabase.from("voice_room_assignments").upsert({
+          user_id: userId, room_id: destinationRoomId, assigned_by: user.id,
+        }, { onConflict: "user_id" });
+        if (assignError) {
+          console.error("Voice room assignment:", assignError);
+          return NextResponse.json({ error: "Не вдалося призначити учасника до прихованої кімнати." }, { status: 500 });
+        }
+      } else {
+        const { error: clearError } = await supabase.from("voice_room_assignments").delete().eq("user_id", userId);
+        if (clearError) {
+          console.error("Voice room assignment cleanup:", clearError);
+          return NextResponse.json({ error: "Не вдалося оновити призначення учасника." }, { status: 500 });
+        }
+      }
+
+      let movedLive = false;
+      try {
+        const livekit = getLiveKitService();
+        const { data: allRooms, error: roomsError } = await supabase.from("voice_rooms").select("id");
+        if (roomsError) throw roomsError;
+        for (const room of allRooms || []) {
+          const sourceName = `verceti-voice-${room.id}`;
+          if (room.id === destinationRoomId) continue;
+          let participants;
+          try { participants = await livekit.listParticipants(sourceName); }
+          catch (error) {
+            const e = error as { status?: number; code?: string };
+            if (e.status === 404 || e.code === "not_found") continue;
+            throw error;
+          }
+          if (participants.some((participant) => participant.identity === userId)) {
+            await livekit.moveParticipant(sourceName, userId, `verceti-voice-${destinationRoomId}`);
+            movedLive = true;
+            break;
+          }
+        }
+      } catch (error) {
+        // Assignment is still saved; the participant can join the destination room on their next connection.
+        console.error("LiveKit participant move:", error);
+      }
+
+      return NextResponse.json({
+        success: true,
+        nickname: member.nickname,
+        destination: destination.name,
+        moved_live: movedLive,
+        message: movedLive ? "Учасника переміщено." : "Призначення збережено. Учасник потрапить до кімнати під час наступного підключення.",
+      });
+    }
+
+    return NextResponse.json({ error: "Невідома дія." }, { status: 400 });
+  } catch (error) {
+    console.error("Voice rooms PATCH error:", error);
+    return NextResponse.json({ error: "Помилка сервера під час керування кімнатами." }, { status: 500 });
+  }
+}
+
 // Видалити кімнату — тільки керівництво
 export async function DELETE(request: NextRequest) {
   try {
@@ -244,7 +388,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    if (!(await isCommunityMember(supabase))) {
+    if (!(await isCommunityMember(supabase)) && !(await checkStaff(supabase))) {
       return NextResponse.json(
         { error: "Немає доступу до спільноти." },
         { status: 403 }

@@ -23,7 +23,8 @@ function formatTime(totalSeconds: number) {
 const medals = ["🥇", "🥈", "🥉"];
 
 const roleLabels: Record<string, string> = {
-  admin: "АДМІНІСТРАТОР",
+  founder: "ЗАСНОВНИК",
+  admin: "ЗАСТАРІЛА РОЛЬ",
   leader: "ЛІДЕР",
   moderator: "МОДЕРАТОР",
   senior: "СТАРШИЙ УЧАСНИК",

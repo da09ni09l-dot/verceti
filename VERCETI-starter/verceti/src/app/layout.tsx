@@ -31,7 +31,7 @@ export default async function RootLayout({
       supabase.rpc("current_verceti_role")
     ]);
     isStaff = !staffError && staffData === true;
-    canModerateVoice = !roleError && ["admin", "leader", "moderator"].includes(String(roleData));
+    canModerateVoice = !roleError && ["founder", "leader", "moderator"].includes(String(roleData));
   }
 
   return (

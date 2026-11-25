@@ -13,6 +13,7 @@ export default async function SectionNavigation() {
   let canSeeMainMenu = false;
   let pendingApplications = 0;
   let isStaff = false;
+  let canViewApplicationDatabase = false;
 
   if (user) {
     const { data: staffStatus } = await supabase.rpc(
@@ -22,6 +23,8 @@ export default async function SectionNavigation() {
     if (staffStatus === true) {
       canSeeMainMenu = true;
       isStaff = true;
+      const { data: currentRole } = await supabase.rpc("current_verceti_role");
+      canViewApplicationDatabase = currentRole === "founder";
       const { count } = await supabase.from("applications").select("id", { count: "exact", head: true }).eq("status", "pending");
       pendingApplications = count ?? 0;
     } else {
@@ -58,9 +61,16 @@ export default async function SectionNavigation() {
         </Link>
       )}
       {isStaff && (
-        <Link className="btn" href="/preview/forms?view=pending">
-          📋 Анкети на підтвердження{pendingApplications > 0 ? ` (${pendingApplications})` : ""}
-        </Link>
+        <>
+          <Link className="btn" href="/preview/forms?view=pending">
+            📋 Анкети на підтвердження{pendingApplications > 0 ? ` (${pendingApplications})` : ""}
+          </Link>
+          {canViewApplicationDatabase && (
+            <Link className="btn" href="/preview/forms?view=database">
+              🗂️ База анкет
+            </Link>
+          )}
+        </>
       )}
       {user && <NewsBell userId={user.id} />}
     </nav>

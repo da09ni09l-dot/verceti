@@ -29,29 +29,8 @@ async function requireAdmin() {
   const { data: currentRole, error: roleError } =
     await supabase.rpc("current_verceti_role");
 
-  if (roleError || currentRole !== "admin") {
+  if (roleError || currentRole !== "founder") {
     redirect("/");
-  }
-
-  return { supabase, user };
-}
-
-async function requireStaff() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    redirect("/login");
-  }
-
-  const { data: isStaff, error: staffError } =
-    await supabase.rpc("is_verceti_staff");
-
-  if (staffError || isStaff !== true) {
-    redirect("/preview/news?status=forbidden");
   }
 
   return { supabase, user };
@@ -158,7 +137,7 @@ export async function resetMemberPassword(formData: FormData) {
   const admin = createAdminClient();
   const { data: member, error: memberError } = await admin.from("profiles").select("id, role").eq("id", memberId).single();
   if (memberError || !member) redirect("/admin?tab=members&error=member");
-  if (member.role === "admin") redirect("/admin?tab=members&error=protected");
+  if (["founder", "admin"].includes(String(member.role))) redirect("/admin?tab=members&error=protected");
   const { error } = await admin.auth.admin.updateUserById(memberId, { password });
   if (error) {
     console.error("Reset member password error:", error.message);
@@ -194,7 +173,7 @@ export async function banMember(formData: FormData) {
     redirect("/admin?tab=members&error=member");
   }
 
-  if (member.role === "admin") {
+  if (["founder", "admin"].includes(String(member.role))) {
     redirect("/admin?tab=members&error=protected");
   }
 
@@ -235,7 +214,7 @@ export async function changeMemberRole(formData: FormData) {
   if (memberId === user.id) redirect("/admin?tab=members&error=self_role");
   const { data: member, error: memberError } = await supabase.from("profiles").select("id, role").eq("id", memberId).single();
   if (memberError || !member) redirect("/admin?tab=members&error=member");
-  if (member.role === "admin") redirect("/admin?tab=members&error=protected");
+  if (["founder", "admin"].includes(String(member.role))) redirect("/admin?tab=members&error=protected");
   const { error } = await supabase.rpc("change_member_role", {
     p_member_id: memberId, p_new_role: role, p_reason: "Зміна ролі адміністратором"
   });
@@ -273,7 +252,7 @@ export async function unbanMember(formData: FormData) {
     redirect("/admin?tab=members&error=member");
   }
 
-  if (member.role === "admin") {
+  if (["founder", "admin"].includes(String(member.role))) {
     redirect("/admin?tab=members&error=protected");
   }
 
@@ -337,7 +316,7 @@ export async function deleteMember(formData: FormData) {
     redirect("/admin?tab=members&error=member");
   }
 
-  if (member.role === "admin") {
+  if (["founder", "admin"].includes(String(member.role))) {
     redirect("/admin?tab=members&error=protected");
   }
 
@@ -421,7 +400,7 @@ export async function deleteMember(formData: FormData) {
 // ==========================================
 
 export async function createNews(formData: FormData) {
-  const { supabase, user } = await requireStaff();
+  const { supabase, user } = await requireAdmin();
 
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
@@ -553,7 +532,7 @@ export async function deleteNews(formData: FormData) {
     redirect("/admin?tab=news&error=news");
   }
 
-  const { supabase } = await requireStaff();
+  const { supabase } = await requireAdmin();
 
   const { error } = await supabase
     .from("news")
@@ -577,7 +556,7 @@ export async function toggleNewsPin(formData: FormData) {
     redirect(returnToPreview ? "/preview/news?status=invalid" : "/admin?tab=news&error=news");
   }
 
-  const { supabase } = await requireStaff();
+  const { supabase } = await requireAdmin();
 
   const { data: news, error: findError } = await supabase
     .from("news")

@@ -175,13 +175,16 @@ export default async function PreviewSection({
     error: staffError
   } = await supabase.rpc("is_verceti_staff");
 
-  const isStaff = !staffError && staffStatus === true;
+  const { data: viewerRole } = await supabase.rpc("current_verceti_role");
+  const isFounder = viewerRole === "founder";
+  const isStaff = !staffError && staffStatus === true && viewerRole !== "leader";
+  const canManageVoiceRooms = viewerRole === "founder" || viewerRole === "leader" || viewerRole === "moderator";
 
   const { data: membershipStatus, error: membershipError } =
     await supabase.rpc("is_verceti_member");
   const hasCommunityAccess = !membershipError && membershipStatus === true;
 
-  if (!hasCommunityAccess && section !== "forms") {
+  if (!hasCommunityAccess && !isStaff && !(section === "voice" && canManageVoiceRooms) && section !== "forms") {
     redirect("/preview/forms");
   }
 
@@ -658,7 +661,7 @@ export default async function PreviewSection({
   if (section === "rewards") {
     const { data: role } = await supabase.rpc("current_verceti_role");
     rewardsRole = typeof role === "string" ? role : null;
-    canManageRewards = ["admin", "leader", "moderator"].includes(rewardsRole ?? "");
+    canManageRewards = rewardsRole === "founder";
 
     const now = new Date();
     const kyivParts = new Intl.DateTimeFormat("en-CA", {
@@ -831,7 +834,7 @@ export default async function PreviewSection({
             <MediaRoom />
           </>
         ) : section === "forms" ? (
-          <ApplicationsSection status={status} showPendingOnly={view === "pending" && isStaff} />
+          <ApplicationsSection status={status} showPendingOnly={view === "pending" && isStaff} showDatabaseOnly={view === "database" && isStaff} />
         ) : section === "members" ? (
           <>
             <h1>Учасники VERCETI</h1>
@@ -865,7 +868,7 @@ export default async function PreviewSection({
                         {member.game_id ? `Ігровий ID: ${member.game_id} · ` : ""}У спільноті з {new Date(member.created_at).toLocaleDateString("uk-UA")}
                       </div>
                     </div>
-                    <span className={`role ${member.role === "admin" || member.role === "leader" ? "orange" : member.role === "moderator" ? "purple" : member.role === "senior" ? "blue" : member.role === "local" ? "green" : "muted"}`}>{({ admin: "АДМІН", leader: "ЗАСНОВНИК", moderator: "МОДЕРАТОР", senior: "СТАРШИЙ", local: "УЧАСНИК", junior: "МОЛОДШИЙ" } as Record<string, string>)[member.role] ?? member.role}</span>
+                    <span className={`role ${member.role === "founder" || member.role === "admin" || member.role === "leader" ? "orange" : member.role === "moderator" ? "purple" : member.role === "senior" ? "blue" : member.role === "local" ? "green" : "muted"}`}>{({ founder: "ЗАСНОВНИК", admin: "ЗАСТАРІЛА РОЛЬ", leader: "ЛІДЕР", moderator: "МОДЕРАТОР", senior: "СТАРШИЙ", local: "УЧАСНИК", junior: "МОЛОДШИЙ" } as Record<string, string>)[member.role] ?? member.role}</span>
                     <span aria-hidden="true" style={{ color: "#bb8aff", fontSize: 18 }}>↗</span>
                   </Link>
                 ))}
@@ -1040,7 +1043,7 @@ export default async function PreviewSection({
             <h1>Новини</h1>
             <p className="muted">Новини спільноти, оголошення та події.</p>
 
-            {isStaff && (
+            {isFounder && (
               <div className="panel" style={{ marginTop: 24 }}>
                 <h2>Створити новину</h2>
 
@@ -1172,7 +1175,7 @@ export default async function PreviewSection({
                       Дата: {new Date(item.event_date ?? item.created_at).toLocaleDateString("uk-UA")}
                     </div>
 
-                    {isStaff && (
+                    {isFounder && (
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
                       <form action={toggleNewsPin}>
                         <input type="hidden" name="news_id" value={item.id} />
@@ -1320,7 +1323,7 @@ export default async function PreviewSection({
               <div className="panel" style={{ marginTop: 24 }}>
                 <h2>Правил поки що немає</h2>
                 <p className="muted">
-                  {isStaff
+                  {isFounder
                     ? "Додай перше правило за допомогою форми нижче."
                     : "Правила спільноти поки не опубліковані."}
                 </p>
@@ -1346,7 +1349,7 @@ export default async function PreviewSection({
                             flexWrap: "wrap"
                           }}
                         >
-                          {!isStaff ? (
+                          {!isFounder ? (
                             <>
                               <span style={{ color: "#bb8aff" }}>✦</span>
                               <span style={{ fontSize: 13, flex: 1 }}>
@@ -1399,7 +1402,7 @@ export default async function PreviewSection({
                             </form>
                           )}
 
-                          {isStaff && (
+                          {isFounder && (
                             <form action={deleteRule}>
                               <input
                                 type="hidden"
@@ -1425,7 +1428,7 @@ export default async function PreviewSection({
               ))
             )}
 
-            {isStaff && (
+            {isFounder && (
               <div className="panel" style={{ marginTop: 24 }}>
                 <h2>Додати нове правило</h2>
 
@@ -1487,7 +1490,7 @@ export default async function PreviewSection({
             {status === "won" && <div className="panel" style={{ marginTop: 14 }}><strong>🎉 Твій результат</strong><p style={{ marginTop: 8 }}>{(lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.title ?? "Оберт успішно зафіксовано."}</p>{(lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.description && <p className="muted" style={{ marginTop: 6 }}>{(lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.description}</p>}</div>}
             {status === "used" && <div className="panel" style={{ marginTop: 14 }}>Ти вже використав(ла) безкоштовний оберт сьогодні. Повертайся завтра!</div>}
             {status === "empty" && <div className="panel" style={{ marginTop: 14 }}>Активних призів поки немає.</div>}
-            {status === "forbidden" && <div className="panel" style={{ marginTop: 14 }}>Керувати призами можуть лише адміністратор, лідер і модератор.</div>}
+            {status === "forbidden" && <div className="panel" style={{ marginTop: 14 }}>Керувати спільними призами може лише Засновник.</div>}
             {(status === "invalid" || status === "error" || status === "spin-error") && <div className="panel" style={{ marginTop: 14 }}>Не вдалося виконати дію. Перевір дані та налаштування бази.</div>}
             <div className="panel" style={{ marginTop: 20 }}>
               <RewardsWheel prizes={rewardPrizes} alreadySpun={dailySpinUsed || status === "used"} />
@@ -1503,7 +1506,7 @@ export default async function PreviewSection({
                         {prize.description && <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>{prize.description}</p>}
                         <p className="notice-time">Вага випадіння: {prize.weight}</p>
                       </div>
-                      {(rewardsRole === "admin" || (rewardsRole === "leader" && prize.created_by === user.id)) && (
+                      {rewardsRole === "founder" && (
                         <form action={deleteRewardPrize}>
                           <input type="hidden" name="id" value={prize.id} />
                           <button className="btn" type="submit" style={{ background: "#8f303f", borderColor: "#b94b5c" }}>Видалити</button>
