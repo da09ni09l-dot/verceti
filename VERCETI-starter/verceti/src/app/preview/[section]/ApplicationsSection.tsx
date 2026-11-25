@@ -28,7 +28,7 @@ const roleLabels: Record<string, string> = {
   moderator: "Модератор",
   founder: "Засновник",
   leader: "Лідер",
-  admin: "Адміністратор",
+  admin: "Застаріла роль",
 };
 
 export default async function ApplicationsSection({
@@ -57,13 +57,15 @@ export default async function ApplicationsSection({
     "current_verceti_role"
   );
 
-  const isAdmin = ["founder", "admin", "leader"].includes(String(currentRole));
-  const canViewDatabase = isAdmin || currentRole === "leader";
+  const isFounder = currentRole === "founder";
+  const isAdmin = isFounder;
+  const canViewDatabase = isFounder;
+  const effectivePendingOnly = showPendingOnly || (isStaff && !isFounder);
 
   if (showDatabaseOnly && !canViewDatabase) {
     return (
       <div className="panel" role="alert">
-        Перегляд бази анкет доступний лише Засновнику та Лідеру.
+        Перегляд бази всіх анкет доступний лише Засновнику.
       </div>
     );
   }
@@ -78,15 +80,16 @@ export default async function ApplicationsSection({
   const { data: myProfile } = await supabase.from("profiles")
     .select("birth_day, birth_month").eq("id", user.id).maybeSingle();
 
-  const { data: applicationsData, error: applicationsError } = await supabase
+  const applicationsQuery = supabase
     .from("applications")
     .select("*")
     .order("created_at", { ascending: false });
+  const { data: applicationsData, error: applicationsError } = effectivePendingOnly
+    ? await applicationsQuery.eq("status", "pending")
+    : await applicationsQuery;
 
   const allApplications = applicationsData ?? [];
-  const applications = showPendingOnly
-    ? allApplications.filter((application) => application.status === "pending")
-    : allApplications;
+  const applications = allApplications;
 
   const userIds = Array.from(
     new Set(applications.map((application) => application.user_id))
@@ -119,7 +122,7 @@ export default async function ApplicationsSection({
 
   return (
     <>
-      <h1>{showPendingOnly ? "Анкети на підтвердження" : showDatabaseOnly ? "База анкет" : "Анкети VERCETI"}</h1>
+      <h1>{effectivePendingOnly ? "Анкети на підтвердження" : showDatabaseOnly ? "База анкет" : "Анкети VERCETI"}</h1>
 
       <p className="muted">
         Заповнення анкет та перевірка заявок учасників спільноти.
@@ -236,7 +239,7 @@ export default async function ApplicationsSection({
         </div>
       )}
 
-      {isStaff && !showPendingOnly && !showDatabaseOnly && (
+      {isFounder && !effectivePendingOnly && !showDatabaseOnly && (
         <div className="panel" style={{ marginTop: 24 }}>
           <h2>Конструктор анкети</h2>
 
@@ -525,7 +528,7 @@ export default async function ApplicationsSection({
         </div>
       )}
 
-      {isStaff && (showPendingOnly || showDatabaseOnly) && (
+      {isStaff && (effectivePendingOnly || showDatabaseOnly) && (
         <div style={{ marginTop: 28 }}>
           <h2>{showDatabaseOnly ? "Усі збережені анкети" : "Список заявок, що очікують рішення"}</h2>
 
@@ -672,7 +675,7 @@ export default async function ApplicationsSection({
                           <option value="local">Учасник</option>
                           <option value="senior">Старший учасник</option>
                           <option value="moderator">Модератор</option>
-                          <option value="leader">Лідер</option>
+                          {isFounder && <option value="leader">Лідер</option>}
                         </select>
 
                         <button className="btn" type="submit">
