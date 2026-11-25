@@ -9,14 +9,18 @@ let mainWindow;
 function isTrustedAppUrl(rawUrl) {
   try {
     const url = new URL(rawUrl);
-    return url.protocol === "https:" && (
-      url.hostname === WEBSITE_HOST ||
-      url.hostname.endsWith(".supabase.co") ||
-      url.hostname.endsWith(".supabase.in")
-    );
+    return url.protocol === "https:" && url.hostname === WEBSITE_HOST;
   } catch {
     return false;
   }
+}
+
+function isAllowedMediaRequest(permission, details) {
+  if (permission === "notifications" || permission === "display-capture") return true;
+  if (permission !== "media") return false;
+  const requestedTypes = details?.mediaTypes || [];
+  return requestedTypes.length > 0 &&
+    requestedTypes.every((type) => type === "audio" || type === "video");
 }
 
 function installMediaPermissions(appSession) {
@@ -26,9 +30,9 @@ function installMediaPermissions(appSession) {
   });
 
   appSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
-    const allowedOrigin = webContents && isTrustedAppUrl(details.requestingUrl || webContents.getURL());
-    const allowedPermission = ["media", "display-capture", "notifications"].includes(permission);
-    callback(Boolean(allowedOrigin && allowedPermission));
+    const requestingUrl = details?.requestingUrl || webContents?.getURL();
+    const allowedOrigin = Boolean(webContents && isTrustedAppUrl(requestingUrl));
+    callback(Boolean(allowedOrigin && isAllowedMediaRequest(permission, details)));
   });
 
   // Electron needs an explicit display-media handler for getDisplayMedia().
@@ -137,6 +141,20 @@ async function createWindow() {
   });
 
   mainWindow.once("ready-to-show", () => mainWindow.show());
+  mainWindow.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    if (isMainFrame && validatedURL.startsWith(WEBSITE_URL)) {
+      console.error("VERCETI page failed to load:", errorCode, errorDescription);
+      dialog.showMessageBox(mainWindow, {
+        type: "warning",
+        title: "VERCETI — немає з’єднання",
+        message: "Не вдалося відкрити VERCETI.",
+        detail: "Перевірте підключення до інтернету та перезапустіть програму.",
+        buttons: ["Закрити"],
+      }).then(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
+      });
+    }
+  });
   await mainWindow.loadURL(WEBSITE_URL);
 }
 
