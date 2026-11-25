@@ -8,6 +8,7 @@ type UnifiedTrack = {
   duration: number;
   source: "Audius" | "Jamendo" | "iTunes";
   url: string;
+  externalUrl?: string;
 };
 
 const AUDIUS_API = "https://api.audius.co/v1";
@@ -87,6 +88,7 @@ async function searchITunes(query: string): Promise<UnifiedTrack[]> {
       duration: Math.round((Number(track.trackTimeMillis) || 0) / 1000),
       source: "iTunes" as const,
       url: track.previewUrl,
+      externalUrl: track.trackViewUrl || "",
     }));
 }
 
@@ -117,7 +119,7 @@ export async function GET(request: NextRequest) {
     if (!unique.has(key)) unique.set(key, track);
   }
   const sorted = [...unique.values()].sort((a, b) => {
-    const priority = { Audius: 0, Jamendo: 1, iTunes: 2 };
+    const priority = { iTunes: 0, Audius: 1, Jamendo: 2 };
     return priority[a.source] - priority[b.source];
   });
 
