@@ -25,8 +25,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: hasCommunityAccess, error: membershipError } = await supabase.rpc("is_verceti_member");
-    if (membershipError || hasCommunityAccess !== true) {
+    const [{ data: hasCommunityAccess, error: membershipError }, { data: hasStaffAccess, error: staffError }] = await Promise.all([
+      supabase.rpc("is_verceti_member"),
+      supabase.rpc("is_verceti_staff"),
+    ]);
+    if ((membershipError || hasCommunityAccess !== true) && (staffError || hasStaffAccess !== true)) {
       return NextResponse.json(
         { error: "Голосові кімнати доступні після схвалення анкети." },
         { status: 403 }
