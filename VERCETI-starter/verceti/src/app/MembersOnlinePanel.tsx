@@ -16,12 +16,13 @@ const roleInfo: Record<
   string,
   { label: string; color: string; order: number }
 > = {
-  leader: { label: "ЗАСНОВНИК", color: "orange", order: 1 },
-  admin: { label: "АДМІНІСТРАТОР", color: "orange", order: 2 },
-  moderator: { label: "МОДЕРАТОР", color: "purple", order: 3 },
-  senior: { label: "СТАРШИЙ УЧАСНИК", color: "blue", order: 4 },
-  local: { label: "УЧАСНИК", color: "green", order: 5 },
-  junior: { label: "МОЛОДШИЙ УЧАСНИК", color: "muted", order: 6 }
+  founder: { label: "ЗАСНОВНИК", color: "orange", order: 1 },
+  leader: { label: "ЛІДЕР", color: "purple", order: 2 },
+  admin: { label: "ЗАСТАРІЛА РОЛЬ", color: "muted", order: 3 },
+  moderator: { label: "МОДЕРАТОР", color: "purple", order: 4 },
+  senior: { label: "СТАРШИЙ УЧАСНИК", color: "blue", order: 5 },
+  local: { label: "УЧАСНИК", color: "green", order: 6 },
+  junior: { label: "МОЛОДШИЙ УЧАСНИК", color: "muted", order: 7 }
 };
 
 export default function MembersOnlinePanel({
