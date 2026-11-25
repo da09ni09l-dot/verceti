@@ -731,7 +731,9 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
                           style={{
                             display: "block",
                             fontSize: 13,
-                            overflowWrap: "anywhere"
+                            overflowWrap: "anywhere",
+                            color: player.nickname_color ?? undefined,
+                            fontFamily: player.nickname_font === "orbitron" ? "Orbitron, Arial, sans-serif" : player.nickname_font === "rajdhani" ? "Rajdhani, Arial, sans-serif" : player.nickname_font === "nunito" ? "Nunito Sans, Arial, sans-serif" : player.nickname_font === "georgia" ? "Georgia, serif" : player.nickname_font === "mono" ? "monospace" : undefined
                           }}
                         >
                           {player.nickname || "Без нікнейму"}
@@ -897,7 +899,9 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
                           style={{
                             whiteSpace: "pre-wrap",
                             overflowWrap: "anywhere",
-                            margin: 0
+                            margin: 0,
+                            color: message.message_color ?? undefined,
+                            fontFamily: message.message_font === "orbitron" ? "Orbitron, Arial, sans-serif" : message.message_font === "rajdhani" ? "Rajdhani, Arial, sans-serif" : message.message_font === "nunito" ? "Nunito Sans, Arial, sans-serif" : message.message_font === "georgia" ? "Georgia, serif" : message.message_font === "mono" ? "monospace" : undefined
                           }}
                         >
                           {message.content}
