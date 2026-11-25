@@ -156,7 +156,7 @@ export async function deleteApplicationQuestion(formData: FormData) {
     redirect(`${formsPath}?status=question-invalid`);
   }
 
-  const { supabase } = await checkStaff();
+  const { supabase } = await checkFounder();
 
   const { error } = await supabase
     .from("application_questions")
@@ -309,7 +309,7 @@ export async function editApplicationAnswers(formData: FormData) {
     redirect(`${formsPath}?status=application-invalid`);
   }
 
-  const { supabase } = await checkStaff();
+  const { supabase } = await checkFounder();
 
   const { error } = await supabase.rpc("staff_update_application", {
     p_application_id: id,
