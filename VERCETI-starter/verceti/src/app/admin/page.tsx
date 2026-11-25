@@ -46,7 +46,7 @@ export default async function AdminPage({
 
   const { data: role } = await supabase.rpc("current_verceti_role");
 
-  if (!["founder", "admin", "leader"].includes(String(role))) {
+  if (role !== "founder") {
     redirect("/");
   }
 
@@ -117,7 +117,7 @@ export default async function AdminPage({
   const roleLabels: Record<string, string> = {
     founder: "Засновник",
     leader: "Лідер",
-    admin: "Адміністратор",
+    admin: "Застаріла роль",
     junior: "Молодший учасник",
     local: "Учасник",
     senior: "Старший учасник",
