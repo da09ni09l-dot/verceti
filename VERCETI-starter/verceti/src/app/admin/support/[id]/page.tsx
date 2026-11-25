@@ -47,7 +47,7 @@ export default async function AdminSupportConversation({ params, searchParams }:
   const { data: role } = await supabase.rpc("current_verceti_role");
   if (role !== "admin") redirect("/");
   const admin = createAdminClient();
-  const { data: ticket } = await admin.from("support_requests").select("*").eq("id", id).maybeSingle();
+  const { data: ticket } = await admin.from("support_requests").select("id, sender_name, subject, message, status, created_at, access_token").eq("id", id).maybeSingle();
   if (!ticket) notFound();
   const { data: replies } = await admin.from("support_messages").select("id, sender_type, message, created_at").eq("request_id", id).order("created_at", { ascending: true });
   return <main className="login-wrap"><section className="login-card" style={{ width: "100%", maxWidth: 700 }}>
