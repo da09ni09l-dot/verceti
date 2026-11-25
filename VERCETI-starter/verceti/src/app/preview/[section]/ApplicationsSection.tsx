@@ -128,7 +128,7 @@ export default async function ApplicationsSection({
         Заповнення анкет та перевірка заявок учасників спільноти.
       </p>
 
-      {!showPendingOnly && !showDatabaseOnly && (
+      {!effectivePendingOnly && !showDatabaseOnly && (
       <div className="panel" style={{ marginTop: 18 }}>
         <h2>🎂 Дата народження</h2>
         <p className="muted">Вкажи день і місяць, щоб усі учасники отримували сповіщення у твій день народження. Рік не потрібен.</p>
