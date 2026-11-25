@@ -1100,37 +1100,41 @@ export default function MusicRoom() {
                     ▶
                   </button>
 
-                  <button
-                    className="btn"
-                    type="button"
-                    disabled={saving || !track.url}
-                    onClick={() => saveCatalogTrack(track, "personal")}
-                    title="В особистий альбом"
-                  >
-                    +🎧
-                  </button>
+                  {track.source !== "iTunes" && (
+                    <>
+                      <button
+                        className="btn"
+                        type="button"
+                        disabled={saving || !track.url}
+                        onClick={() => saveCatalogTrack(track, "personal")}
+                        title="В особистий альбом"
+                      >
+                        +🎧
+                      </button>
 
-                  {isManagement && (
-                    <button
-                      className="btn"
-                      type="button"
-                      disabled={saving || !track.url}
-                      onClick={() => saveCatalogTrack(track, "shared")}
-                      title="У спільний альбом"
-                    >
-                      +🌐
-                    </button>
+                      {isManagement && (
+                        <button
+                          className="btn"
+                          type="button"
+                          disabled={saving || !track.url}
+                          onClick={() => saveCatalogTrack(track, "shared")}
+                          title="У спільний альбом"
+                        >
+                          +🌐
+                        </button>
+                      )}
+
+                      <button
+                        className="btn"
+                        type="button"
+                        disabled={saving || !track.url}
+                        onClick={() => recommendCatalogTrack(track)}
+                        title="Запропонувати керівництву"
+                      >
+                        💡
+                      </button>
+                    </>
                   )}
-
-                  <button
-                    className="btn"
-                    type="button"
-                    disabled={saving || !track.url}
-                    onClick={() => recommendCatalogTrack(track)}
-                    title="Запропонувати керівництву"
-                  >
-                    💡
-                  </button>
                 </div>
               </div>
             ))}
