@@ -51,16 +51,9 @@ export async function middleware(request: NextRequest) {
   const isMaintenancePage = request.nextUrl.pathname === "/maintenance";
   const isPublicSupport = request.nextUrl.pathname === "/support" || request.nextUrl.pathname.startsWith("/support/chat");
 
-  if (!user && !isLogin && !isMaintenancePage && !isPublicSupport && request.nextUrl.pathname !== "/setup") {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  if (user && isLogin) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
-  const pathname = request.nextUrl.pathname;
-  if (pathname !== "/maintenance") {
+  // Check maintenance mode before authentication redirects so signed-out visitors
+  // also see the maintenance page instead of the login screen.
+  if (!isMaintenancePage) {
     const { data: setting } = await supabase
       .from("site_settings")
       .select("maintenance_enabled")
@@ -83,6 +76,14 @@ export async function middleware(request: NextRequest) {
         return maintenanceResponse;
       }
     }
+  }
+
+  if (!user && !isLogin && !isMaintenancePage && !isPublicSupport && request.nextUrl.pathname !== "/setup") {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  if (user && isLogin) {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return response;
