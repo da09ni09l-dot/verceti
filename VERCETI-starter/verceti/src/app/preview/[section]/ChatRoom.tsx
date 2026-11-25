@@ -176,10 +176,9 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
       return;
     }
 
-    const { data: messageData, error: messagesError } = await supabase
-      .from("chat_messages")
-      .select("id, user_id, group_id, content, created_at")
-      .eq("group_id", selectedGroupId)
+    let messagesQuery = supabase.from("chat_messages").select("id, user_id, group_id, content, created_at");
+    messagesQuery = selectedGroupId ? messagesQuery.eq("group_id", selectedGroupId) : messagesQuery.is("group_id", null);
+    const { data: messageData, error: messagesError } = await messagesQuery
       .order("created_at", { ascending: true })
       .limit(100);
 
@@ -415,6 +414,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
         .from("chat_messages")
         .insert({
           user_id: authData.user.id,
+          group_id: selectedGroupId,
           content: messageContent
         });
 
