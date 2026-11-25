@@ -10,9 +10,7 @@ import {
   editApplicationAnswers,
   reviewApplication,
   deleteApplication,
-  setMyBirthday,
-  adminUpdateBirthday,
-} from "./application-actions";
+  } from "./application-actions";
 
 const statusLabels: Record<string, string> = {
   pending: "На перевірці",
@@ -107,12 +105,7 @@ export default async function ApplicationsSection({
   }
 
 
-  const { data: birthdayProfilesData } = isAdmin
-    ? await supabase.from("profiles").select("id, nickname, birth_day, birth_month").order("nickname")
-    : { data: [] as { id: string; nickname: string; birth_day: number | null; birth_month: number | null }[] };
-  const birthdayProfiles = birthdayProfilesData ?? [];
-
-  const myApplication = applications.find(
+   const myApplication = applications.find(
     (application) => application.user_id === user.id
   );
 
