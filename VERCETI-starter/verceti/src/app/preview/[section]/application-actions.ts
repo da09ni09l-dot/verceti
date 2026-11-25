@@ -24,13 +24,15 @@ async function getUserAndClient() {
 
 async function checkStaff() {
   const { supabase, user } = await getUserAndClient();
-
   const { data, error } = await supabase.rpc("is_verceti_staff");
+  if (error || data !== true) redirect(`${formsPath}?status=forbidden`);
+  return { supabase, user };
+}
 
-  if (error || data !== true) {
-    redirect(`${formsPath}?status=forbidden`);
-  }
-
+async function checkFounder() {
+  const { supabase, user } = await getUserAndClient();
+  const { data, error } = await supabase.rpc("current_verceti_role");
+  if (error || data !== "founder") redirect(`${formsPath}?status=forbidden`);
   return { supabase, user };
 }
 
@@ -67,7 +69,7 @@ export async function createApplicationQuestion(formData: FormData) {
     redirect(`${formsPath}?status=question-options`);
   }
 
-  const { supabase, user } = await checkStaff();
+  const { supabase, user } = await checkFounder();
 
   const { error } = await supabase
     .from("application_questions")
@@ -122,7 +124,7 @@ export async function updateApplicationQuestion(formData: FormData) {
     redirect(`${formsPath}?status=question-options`);
   }
 
-  const { supabase } = await checkStaff();
+  const { supabase } = await checkFounder();
 
   const { error } = await supabase
     .from("application_questions")
@@ -383,7 +385,7 @@ export async function deleteApplication(formData: FormData) {
     "current_verceti_role"
   );
 
-  if (roleError || !["founder", "admin", "leader"].includes(String(role))) {
+  if (roleError || role !== "founder") {
     redirect(`${formsPath}?status=forbidden`);
   }
 
@@ -451,7 +453,7 @@ export async function adminUpdateBirthday(formData: FormData) {
   }
   const { supabase } = await getUserAndClient();
   const { data: role, error: roleError } = await supabase.rpc("current_verceti_role");
-  if (roleError || !["founder", "admin", "leader"].includes(String(role))) redirect(`${formsPath}?status=forbidden`);
+  if (roleError || role !== "founder") redirect(`${formsPath}?status=forbidden`);
   const { error } = await supabase.rpc("admin_update_member_birthday", {
     p_user_id: userId, p_birth_day: birthDay, p_birth_month: birthMonth,
   });
