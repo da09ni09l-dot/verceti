@@ -100,8 +100,19 @@ async function waitForBroadcast(channel: ReturnType<typeof supabase.channel>) {
 
 function CallMedia({ mode }: { mode: "audio" | "video" }) {
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant();
+  const [microphoneError, setMicrophoneError] = useState("");
+  useEffect(() => {
+    let active = true;
+    void localParticipant.setMicrophoneEnabled(true).then(() => {
+      if (active) setMicrophoneError("");
+    }).catch((error) => {
+      console.error("Call microphone publish failed:", error);
+      if (active) setMicrophoneError("Не вдалося ввімкнути мікрофон. Перевір дозвіл браузера та налаштування звуку пристрою.");
+    });
+    return () => { active = false; };
+  }, [localParticipant]);
   const participants = useParticipants();
   const tracks = useTracks([Track.Source.Camera]);
   useEffect(() => { if (mode === "video") void localParticipant.setCameraEnabled(true).catch(() => undefined); }, [mode, localParticipant]);
-  return <div className="call-media"><p>У дзвінку: {participants.length}</p>{mode === "video" && <div className="voice-camera-grid">{tracks.map((track) => <div className="voice-camera-track" key={track.publication.trackSid}><VideoTrack trackRef={track}/><p>{track.participant.name || track.participant.identity}</p></div>)}</div>}<div className="voice-action-group"><button className="voice-action-button" onClick={() => void localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}>{isMicrophoneEnabled ? <MicOff size={17}/> : <Mic size={17}/>} Мікрофон</button>{mode === "video" && <button className="voice-action-button" onClick={() => void localParticipant.setCameraEnabled(!isCameraEnabled)}>{isCameraEnabled ? <VideoOff size={17}/> : <Video size={17}/>} Камера</button>}</div></div>;
+  return <div className="call-media"><p>У дзвінку: {participants.length}</p>{microphoneError && <p className="voice-error" role="alert">{microphoneError}</p>}{mode === "video" && <div className="voice-camera-grid">{tracks.map((track) => <div className="voice-camera-track" key={track.publication.trackSid}><VideoTrack trackRef={track}/><p>{track.participant.name || track.participant.identity}</p></div>)}</div>}<div className="voice-action-group"><button className="voice-action-button" onClick={() => void localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}>{isMicrophoneEnabled ? <MicOff size={17}/> : <Mic size={17}/>} {isMicrophoneEnabled ? "Вимкнути мікрофон" : "Увімкнути мікрофон"}</button>{mode === "video" && <button className="voice-action-button" onClick={() => void localParticipant.setCameraEnabled(!isCameraEnabled)}>{isCameraEnabled ? <VideoOff size={17}/> : <Video size={17}/>} Камера</button>}</div></div>;
 }
