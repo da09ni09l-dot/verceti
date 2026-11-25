@@ -108,12 +108,13 @@ export default async function ApplicationsSection({
 
   return (
     <>
-      <h1>Анкети VERCETI</h1>
+      <h1>{showPendingOnly ? "Анкети на підтвердження" : "Анкети VERCETI"}</h1>
 
       <p className="muted">
         Заповнення анкет та перевірка заявок учасників спільноти.
       </p>
 
+      {!showPendingOnly && (
       <div className="panel" style={{ marginTop: 18 }}>
         <h2>🎂 Дата народження</h2>
         <p className="muted">Вкажи день і місяць, щоб усі учасники отримували сповіщення у твій день народження. Рік не потрібен.</p>
@@ -135,6 +136,7 @@ export default async function ApplicationsSection({
           <button className="btn" type="submit">Зберегти</button>
         </form>
       </div>
+      )}
 
       {status === "question-created" && (
         <div className="panel">Запитання успішно додано.</div>
@@ -223,7 +225,7 @@ export default async function ApplicationsSection({
         </div>
       )}
 
-      {isStaff && (
+      {isStaff && !showPendingOnly && (
         <div className="panel" style={{ marginTop: 24 }}>
           <h2>Конструктор анкети</h2>
 
@@ -512,9 +514,9 @@ export default async function ApplicationsSection({
         </div>
       )}
 
-      {isStaff && (
+      {isStaff && showPendingOnly && (
         <div style={{ marginTop: 28 }}>
-          <h2>{showPendingOnly ? "Анкети на підтвердження" : "Анкети учасників"}</h2>
+          <h2>Список заявок, що очікують рішення</h2>
 
           {applications.length === 0 ? (
             <div className="panel">
