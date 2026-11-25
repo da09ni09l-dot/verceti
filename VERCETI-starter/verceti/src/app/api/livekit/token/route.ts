@@ -67,16 +67,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: isStaff } = await supabase.rpc("is_verceti_staff");
-    if (room.is_hidden && isStaff !== true) {
+    if (room.is_hidden) {
+      const { data: staff } = await supabase.rpc("is_verceti_staff");
+      if (staff !== true) {
         const { data: assignment, error: assignmentError } = await supabase
           .from("voice_room_assignments").select("room_id").eq("user_id", user.id).maybeSingle();
         if (assignmentError) {
           console.error("Hidden voice room assignment lookup:", assignmentError);
           return NextResponse.json({ error: "Не вдалося перевірити доступ до прихованої кімнати." }, { status: 500 });
         }
-      if (assignment?.room_id !== roomId) {
-        return NextResponse.json({ error: "Ця голосова кімната прихована. Доступ має надати керівництво." }, { status: 403 });
+        if (assignment?.room_id !== roomId) {
+          return NextResponse.json({ error: "Ця голосова кімната прихована. Доступ має надати керівництво." }, { status: 403 });
+        }
       }
     }
 
@@ -86,7 +88,7 @@ export async function POST(request: NextRequest) {
       console.error("Voice room assignment lookup:", assignedRoomError);
       return NextResponse.json({ error: "Не вдалося перевірити призначену кімнату." }, { status: 500 });
     }
-    if (isStaff !== true && assignedRoom && assignedRoom.room_id !== roomId) {
+    if (assignedRoom && assignedRoom.room_id !== roomId) {
       return NextResponse.json({ error: "Керівництво призначило тобі іншу голосову кімнату." }, { status: 403 });
     }
 
