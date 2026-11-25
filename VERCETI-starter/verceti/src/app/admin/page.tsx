@@ -13,6 +13,7 @@ import {
   createNews,
   deleteNews,
   toggleNewsPin,
+  setMaintenanceMode,
 } from "./actions";
 import { reviewPasswordChangeRequest } from "../preview/[section]/password-actions";
 
@@ -47,6 +48,12 @@ export default async function AdminPage({
   if (role !== "admin") {
     redirect("/");
   }
+
+  const { data: maintenanceSettings } = await supabase
+    .from("site_settings")
+    .select("maintenance_enabled, maintenance_message")
+    .eq("id", true)
+    .maybeSingle();
 
   const params = await searchParams;
   const allowedTabs = ["overview", "accounts", "news", "members"] as const;
@@ -196,6 +203,42 @@ export default async function AdminPage({
             </div>
           </div>
         )}
+
+        {params.maintenance_updated === "1" && (
+          <p style={{ color: "#8ee6a5", fontSize: 13 }}>Налаштування режиму обслуговування збережено.</p>
+        )}
+        {params.error === "maintenance" && (
+          <p style={{ color: "#ff8f9f", fontSize: 13 }}>Не вдалося змінити режим обслуговування.</p>
+        )}
+
+        <section className="panel" style={{ marginTop: 20 }}>
+          <h2>Технічне обслуговування</h2>
+          <p className="muted" style={{ fontSize: 12, lineHeight: 1.6 }}>
+            Коли режим увімкнено, учасники не зможуть відкривати сторінки або виконувати дії. Адміністратори збережуть доступ до панелі керування.
+          </p>
+          <p style={{ color: maintenanceSettings?.maintenance_enabled ? "#ffb36b" : "#8ee6a5", fontWeight: 700, fontSize: 13 }}>
+            {maintenanceSettings?.maintenance_enabled ? "РЕЖИМ УВІМКНЕНО" : "САЙТ ПРАЦЮЄ У ЗВИЧАЙНОМУ РЕЖИМІ"}
+          </p>
+          <form action={setMaintenanceMode} style={{ marginTop: 12 }}>
+            <label htmlFor="maintenance-message">Повідомлення для відвідувачів</label>
+            <textarea
+              id="maintenance-message"
+              name="message"
+              rows={3}
+              maxLength={300}
+              defaultValue={maintenanceSettings?.maintenance_message ?? "Сайт тимчасово оновлюється. Будь ласка, зайдіть пізніше."}
+              style={{ width: "100%", marginTop: 6, resize: "vertical" }}
+            />
+            <input type="hidden" name="enabled" value={maintenanceSettings?.maintenance_enabled ? "false" : "true"} />
+            <button
+              className="btn"
+              type="submit"
+              style={{ width: "100%", marginTop: 12, background: maintenanceSettings?.maintenance_enabled ? "#287a4b" : "#8f303f", borderColor: maintenanceSettings?.maintenance_enabled ? "#48a86e" : "#b94b5c" }}
+            >
+              {maintenanceSettings?.maintenance_enabled ? "Вимкнути режим обслуговування" : "Увімкнути режим обслуговування"}
+            </button>
+          </form>
+        </section>
 
         {params.created === "1" && (
           <p style={{ color: "#8ee6a5", fontSize: 13 }}>
