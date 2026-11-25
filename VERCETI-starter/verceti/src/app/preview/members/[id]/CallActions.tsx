@@ -10,7 +10,7 @@ type CallInvite = { callId: string; callerId: string; callerName: string; mode: 
 
 export default function CallActions({ targetId, currentUserId, listenForCalls = false }: { targetId?: string; currentUserId: string; listenForCalls?: boolean }) {
   const [invite, setInvite] = useState<CallInvite | null>(null);
-  const [session, setSession] = useState<{ token: string; serverUrl: string; roomName: string; mode: "audio" | "video" } | null>(null);
+  const [session, setSession] = useState<{ token: string; serverUrl: string; roomName: string; mode: "audio" | "video"; callId: string; otherUserId: string } | null>(null);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [supabase] = useState(() => createClient());
@@ -19,11 +19,10 @@ export default function CallActions({ targetId, currentUserId, listenForCalls = 
     const channel = supabase.channel(`user-calls:${currentUserId}`);
     channel.on("broadcast", { event: "incoming-call" }, ({ payload }) => {
       const incoming = payload as CallInvite;
-      if (incoming.targetId === currentUserId) setInvite(incoming);
-    });
+      if (incoming.targetId === currentUserId) setInvite(incoming);\n    });\n    channel.on("broadcast", { event: "call-ended" }, ({ payload }) => {\n      if (session?.callId && (payload as { callId?: string }).callId === session.callId) setSession(null);\n    });
     channel.subscribe();
     return () => { void supabase.removeChannel(channel); };
-  }, [currentUserId, listenForCalls, supabase]);
+  }, [currentUserId, listenForCalls, supabase, session?.callId]);
 
   async function startCall(mode: "audio" | "video") {
     if (busy || session) return;
@@ -37,7 +36,7 @@ export default function CallActions({ targetId, currentUserId, listenForCalls = 
       await channel.subscribe();
       await channel.send({ type: "broadcast", event: "incoming-call", payload: { callId, callerId: currentUserId, callerName: "Учасник VERCETI", mode, targetId } });
       await supabase.removeChannel(channel);
-      setSession(data);
+      setSession({ ...data, callId, otherUserId: targetId });
     } catch (error) { setStatus(error instanceof Error ? error.message : "Помилка дзвінка."); }
     finally { setBusy(false); }
   }
@@ -49,17 +48,16 @@ export default function CallActions({ targetId, currentUserId, listenForCalls = 
       const response = await fetch("/api/livekit/call-token", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ targetId: invite.callerId, callId: invite.callId, mode: invite.mode }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Не вдалося прийняти дзвінок.");
-      setSession(data); setInvite(null);
+      setSession({ ...data, callId: invite.callId, otherUserId: invite.callerId }); setInvite(null);
     } catch (error) { setStatus(error instanceof Error ? error.message : "Помилка підключення."); }
     finally { setBusy(false); }
   }
 
-  return (
-    <div className={targetId ? "member-call-actions" : "global-call-listener"}>
+  async function endCall() {\n    if (!session) return;\n    const channel = supabase.channel(`user-calls:${session.otherUserId}`);\n    await channel.subscribe();\n    await channel.send({ type: "broadcast", event: "call-ended", payload: { callId: session.callId } });\n    await supabase.removeChannel(channel);\n    setSession(null);\n  }\n\n  return (\n    <div className={targetId ? "member-call-actions" : "global-call-listener"}>
       {targetId && <><button className="btn" type="button" disabled={busy || !!session} onClick={() => void startCall("audio")}><Phone size={16}/> Зателефонувати</button><button className="btn" type="button" disabled={busy || !!session} onClick={() => void startCall("video")}><Video size={16}/> Відеодзвінок</button></>}
       {status && <p className="voice-error" role="alert">{status}</p>}
       {invite && !session && <div className="call-incoming panel" role="dialog" aria-label="Вхідний дзвінок"><strong>{invite.callerName} телефонує</strong><p>{invite.mode === "video" ? "Відеодзвінок" : "Аудіодзвінок"}</p><button className="btn" disabled={busy} onClick={() => void answerCall()}><Phone size={16}/> Прийняти</button><button className="tag" onClick={() => setInvite(null)}><PhoneOff size={16}/> Відхилити</button></div>}
-      {session && <div className="call-session panel"><div className="call-session-head"><strong>{session.mode === "video" ? "Відеодзвінок" : "Аудіодзвінок"}</strong><button className="tag" onClick={() => setSession(null)}><X size={16}/> Завершити</button></div><LiveKitRoom token={session.token} serverUrl={session.serverUrl} connect audio video={false} onDisconnected={() => setSession(null)}><RoomAudioRenderer/><CallMedia mode={session.mode}/></LiveKitRoom></div>}
+      {session && <div className="call-session panel"><div className="call-session-head"><strong>{session.mode === "video" ? "Відеодзвінок" : "Аудіодзвінок"}</strong><button className="tag" onClick={() => void endCall()}><X size={16}/> Завершити</button></div><LiveKitRoom token={session.token} serverUrl={session.serverUrl} connect audio video={false} onDisconnected={() => setSession(null)}><RoomAudioRenderer/><CallMedia mode={session.mode}/></LiveKitRoom></div>}
     </div>
   );
 }
