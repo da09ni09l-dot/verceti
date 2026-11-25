@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { spinRewards, spinBirthdayRewards } from "./rewards-actions";
+import { spinRewards } from "./rewards-actions";
 
 type Prize = {
   id: string;
@@ -15,20 +15,14 @@ const COLORS = ["#7c3aed", "#db2777", "#2563eb", "#0891b2", "#16a34a", "#d97706"
 export default function RewardsWheel({
   prizes,
   alreadySpun,
-  birthdayEligible,
-  birthdayAlreadySpun,
 }: {
   prizes: Prize[];
   alreadySpun: boolean;
-  birthdayEligible: boolean;
-  birthdayAlreadySpun: boolean;
 }) {
   const [hasSpun, setHasSpun] = useState(alreadySpun);
-  const [birthdayUsed, setBirthdayUsed] = useState(birthdayAlreadySpun);
   const [busy, setBusy] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [wonPrize, setWonPrize] = useState<{ title: string; description: string } | null>(null);
-  const [birthdayPrize, setBirthdayPrize] = useState<{ title: string; description: string } | null>(null);
   const [error, setError] = useState("");
 
   const totalWeight = prizes.reduce((total, prize) => total + prize.weight, 0);
@@ -92,43 +86,6 @@ export default function RewardsWheel({
     }
   }
 
-  async function handleBirthdaySpin() {
-    if (busy || birthdayUsed || !birthdayEligible || prizes.length === 0) return;
-    setBusy(true);
-    setError("");
-    setBirthdayPrize(null);
-    try {
-      const result = await spinBirthdayRewards();
-      if (!result.ok) {
-        setError(
-          result.error === "used"
-            ? "Святковий оберт цього року вже використано."
-            : result.error === "not_birthday"
-              ? "Святковий оберт доступний лише в день народження."
-              : result.error === "empty"
-                ? "Активних призів поки немає."
-                : result.error === "unauthorized"
-                  ? "Увійди до акаунта, щоб отримати подарунок."
-                  : "Не вдалося виконати святковий оберт. Спробуй ще раз."
-        );
-        if (result.error === "used") setBirthdayUsed(true);
-        setBusy(false);
-        return;
-      }
-      if (!animateToPrize(result.prize.id)) {
-        setError("Святковий приз отримано, але його сектор не знайдено. Онови сторінку.");
-        setBirthdayUsed(true);
-        setBusy(false);
-        return;
-      }
-      setBirthdayPrize({ title: result.prize.title, description: result.prize.description });
-      setBirthdayUsed(true);
-    } catch {
-      setError("Не вдалося зв’язатися із сервером. Спробуй ще раз.");
-      setBusy(false);
-    }
-  }
-
   return (
     <div className="rewards-wheel-panel">
       <div className="rewards-wheel-layout">
@@ -167,31 +124,6 @@ export default function RewardsWheel({
             >
               {busy ? "Визначаємо результат..." : "🎡 Крутити рулетку"}
             </button>
-          )}
-
-          {birthdayEligible && (
-            <div className="panel" style={{ marginTop: 16 }}>
-              <h3>🎂 Подарунок до дня народження</h3>
-              <p className="muted">Для тебе доступний один безкоштовний святковий оберт.</p>
-              {birthdayUsed ? (
-                <p className="page-note">Святковий оберт цього року вже використано.</p>
-              ) : (
-                <button
-                  className="btn"
-                  type="button"
-                  disabled={busy || prizes.length === 0}
-                  onClick={handleBirthdaySpin}
-                  style={{ width: "100%", marginTop: 10 }}
-                >
-                  🎁 Забрати безкоштовну рулетку
-                </button>
-              )}
-              {birthdayPrize && (
-                <p className="page-note" style={{ marginTop: 10 }}>
-                  🎉 Випало: {birthdayPrize.title} {birthdayPrize.description}
-                </p>
-              )}
-            </div>
           )}
 
           {error && <p className="page-note" role="alert" style={{ marginTop: 12 }}>{error}</p>}
