@@ -176,6 +176,8 @@ export default async function PreviewSection({
   } = await supabase.rpc("is_verceti_staff");
 
   const isStaff = !staffError && staffStatus === true;
+  const { data: viewerRole } = await supabase.rpc("current_verceti_role");
+  const isFounder = viewerRole === "founder";
 
   const { data: membershipStatus, error: membershipError } =
     await supabase.rpc("is_verceti_member");
@@ -1040,7 +1042,7 @@ export default async function PreviewSection({
             <h1>Новини</h1>
             <p className="muted">Новини спільноти, оголошення та події.</p>
 
-            {isStaff && (
+            {isFounder && (
               <div className="panel" style={{ marginTop: 24 }}>
                 <h2>Створити новину</h2>
 
@@ -1172,7 +1174,7 @@ export default async function PreviewSection({
                       Дата: {new Date(item.event_date ?? item.created_at).toLocaleDateString("uk-UA")}
                     </div>
 
-                    {isStaff && (
+                    {isFounder && (
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
                       <form action={toggleNewsPin}>
                         <input type="hidden" name="news_id" value={item.id} />
@@ -1320,7 +1322,7 @@ export default async function PreviewSection({
               <div className="panel" style={{ marginTop: 24 }}>
                 <h2>Правил поки що немає</h2>
                 <p className="muted">
-                  {isStaff
+                  {isFounder
                     ? "Додай перше правило за допомогою форми нижче."
                     : "Правила спільноти поки не опубліковані."}
                 </p>
@@ -1346,7 +1348,7 @@ export default async function PreviewSection({
                             flexWrap: "wrap"
                           }}
                         >
-                          {!isStaff ? (
+                          {!isFounder ? (
                             <>
                               <span style={{ color: "#bb8aff" }}>✦</span>
                               <span style={{ fontSize: 13, flex: 1 }}>
@@ -1399,7 +1401,7 @@ export default async function PreviewSection({
                             </form>
                           )}
 
-                          {isStaff && (
+                          {isFounder && (
                             <form action={deleteRule}>
                               <input
                                 type="hidden"
@@ -1425,7 +1427,7 @@ export default async function PreviewSection({
               ))
             )}
 
-            {isStaff && (
+            {isFounder && (
               <div className="panel" style={{ marginTop: 24 }}>
                 <h2>Додати нове правило</h2>
 
