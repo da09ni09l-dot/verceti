@@ -8,12 +8,12 @@ import { createClient } from "@/lib/supabase/client";
 
 type CallInvite = { callId: string; callerId: string; callerName: string; mode: "audio" | "video"; targetId: string };
 
-export default function CallActions({ targetId, targetName, currentUserId }: { targetId: string; targetName: string; currentUserId: string }) {
+export default function CallActions({ targetId, currentUserId }: { targetId: string; currentUserId: string }) {
   const [invite, setInvite] = useState<CallInvite | null>(null);
   const [session, setSession] = useState<{ token: string; serverUrl: string; roomName: string; mode: "audio" | "video" } | null>(null);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
 
   useEffect(() => {
     const channel = supabase.channel(`user-calls:${currentUserId}`);
