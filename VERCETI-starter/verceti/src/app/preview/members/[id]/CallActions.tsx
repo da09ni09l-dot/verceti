@@ -15,11 +15,16 @@ export default function CallActions({ targetId, currentUserId, listenForCalls = 
   const [busy, setBusy] = useState(false);
   const [supabase] = useState(() => createClient());
 
-  useEffect(() => {\n    if (!listenForCalls) return;
+  useEffect(() => {
+    if (!listenForCalls) return;
     const channel = supabase.channel(`user-calls:${currentUserId}`);
     channel.on("broadcast", { event: "incoming-call" }, ({ payload }) => {
       const incoming = payload as CallInvite;
-      if (incoming.targetId === currentUserId) setInvite(incoming);\n    });\n    channel.on("broadcast", { event: "call-ended" }, ({ payload }) => {\n      if (session?.callId && (payload as { callId?: string }).callId === session.callId) setSession(null);\n    });
+      if (incoming.targetId === currentUserId) setInvite(incoming);
+    });
+    channel.on("broadcast", { event: "call-ended" }, ({ payload }) => {
+      if (session?.callId && (payload as { callId?: string }).callId === session.callId) setSession(null);
+    });
     channel.subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [currentUserId, listenForCalls, supabase, session?.callId]);
@@ -29,7 +34,8 @@ export default function CallActions({ targetId, currentUserId, listenForCalls = 
     setBusy(true); setStatus("");
     try {
       const callId = crypto.randomUUID();
-      if (!targetId) return;\n      const response = await fetch("/api/livekit/call-token", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ targetId, callId, mode }) });
+      if (!targetId) return;
+      const response = await fetch("/api/livekit/call-token", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ targetId, callId, mode }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Не вдалося почати дзвінок.");
       const channel = supabase.channel(`user-calls:${targetId}`);
@@ -53,7 +59,26 @@ export default function CallActions({ targetId, currentUserId, listenForCalls = 
     finally { setBusy(false); }
   }
 
-  async function rejectCall() {\n    if (!invite) return;\n    const channel = supabase.channel(`user-calls:${invite.callerId}`);\n    await channel.subscribe();\n    await channel.send({ type: "broadcast", event: "call-ended", payload: { callId: invite.callId } });\n    await supabase.removeChannel(channel);\n    setInvite(null);\n  }\n\n  async function endCall() {\n    if (!session) return;\n    const channel = supabase.channel(`user-calls:${session.otherUserId}`);\n    await channel.subscribe();\n    await channel.send({ type: "broadcast", event: "call-ended", payload: { callId: session.callId } });\n    await supabase.removeChannel(channel);\n    setSession(null);\n  }\n\n  return (\n    <div className={targetId ? "member-call-actions" : "global-call-listener"}>
+  async function rejectCall() {
+    if (!invite) return;
+    const channel = supabase.channel(`user-calls:${invite.callerId}`);
+    await channel.subscribe();
+    await channel.send({ type: "broadcast", event: "call-ended", payload: { callId: invite.callId } });
+    await supabase.removeChannel(channel);
+    setInvite(null);
+  }
+
+  async function endCall() {
+    if (!session) return;
+    const channel = supabase.channel(`user-calls:${session.otherUserId}`);
+    await channel.subscribe();
+    await channel.send({ type: "broadcast", event: "call-ended", payload: { callId: session.callId } });
+    await supabase.removeChannel(channel);
+    setSession(null);
+  }
+
+  return (
+    <div className={targetId ? "member-call-actions" : "global-call-listener"}>
       {targetId && <><button className="btn" type="button" disabled={busy || !!session} onClick={() => void startCall("audio")}><Phone size={16}/> Зателефонувати</button><button className="btn" type="button" disabled={busy || !!session} onClick={() => void startCall("video")}><Video size={16}/> Відеодзвінок</button></>}
       {status && <p className="voice-error" role="alert">{status}</p>}
       {invite && !session && <div className="call-incoming panel" role="dialog" aria-label="Вхідний дзвінок"><strong>{invite.callerName} телефонує</strong><p>{invite.mode === "video" ? "Відеодзвінок" : "Аудіодзвінок"}</p><button className="btn" disabled={busy} onClick={() => void answerCall()}><Phone size={16}/> Прийняти</button><button className="tag" onClick={() => void rejectCall()}><PhoneOff size={16}/> Відхилити</button></div>}
