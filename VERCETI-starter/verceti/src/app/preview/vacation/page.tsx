@@ -23,6 +23,8 @@ export default async function VacationPage({ searchParams }: { searchParams: Pro
   if (membershipError || membershipStatus !== true) redirect("/preview/forms");
   const { data: isStaff, error: staffError } = await supabase.rpc("is_verceti_staff");
   const canReview = !staffError && isStaff === true;
+  const { data: role } = await supabase.rpc("current_verceti_role");
+  const canDelete = ["admin", "leader"].includes(String(role ?? ""));
 
   let query = supabase.from("vacation_requests")
     .select("id, user_id, start_date, end_date, reason, status, created_at")
@@ -80,7 +82,7 @@ export default async function VacationPage({ searchParams }: { searchParams: Pro
                     <p style={{ marginTop: 8, whiteSpace: "pre-wrap" }}>{request.reason}</p>
                     <p className="notice-time" style={{ marginTop: 8 }}>Статус: {statusLabels[request.status]}</p>
                   </div>
-                  {canReview && <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{request.status === "pending" && <>
+                  {(canReview && request.status === "pending" || canDelete) && <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{canReview && request.status === "pending" && <>
                     <form action={reviewVacationRequest}><input type="hidden" name="id" value={request.id} /><input type="hidden" name="decision" value="approved" /><button className="btn" type="submit">Схвалити</button></form>
                     <form action={reviewVacationRequest}><input type="hidden" name="id" value={request.id} /><input type="hidden" name="decision" value="rejected" /><button className="btn secondary" type="submit">Відхилити</button></form>
                   </div>}
