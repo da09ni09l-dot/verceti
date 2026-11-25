@@ -139,14 +139,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Use the community nickname in the participant metadata; never expose email or user ID.
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("nickname")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error("Voice participant profile lookup:", profileError.message);
+      return NextResponse.json(
+        { error: "Не вдалося завантажити ім’я учасника." },
+        { status: 500 }
+      );
+    }
+
+    const participantName =
+      typeof profile?.nickname === "string" && profile.nickname.trim()
+        ? profile.nickname.trim()
+        : "Учасник";
+
     // Створення токена
     const accessToken = new AccessToken(apiKey, apiSecret, {
       identity: user.id,
-      name:
-        user.user_metadata?.display_name ||
-        user.user_metadata?.full_name ||
-        user.email ||
-        "Учасник",
+      name: participantName,
       ttl: "2h",
     });
 
