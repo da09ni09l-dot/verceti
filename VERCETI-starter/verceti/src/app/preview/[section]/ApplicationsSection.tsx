@@ -57,13 +57,13 @@ export default async function ApplicationsSection({
     "current_verceti_role"
   );
 
-  const isAdmin = currentRole === "founder" || currentRole === "admin";
+  const isAdmin = ["founder", "admin", "leader"].includes(String(currentRole));
   const canViewDatabase = isAdmin || currentRole === "leader";
 
   if (showDatabaseOnly && !canViewDatabase) {
     return (
       <div className="panel" role="alert">
-        Перегляд бази анкет доступний лише засновнику та лідеру.
+        Перегляд бази анкет доступний лише Засновнику та Лідеру.
       </div>
     );
   }
