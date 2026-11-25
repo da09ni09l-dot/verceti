@@ -56,7 +56,7 @@ const actionLabels: Record<string, string> = {
 };
 
 const roleLabels: Record<string, string> = {
-  admin: "Адміністратор", leader: "Лідер", moderator: "Модератор",
+  founder: "Засновник", admin: "Застаріла роль", leader: "Лідер", moderator: "Модератор",
   senior: "Старший учасник", local: "Учасник", junior: "Молодший учасник"
 };
 
