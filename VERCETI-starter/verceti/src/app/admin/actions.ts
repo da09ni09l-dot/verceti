@@ -556,7 +556,7 @@ export async function toggleNewsPin(formData: FormData) {
     redirect(returnToPreview ? "/preview/news?status=invalid" : "/admin?tab=news&error=news");
   }
 
-  const { supabase } = await requireStaff();
+  const { supabase } = await requireAdmin();
 
   const { data: news, error: findError } = await supabase
     .from("news")
