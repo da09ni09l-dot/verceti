@@ -3484,3 +3484,18 @@ td {
   text-align: left;
   text-decoration: none;
 }
+
+/* Mobile drawer must sit above its dimming backdrop so links remain bright and tappable. */
+@media (max-width: 760px) {
+  .app-shell .sidebar {
+    z-index: 1102;
+  }
+
+  .mobile-menu-backdrop {
+    z-index: 1100;
+  }
+
+  .mobile-menu-toggle {
+    z-index: 1105;
+  }
+}
