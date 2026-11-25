@@ -340,57 +340,42 @@ export async function deleteMember(formData: FormData) {
     redirect("/admin?tab=members&error=protected");
   }
 
+  // Preserve shared records while detaching author/reviewer references.
   const detachOperations = [
-    admin
-      .from("application_questions")
-      .update({ created_by: null })
-      .eq("created_by", memberId),
-
-    admin
-      .from("applications")
-      .update({ reviewed_by: null })
-      .eq("reviewed_by", memberId),
-
-    admin
-      .from("disciplinary_actions")
-      .update({ issued_by: null })
-      .eq("issued_by", memberId),
-
-    admin
-      .from("moderation_actions")
-      .update({ moderator_id: null })
-      .eq("moderator_id", memberId),
-
-    admin
-      .from("role_history")
-      .update({ changed_by: null })
-      .eq("changed_by", memberId),
-
-    admin
-      .from("test_permissions")
-      .update({ granted_by: null })
-      .eq("granted_by", memberId),
-
-    admin
-      .from("tests")
-      .update({ created_by: null })
-      .eq("created_by", memberId),
-
-    admin
-      .from("rewards_prizes")
-      .update({ created_by: null })
-      .eq("created_by", memberId),
+    admin.from("application_questions").update({ created_by: null }).eq("created_by", memberId),
+    admin.from("applications").update({ reviewed_by: null }).eq("reviewed_by", memberId),
+    admin.from("disciplinary_actions").update({ issued_by: null }).eq("issued_by", memberId),
+    admin.from("moderation_actions").update({ moderator_id: null }).eq("moderator_id", memberId),
+    admin.from("role_history").update({ changed_by: null }).eq("changed_by", memberId),
+    admin.from("test_permissions").update({ granted_by: null }).eq("granted_by", memberId),
+    admin.from("tests").update({ created_by: null }).eq("created_by", memberId),
+    admin.from("rewards_prizes").update({ created_by: null }).eq("created_by", memberId),
+    admin.from("news").update({ created_by: null }).eq("created_by", memberId),
+    admin.from("community_rules").update({ updated_by: null }).eq("updated_by", memberId),
+    admin.from("rules_history").update({ changed_by: null }).eq("changed_by", memberId),
   ];
 
   const detachResults = await Promise.all(detachOperations);
-
   const detachError = detachResults.find((result) => result.error);
-
   if (detachError?.error) {
-    console.error(
-      "Detach member references error:",
-      detachError.error.message
-    );
+    console.error("Detach member references error:", detachError.error.message);
+    redirect("/admin?tab=members&error=delete_cleanup");
+  }
+
+  // Remove rows owned by this member where the FK intentionally preserves
+  // records by default; shared content and reward-spin history stay intact.
+  const ownedDataDeletes = [
+    admin.from("applications").delete().eq("user_id", memberId),
+    admin.from("disciplinary_actions").delete().eq("member_id", memberId),
+    admin.from("moderation_actions").delete().eq("member_id", memberId),
+    admin.from("role_history").delete().eq("member_id", memberId),
+    admin.from("test_permissions").delete().eq("user_id", memberId),
+    admin.from("test_results").delete().eq("user_id", memberId),
+  ];
+  const ownedDataResults = await Promise.all(ownedDataDeletes);
+  const ownedDataError = ownedDataResults.find((result) => result.error);
+  if (ownedDataError?.error) {
+    console.error("Delete member-owned data error:", ownedDataError.error.message);
     redirect("/admin?tab=members&error=delete_cleanup");
   }
 
@@ -417,16 +402,6 @@ export async function deleteMember(formData: FormData) {
       console.error("Delete member chat media error:", mediaError.message);
       redirect("/admin?tab=members&error=delete_cleanup");
     }
-  }
-
-  const { error: resultsError } = await admin
-    .from("test_results")
-    .delete()
-    .eq("user_id", memberId);
-
-  if (resultsError) {
-    console.error("Delete test results error:", resultsError.message);
-    redirect("/admin?tab=members&error=delete_cleanup");
   }
 
   const { error: deleteError } =
