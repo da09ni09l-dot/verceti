@@ -2528,7 +2528,7 @@ td {
     z-index: 1002;
   }
 
-  .sidebar:has(.mobile-menu-open) {
+  .app-shell:has(.mobile-menu-toggle.mobile-menu-open) .sidebar {
     transform: translateX(0);
     visibility: visible;
   }
@@ -3105,7 +3105,7 @@ td {
     -webkit-overflow-scrolling: touch;
   }
 
-  .sidebar:has(.mobile-menu-open) {
+  .app-shell:has(.mobile-menu-toggle.mobile-menu-open) .sidebar {
     transform: translate3d(0, 0, 0);
     visibility: visible;
   }
