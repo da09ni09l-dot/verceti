@@ -259,6 +259,22 @@ export async function PATCH(request: NextRequest) {
       if (!Number.isSafeInteger(id) || id <= 0 || typeof body.isHidden !== "boolean") {
         return NextResponse.json({ error: "Некоректні параметри кімнати." }, { status: 400 });
       }
+      if (body.isHidden) {
+        try {
+          const livekit = getLiveKitService();
+          const participants = await livekit.listParticipants(`verceti-voice-${id}`);
+          if (participants.length > 0) {
+            return NextResponse.json({ error: "Спочатку перемісти всіх учасників з кімнати, а потім приховуй її." }, { status: 409 });
+          }
+        } catch (error) {
+          const liveKitError = error as { status?: number; code?: string };
+          if (liveKitError.status !== 404 && liveKitError.code !== "not_found") {
+            console.error("Check room before hiding:", error);
+            return NextResponse.json({ error: "Не вдалося перевірити учасників кімнати. Спробуй пізніше." }, { status: 503 });
+          }
+        }
+      }
+
       const { data, error } = await supabase.from("voice_rooms")
         .update({ is_hidden: body.isHidden }).eq("id", id)
         .select("id, name, is_hidden").maybeSingle();
@@ -267,6 +283,14 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: "Не вдалося змінити видимість кімнати." }, { status: 500 });
       }
       if (!data) return NextResponse.json({ error: "Кімнату не знайдено." }, { status: 404 });
+      if (!body.isHidden) {
+        const { error: clearAssignmentsError } = await supabase
+          .from("voice_room_assignments").delete().eq("room_id", id);
+        if (clearAssignmentsError) {
+          console.error("Clear hidden room assignments:", clearAssignmentsError);
+          return NextResponse.json({ error: "Кімнату відкрито, але не вдалося очистити призначення." }, { status: 500 });
+        }
+      }
       return NextResponse.json({ room: data });
     }
 
