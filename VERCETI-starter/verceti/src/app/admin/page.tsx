@@ -647,9 +647,9 @@ export default async function AdminPage({
                     {new Date(member.created_at).toLocaleDateString("uk-UA")}
                   </p>
 
-                  {member.role === "admin" ? (
+                  {["founder", "admin", "leader"].includes(String(member.role)) ? (
                     <p className="muted" style={{ fontSize: 12 }}>
-                      Захищений акаунт адміністратора.
+                      Захищений акаунт керівництва.
                     </p>
                   ) : (
                     <>
