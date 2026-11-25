@@ -2569,8 +2569,10 @@ td {
 @media (min-width: 761px) {
   .login-wrap.workspace-wrap {
     width: 100%;
-    min-height: 100vh;
-    padding: 32px clamp(24px, 4vw, 72px);
+    /* The application shell already fills the viewport. A second 100vh
+       here created an empty screen-sized gap before globally mounted panels. */
+    min-height: 0;
+    padding: 18px clamp(18px, 2.5vw, 42px) 32px;
     place-items: start center;
   }
 
@@ -2578,10 +2580,25 @@ td {
     width: 100%;
     max-width: min(1320px, 100%);
     min-width: 0;
-    padding: clamp(26px, 3vw, 46px);
+    padding: clamp(22px, 2.4vw, 36px);
   }
 }
 
+
+/* Compact workspace spacing on narrow screens as well. */
+@media (max-width: 760px) {
+  .login-wrap.workspace-wrap {
+    min-height: 0;
+    padding: 14px 12px 24px;
+    place-items: start stretch;
+  }
+
+  .login-card.workspace-card {
+    width: 100%;
+    min-width: 0;
+    padding: 18px 14px;
+  }
+}
 
 /* Chat gets the full desktop workspace width. */
 @media (min-width: 761px) {

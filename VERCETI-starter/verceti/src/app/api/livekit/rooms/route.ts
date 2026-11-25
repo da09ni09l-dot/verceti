@@ -66,35 +66,41 @@ export async function GET() {
       );
     }
 
-    const livekit = getLiveKitService();
+    // A temporary LiveKit outage must not hide the rooms stored in Supabase.
+    // Participants are supplementary presence data, not a prerequisite for listing rooms.
+    let livekit: RoomServiceClient | null = null;
+    try {
+      livekit = getLiveKitService();
+    } catch (error) {
+      console.error("LiveKit presence unavailable:", error);
+    }
 
     const roomsWithCounts = await Promise.all(
       (rooms || []).map(async (room) => {
         let participantCount = 0;
 
-        try {
-          const participants = await livekit.listParticipants(
-            `verceti-voice-${room.id}`
-          );
-
-          participantCount = participants.length;
-        } catch (error) {
-          const liveKitError = error as {
-            status?: number;
-            code?: string;
-          };
-
-          // Кімната ще не створена в LiveKit — це нормально.
-          if (
-            liveKitError.status === 404 ||
-            liveKitError.code === "not_found"
-          ) {
-            participantCount = 0;
-          } else {
-            console.error(
-              `LiveKit participants for room ${room.id}:`,
-              error
+        if (livekit) {
+          try {
+            const participants = await livekit.listParticipants(
+              `verceti-voice-${room.id}`
             );
+            participantCount = participants.length;
+          } catch (error) {
+            const liveKitError = error as {
+              status?: number;
+              code?: string;
+            };
+
+            // A room that has not yet been created in LiveKit has no participants.
+            if (
+              liveKitError.status !== 404 &&
+              liveKitError.code !== "not_found"
+            ) {
+              console.error(
+                `LiveKit participants for room ${room.id}:`,
+                error
+              );
+            }
           }
         }
 
@@ -106,7 +112,7 @@ export async function GET() {
     );
 
     return NextResponse.json(
-      { rooms: roomsWithCounts },
+      { rooms: roomsWithCounts, presence_available: livekit !== null },
       {
         headers: {
           "Cache-Control": "no-store, no-cache, must-revalidate",

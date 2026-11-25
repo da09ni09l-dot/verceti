@@ -45,16 +45,36 @@ export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: Voice
   const pathname = usePathname();
   const isVoicePage = pathname === "/preview/voice" || pathname === "/preview/streams";
 
+  const roomsRequestInFlight = useRef(false);
+
   const loadRooms = useCallback(async () => {
+    // Prevent overlapping 10-second refreshes from racing each other.
+    if (roomsRequestInFlight.current) return;
+    roomsRequestInFlight.current = true;
     try {
-      const response = await fetch("/api/livekit/rooms", { cache: "no-store" });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Не вдалося завантажити кімнати.");
-      setRooms(data.rooms || []);
-      setError((current) => current === "Не вдалося завантажити кімнати." ? "" : current);
+      const response = await fetch("/api/livekit/rooms", {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof data.error === "string"
+            ? data.error
+            : "Сервер голосових кімнат тимчасово недоступний."
+        );
+      }
+      if (!Array.isArray(data.rooms)) {
+        throw new Error("Сервер повернув некоректний список голосових кімнат.");
+      }
+      setRooms(data.rooms);
+      setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Помилка завантаження кімнат.");
+      // Keep the last successful room list visible during a temporary outage.
+      console.error("Voice rooms refresh failed:", err);
+      setError("Не вдалося оновити голосові кімнати. Перевір з’єднання та спробуй ще раз.");
     } finally {
+      roomsRequestInFlight.current = false;
       setLoadingRooms(false);
     }
   }, []);
@@ -68,8 +88,10 @@ export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: Voice
     }
     void loadRooms();
     const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") void loadRooms();
-    }, 10000);
+      if (document.visibilityState === "visible" && !roomsRequestInFlight.current) {
+        void loadRooms();
+      }
+    }, 15000);
     return () => window.clearInterval(interval);
   }, [isVoicePage, token, loadRooms]);
 
