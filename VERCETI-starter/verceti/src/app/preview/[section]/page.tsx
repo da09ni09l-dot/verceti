@@ -831,7 +831,7 @@ export default async function PreviewSection({
             <MediaRoom />
           </>
         ) : section === "forms" ? (
-          <ApplicationsSection status={status} showPendingOnly={view === "pending" && isStaff} />
+          <ApplicationsSection status={status} showPendingOnly={view === "pending" && isStaff} showDatabaseOnly={view === "database" && isStaff} />
         ) : section === "members" ? (
           <>
             <h1>Учасники VERCETI</h1>
