@@ -63,6 +63,7 @@ type CatalogTrack = {
   duration: number;
   source: CatalogSource;
   url: string;
+  externalUrl?: string;
 };
 
 type PlayingTrack = {
@@ -731,6 +732,7 @@ export default function MusicRoom() {
 
       const items = Array.isArray(result.results) ? result.results : [];
       setCatalogTracks(items);
+      if (result.warning) setMessage(result.warning);
       if (items.length === 0) setMessage("У доступних музичних каталогах збігів не знайдено. Спробуй інший запит.");
     } catch (error) {
       setCatalogTracks([]);
@@ -1077,6 +1079,17 @@ export default function MusicRoom() {
                 </div>
 
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {track.source === "iTunes" && track.externalUrl && (
+                    <a
+                      href={track.externalUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn secondary"
+                      style={{ textDecoration: "none" }}
+                    >
+                      Повна версія
+                    </a>
+                  )}
                   <button
                     className="btn"
                     type="button"
