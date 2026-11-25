@@ -201,6 +201,7 @@ export default async function PreviewSection({
     created_at: string;
     show_from: string | null;
     show_until: string | null;
+    created_by: string | null;
   }[] = [];
 
   let newsError = false;
@@ -614,7 +615,7 @@ export default async function PreviewSection({
 
     const { data, error } = await supabase
       .from("news")
-      .select("id, title, content, category, event_date, is_pinned, created_at, show_from, show_until")
+      .select("id, title, content, category, event_date, is_pinned, created_at, show_from, show_until, created_by")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -628,6 +629,12 @@ export default async function PreviewSection({
       );
     }
   }
+
+  const newsAuthorIds = [...new Set(newsItems.map((item) => item.created_by).filter((id): id is string => Boolean(id)))];
+  const { data: newsAuthors } = newsAuthorIds.length
+    ? await supabase.from("profiles").select("id, nickname, nickname_color, nickname_font").in("id", newsAuthorIds)
+    : { data: [] as { id: string; nickname: string; nickname_color: string | null; nickname_font: string | null }[] };
+  const newsAuthorById = new Map((newsAuthors ?? []).map((author) => [author.id, author]));
 
   let passwordRequestStatus: string | null = null;
   if (section === "settings") {
