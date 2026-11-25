@@ -122,7 +122,6 @@ export default async function AdminPage({
     local: "Учасник",
     senior: "Старший учасник",
     moderator: "Модератор",
-    leader: "Лідер",
   };
 
   const categoryLabels: Record<string, string> = {
