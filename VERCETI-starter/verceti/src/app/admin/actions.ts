@@ -273,7 +273,7 @@ export async function unbanMember(formData: FormData) {
     redirect("/admin?tab=members&error=member");
   }
 
-  if (member.role === "admin") {
+  if (["founder", "admin", "leader"].includes(String(member.role))) {
     redirect("/admin?tab=members&error=protected");
   }
 
