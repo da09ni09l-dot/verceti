@@ -10,7 +10,7 @@ type Source = "Audius" | "Jamendo" | "iTunes" | "YouTube" | "SoundCloud";
 type CatalogSource = "Audius" | "Jamendo" | "iTunes";
 type Tab = "personal" | "shared" | "recommendations" | "favorites";
 type PlaylistType = "personal" | "shared";
-type MusicMode = "trending" | "latest" | "ukrainian" | "search";
+type MusicMode = "search";
 
 type Track = {
   id: string;
@@ -127,11 +127,9 @@ export default function MusicRoom() {
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
 
-  const [catalogSource, setCatalogSource] =
-    useState<CatalogSource>("Audius");
   const [catalogTracks, setCatalogTracks] = useState<CatalogTrack[]>([]);
   const [search, setSearch] = useState("");
-  const [musicMode, setMusicMode] = useState<MusicMode>("trending");
+  const [musicMode, setMusicMode] = useState<MusicMode>("search");
   const [musicLoading, setMusicLoading] = useState(false);
 
   const [playing, setPlaying] = useState<PlayingTrack | null>(null);
@@ -156,112 +154,6 @@ export default function MusicRoom() {
   }, []);
 
   const isManagement = ["admin", "leader", "moderator"].includes(role);
-
-  const loadAudius = useCallback(
-    async (action: "trending" | "latest" | "search", query = "") => {
-      setCatalogSource("Audius");
-      setMusicLoading(true);
-      setMessage("");
-
-      try {
-        const params = new URLSearchParams({ action });
-
-        if (action === "search") {
-          params.set("q", query);
-        }
-
-        const response = await fetch(`/api/audius?${params.toString()}`);
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || "Не вдалося завантажити Audius.");
-        }
-
-        const items: AudiusTrack[] = Array.isArray(result.data)
-          ? result.data
-          : [];
-
-        setCatalogTracks(
-          items.map((track) => ({
-            id: track.id,
-            title: track.title,
-            artist: track.user?.name || "Невідомий виконавець",
-            artwork:
-              track.artwork?.["480x480"] ||
-              track.artwork?.["150x150"] ||
-              track.artwork?.["1000x1000"] ||
-              "",
-            duration: track.duration || 0,
-            source: "Audius",
-            url: audiusTrackUrl(track),
-          }))
-        );
-
-        setMusicMode(action);
-      } catch (error) {
-        setMessage(
-          error instanceof Error
-            ? error.message
-            : "Помилка з'єднання з Audius."
-        );
-        setCatalogTracks([]);
-      } finally {
-        setMusicLoading(false);
-      }
-    },
-    []
-  );
-
-  const loadJamendo = useCallback(
-    async (action: "ukrainian" | "search", query = "") => {
-      setCatalogSource("Jamendo");
-      setMusicLoading(true);
-      setMessage("");
-
-      try {
-        const params = new URLSearchParams({ action });
-
-        if (action === "search") {
-          params.set("q", query);
-        }
-
-        const response = await fetch(`/api/jamendo?${params.toString()}`);
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || "Не вдалося завантажити Jamendo.");
-        }
-
-        const items: JamendoTrack[] = Array.isArray(result.results)
-          ? result.results
-          : [];
-
-        setCatalogTracks(
-          items.map((track) => ({
-            id: track.id,
-            title: track.title,
-            artist: track.artist,
-            artwork: track.image || "",
-            duration: track.duration || 0,
-            source: "Jamendo",
-            url: track.audio || "",
-          }))
-        );
-
-        setMusicMode(action);
-      } catch (error) {
-        setMessage(
-          error instanceof Error
-            ? error.message
-            : "Помилка з'єднання з Jamendo."
-        );
-        setCatalogTracks([]);
-      } finally {
-        setMusicLoading(false);
-      }
-    },
-    []
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -300,10 +192,6 @@ export default function MusicRoom() {
       cancelled = true;
     };
   }, [supabase]);
-
-  useEffect(() => {
-    loadAudius("trending");
-  }, [loadAudius]);
 
   useEffect(() => {
     if (!userId) return;
@@ -1025,7 +913,7 @@ export default function MusicRoom() {
           <p className="muted">Шукаємо музику...</p>
         ) : catalogTracks.length === 0 ? (
           <p className="muted">
-            Композицій не знайдено. Спробуй інший запит або каталог.
+            Введи назву пісні або виконавця та натисни «Шукати».
           </p>
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
