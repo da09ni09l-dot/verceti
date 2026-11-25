@@ -29,6 +29,26 @@ export default function CallActions({ targetId, currentUserId, listenForCalls = 
     return () => { void supabase.removeChannel(channel); };
   }, [currentUserId, listenForCalls, supabase, session?.callId]);
 
+async function waitForBroadcast(channel: ReturnType<typeof supabase.channel>) {
+    await new Promise<void>((resolve, reject) => {
+      channel.subscribe((status) => {
+        if (status === "SUBSCRIBED") resolve();
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") reject(new Error("Не вдалося встановити сигналізацію дзвінка."));
+      });
+    });
+  }
+
+  async function sendCallSignal(userId: string, event: string, payload: Record<string, string>) {
+    const channel = supabase.channel(`user-calls:${userId}`);
+    await waitForBroadcast(channel);
+    try {
+      const result = await channel.send({ type: "broadcast", event, payload });
+      if (result !== "ok") throw new Error("Не вдалося надіслати сигнал дзвінка.");
+    } finally {
+      await supabase.removeChannel(channel);
+    }
+  }
+
   async function startCall(mode: "audio" | "video") {
     if (busy || session) return;
     setBusy(true); setStatus("");
@@ -38,10 +58,7 @@ export default function CallActions({ targetId, currentUserId, listenForCalls = 
       const response = await fetch("/api/livekit/call-token", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ targetId, callId, mode }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Не вдалося почати дзвінок.");
-      const channel = supabase.channel(`user-calls:${targetId}`);
-      await channel.subscribe();
-      await channel.send({ type: "broadcast", event: "incoming-call", payload: { callId, callerId: currentUserId, callerName: "Учасник VERCETI", mode, targetId } });
-      await supabase.removeChannel(channel);
+      await sendCallSignal(targetId, "incoming-call", { callId, callerId: currentUserId, callerName: "Учасник VERCETI", mode, targetId });
       setSession({ ...data, callId, otherUserId: targetId });
     } catch (error) { setStatus(error instanceof Error ? error.message : "Помилка дзвінка."); }
     finally { setBusy(false); }
@@ -61,19 +78,13 @@ export default function CallActions({ targetId, currentUserId, listenForCalls = 
 
   async function rejectCall() {
     if (!invite) return;
-    const channel = supabase.channel(`user-calls:${invite.callerId}`);
-    await channel.subscribe();
-    await channel.send({ type: "broadcast", event: "call-ended", payload: { callId: invite.callId } });
-    await supabase.removeChannel(channel);
+    await sendCallSignal(invite.callerId, "call-ended", { callId: invite.callId });
     setInvite(null);
   }
 
   async function endCall() {
     if (!session) return;
-    const channel = supabase.channel(`user-calls:${session.otherUserId}`);
-    await channel.subscribe();
-    await channel.send({ type: "broadcast", event: "call-ended", payload: { callId: session.callId } });
-    await supabase.removeChannel(channel);
+    await sendCallSignal(session.otherUserId, "call-ended", { callId: session.callId });
     setSession(null);
   }
 
