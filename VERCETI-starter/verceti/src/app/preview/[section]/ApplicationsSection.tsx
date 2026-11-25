@@ -57,8 +57,9 @@ export default async function ApplicationsSection({
 
   const isFounder = currentRole === "founder";
   const isAdmin = isFounder;
-  const canViewDatabase = isFounder;
-  const effectivePendingOnly = showPendingOnly || (isStaff && !isFounder);
+  const isLeader = currentRole === "leader";
+  const canViewDatabase = isFounder || isLeader;
+  const effectivePendingOnly = showPendingOnly || (isStaff && !canViewDatabase);
 
   if (showDatabaseOnly && !canViewDatabase) {
     return (
