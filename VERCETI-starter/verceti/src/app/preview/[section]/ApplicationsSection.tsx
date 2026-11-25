@@ -26,6 +26,7 @@ const roleLabels: Record<string, string> = {
   local: "Учасник",
   senior: "Старший учасник",
   moderator: "Модератор",
+  founder: "Засновник",
   leader: "Лідер",
   admin: "Адміністратор",
 };
@@ -56,13 +57,13 @@ export default async function ApplicationsSection({
     "current_verceti_role"
   );
 
-  const isAdmin = currentRole === "admin";
+  const isAdmin = currentRole === "founder" || currentRole === "admin";
   const canViewDatabase = isAdmin || currentRole === "leader";
 
   if (showDatabaseOnly && !canViewDatabase) {
     return (
       <div className="panel" role="alert">
-        Перегляд бази анкет доступний лише адміністратору та лідеру.
+        Перегляд бази анкет доступний лише засновнику та лідеру.
       </div>
     );
   }
