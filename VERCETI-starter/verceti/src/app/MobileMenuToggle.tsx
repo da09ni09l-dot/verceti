@@ -20,7 +20,7 @@ export default function MobileMenuToggle() {
       {open && (
         <button
           type="button"
-          className="mobile-menu-backdrop"
+          className="mobile-menu-backdrop is-open"
           aria-label="Закрити меню"
           onClick={() => setOpen(false)}
         />
