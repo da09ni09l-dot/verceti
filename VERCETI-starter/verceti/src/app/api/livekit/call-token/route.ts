@@ -22,11 +22,11 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: target, error: targetError } = await supabase
-      .from("profiles").select("id,is_banned").eq("id", targetId).maybeSingle();
+      .from("profiles").select("id,is_banned,membership_approved,role").eq("id", targetId).maybeSingle();
     if (targetError || !target || target.is_banned) return NextResponse.json({ error: "Учасника не знайдено." }, { status: 404 });
 
-    const { data: targetAccess, error: targetAccessError } = await supabase.rpc("is_verceti_member", { user_id: targetId });
-    if (targetAccessError || targetAccess !== true) return NextResponse.json({ error: "Цей учасник поки не має доступу до дзвінків." }, { status: 403 });
+    const targetIsStaff = ["admin", "leader", "moderator"].includes(target.role);
+    if (!target.membership_approved && !targetIsStaff) return NextResponse.json({ error: "Цей учасник поки не має доступу до дзвінків." }, { status: 403 });
 
     const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
     const apiKey = process.env.LIVEKIT_API_KEY;
