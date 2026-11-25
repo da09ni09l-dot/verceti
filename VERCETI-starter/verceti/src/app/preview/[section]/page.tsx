@@ -181,7 +181,7 @@ export default async function PreviewSection({
     await supabase.rpc("is_verceti_member");
   const hasCommunityAccess = !membershipError && membershipStatus === true;
 
-  if (!hasCommunityAccess && section !== "forms") {
+  if (!hasCommunityAccess && !isStaff && section !== "forms") {
     redirect("/preview/forms");
   }
 
