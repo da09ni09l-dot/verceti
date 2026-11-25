@@ -85,7 +85,7 @@ export default async function VacationPage({ searchParams }: { searchParams: Pro
                   {(canReview && request.status === "pending" || canDelete) && <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{canReview && request.status === "pending" && <>
                     <form action={reviewVacationRequest}><input type="hidden" name="id" value={request.id} /><input type="hidden" name="decision" value="approved" /><button className="btn" type="submit">Схвалити</button></form>
                     <form action={reviewVacationRequest}><input type="hidden" name="id" value={request.id} /><input type="hidden" name="decision" value="rejected" /><button className="btn secondary" type="submit">Відхилити</button></form>
-                  </>}{canDelete && <form action={deleteVacationRequest} onSubmit={(event) => { if (!window.confirm("Видалити цю заявку на відпустку?")) event.preventDefault(); }}><input type="hidden" name="id" value={request.id} /><button className="btn secondary" type="submit">Видалити</button></form>}</div>}
+                  </>}{canDelete && <form action={deleteVacationRequest}><input type="hidden" name="id" value={request.id} /><button className="btn secondary" type="submit">Видалити</button></form>}</div>}
                 </article>
               ))}
             </div>
