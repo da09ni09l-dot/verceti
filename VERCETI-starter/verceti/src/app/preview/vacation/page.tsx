@@ -82,7 +82,8 @@ export default async function VacationPage({ searchParams }: { searchParams: Pro
             <div className="member-list" style={{ marginTop: 14 }}>
               {requests.map((request) => {
                 const showReview = canReview && request.status === "pending";
-                const showActions = showReview || canDelete;
+                const canClearApproved = canDelete && request.status === "approved";
+                const showActions = showReview || canClearApproved;
                 return (
                   <article className="member-row" key={request.id} style={{ alignItems: "flex-start", flexWrap: "wrap" }}>
                     <div style={{ flex: "1 1 260px", minWidth: 0 }}>
@@ -109,10 +110,10 @@ export default async function VacationPage({ searchParams }: { searchParams: Pro
                             </form>
                           </>
                         )}
-                        {canDelete && (
+                        {canClearApproved && (
                           <form action={deleteVacationRequest}>
                             <input type="hidden" name="id" value={request.id} />
-                            <button className="btn secondary" type="submit">Видалити</button>
+                            <button className="btn secondary" type="submit">Очистити схвалену</button>
                           </form>
                         )}
                       </div>
