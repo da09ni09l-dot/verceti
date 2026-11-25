@@ -25,6 +25,10 @@ type DirectMessage = {
   content: string;
   created_at: string;
   is_read: boolean;
+  sender_nickname_color?: string | null;
+  sender_nickname_font?: string | null;
+  message_color?: string | null;
+  message_font?: string | null;
 };
 
 type Player = {
@@ -270,6 +274,10 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
         (data ?? []).map(async (message) => ({
           ...message,
           content: await resolveMediaContent(message.content),
+          sender_nickname_color: players.find((player) => player.id === message.sender_id)?.nickname_color ?? null,
+          sender_nickname_font: players.find((player) => player.id === message.sender_id)?.nickname_font ?? null,
+          message_color: players.find((player) => player.id === message.sender_id)?.message_color ?? null,
+          message_font: players.find((player) => player.id === message.sender_id)?.message_font ?? null,
           is_read:
             message.recipient_id === currentUserId
               ? true
@@ -1013,7 +1021,9 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
                           style={{
                             whiteSpace: "pre-wrap",
                             overflowWrap: "anywhere",
-                            margin: 0
+                            margin: 0,
+                            color: message.message_color ?? undefined,
+                            fontFamily: message.message_font === "orbitron" ? "Orbitron, Arial, sans-serif" : message.message_font === "rajdhani" ? "Rajdhani, Arial, sans-serif" : message.message_font === "nunito" ? "Nunito Sans, Arial, sans-serif" : message.message_font === "georgia" ? "Georgia, serif" : message.message_font === "mono" ? "monospace" : undefined
                           }}
                         >
                           {message.content}
