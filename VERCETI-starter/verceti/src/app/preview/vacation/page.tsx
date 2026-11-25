@@ -21,10 +21,9 @@ export default async function VacationPage({ searchParams }: { searchParams: Pro
   if (!user) redirect("/login");
   const { data: membershipStatus, error: membershipError } = await supabase.rpc("is_verceti_member");
   if (membershipError || membershipStatus !== true) redirect("/preview/forms");
-  const { data: isStaff, error: staffError } = await supabase.rpc("is_verceti_staff");
-  const canReview = !staffError && isStaff === true;
   const { data: role } = await supabase.rpc("current_verceti_role");
-  const canDelete = ["admin", "leader"].includes(String(role ?? ""));
+  const canReview = role === "founder";
+  const canDelete = role === "founder";
 
   let query = supabase.from("vacation_requests")
     .select("id, user_id, start_date, end_date, reason, status, created_at")
