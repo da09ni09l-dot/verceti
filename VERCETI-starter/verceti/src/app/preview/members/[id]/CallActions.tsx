@@ -1,0 +1,107 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { LiveKitRoom, RoomAudioRenderer, VideoTrack, useLocalParticipant, useParticipants, useTracks } from "@livekit/components-react";
+import { Track } from "livekit-client";
+import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, X } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+
+type CallInvite = { callId: string; callerId: string; callerName: string; mode: "audio" | "video"; targetId: string };
+
+export default function CallActions({ targetId, currentUserId, listenForCalls = false }: { targetId?: string; currentUserId: string; listenForCalls?: boolean }) {
+  const [invite, setInvite] = useState<CallInvite | null>(null);
+  const [session, setSession] = useState<{ token: string; serverUrl: string; roomName: string; mode: "audio" | "video"; callId: string; otherUserId: string } | null>(null);
+  const [status, setStatus] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [supabase] = useState(() => createClient());
+
+  useEffect(() => {
+    if (!listenForCalls) return;
+    const channel = supabase.channel(`user-calls:${currentUserId}`);
+    channel.on("broadcast", { event: "incoming-call" }, ({ payload }) => {
+      const incoming = payload as CallInvite;
+      if (incoming.targetId === currentUserId) setInvite(incoming);
+    });
+    channel.on("broadcast", { event: "call-ended" }, ({ payload }) => {
+      if (session?.callId && (payload as { callId?: string }).callId === session.callId) setSession(null);
+    });
+    channel.subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [currentUserId, listenForCalls, supabase, session?.callId]);
+
+async function waitForBroadcast(channel: ReturnType<typeof supabase.channel>) {
+    await new Promise<void>((resolve, reject) => {
+      channel.subscribe((status) => {
+        if (status === "SUBSCRIBED") resolve();
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") reject(new Error("Не вдалося встановити сигналізацію дзвінка."));
+      });
+    });
+  }
+
+  async function sendCallSignal(userId: string, event: string, payload: Record<string, string>) {
+    const channel = supabase.channel(`user-calls:${userId}`);
+    await waitForBroadcast(channel);
+    try {
+      const result = await channel.send({ type: "broadcast", event, payload });
+      if (result !== "ok") throw new Error("Не вдалося надіслати сигнал дзвінка.");
+    } finally {
+      await supabase.removeChannel(channel);
+    }
+  }
+
+  async function startCall(mode: "audio" | "video") {
+    if (busy || session) return;
+    setBusy(true); setStatus("");
+    try {
+      const callId = crypto.randomUUID();
+      if (!targetId) return;
+      const response = await fetch("/api/livekit/call-token", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ targetId, callId, mode }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Не вдалося почати дзвінок.");
+      await sendCallSignal(targetId, "incoming-call", { callId, callerId: currentUserId, callerName: "Учасник VERCETI", mode, targetId });
+      setSession({ ...data, callId, otherUserId: targetId });
+    } catch (error) { setStatus(error instanceof Error ? error.message : "Помилка дзвінка."); }
+    finally { setBusy(false); }
+  }
+
+  async function answerCall() {
+    if (!invite || busy) return;
+    setBusy(true); setStatus("");
+    try {
+      const response = await fetch("/api/livekit/call-token", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ targetId: invite.callerId, callId: invite.callId, mode: invite.mode }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Не вдалося прийняти дзвінок.");
+      setSession({ ...data, callId: invite.callId, otherUserId: invite.callerId }); setInvite(null);
+    } catch (error) { setStatus(error instanceof Error ? error.message : "Помилка підключення."); }
+    finally { setBusy(false); }
+  }
+
+  async function rejectCall() {
+    if (!invite) return;
+    await sendCallSignal(invite.callerId, "call-ended", { callId: invite.callId });
+    setInvite(null);
+  }
+
+  async function endCall() {
+    if (!session) return;
+    await sendCallSignal(session.otherUserId, "call-ended", { callId: session.callId });
+    setSession(null);
+  }
+
+  return (
+    <div className={targetId ? "member-call-actions" : "global-call-listener"}>
+      {targetId && <><button className="btn" type="button" disabled={busy || !!session} onClick={() => void startCall("audio")}><Phone size={16}/> Зателефонувати</button><button className="btn" type="button" disabled={busy || !!session} onClick={() => void startCall("video")}><Video size={16}/> Відеодзвінок</button></>}
+      {status && <p className="voice-error" role="alert">{status}</p>}
+      {invite && !session && <div className="call-incoming panel" role="dialog" aria-label="Вхідний дзвінок"><strong>{invite.callerName} телефонує</strong><p>{invite.mode === "video" ? "Відеодзвінок" : "Аудіодзвінок"}</p><button className="btn" disabled={busy} onClick={() => void answerCall()}><Phone size={16}/> Прийняти</button><button className="tag" onClick={() => void rejectCall()}><PhoneOff size={16}/> Відхилити</button></div>}
+      {session && <div className="call-session panel"><div className="call-session-head"><strong>{session.mode === "video" ? "Відеодзвінок" : "Аудіодзвінок"}</strong><button className="tag" onClick={() => void endCall()}><X size={16}/> Завершити</button></div><LiveKitRoom token={session.token} serverUrl={session.serverUrl} connect audio video={session.mode === "video"} onDisconnected={() => setSession(null)}><RoomAudioRenderer/><CallMedia mode={session.mode}/></LiveKitRoom></div>}
+    </div>
+  );
+}
+
+function CallMedia({ mode }: { mode: "audio" | "video" }) {
+  const { localParticipant, isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant();
+  const participants = useParticipants();
+  const tracks = useTracks([Track.Source.Camera]);
+  useEffect(() => { if (mode === "video") void localParticipant.setCameraEnabled(true).catch(() => undefined); }, [mode, localParticipant]);
+  return <div className="call-media"><p>У дзвінку: {participants.length}</p>{mode === "video" && <div className="voice-camera-grid">{tracks.map((track) => <div className="voice-camera-track" key={track.publication.trackSid}><VideoTrack trackRef={track}/><p>{track.participant.name || track.participant.identity}</p></div>)}</div>}<div className="voice-action-group"><button className="voice-action-button" onClick={() => void localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}>{isMicrophoneEnabled ? <MicOff size={17}/> : <Mic size={17}/>} Мікрофон</button>{mode === "video" && <button className="voice-action-button" onClick={() => void localParticipant.setCameraEnabled(!isCameraEnabled)}>{isCameraEnabled ? <VideoOff size={17}/> : <Video size={17}/>} Камера</button>}</div></div>;
+}

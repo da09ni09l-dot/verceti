@@ -8,6 +8,7 @@ import PinnedSiteActions from "./PinnedSiteActions";
 import LiveDataRefresh from "./LiveDataRefresh";
 import ActivityTracker from "./preview/[section]/ActivityTracker";
 import VoiceRoom from "./preview/[section]/VoiceRoom";
+import CallActions from "./preview/members/[id]/CallActions";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -42,6 +43,7 @@ export default async function RootLayout({
           {children}
           <MusicRoom />
           <VoiceRoom isStaff={isStaff} canModerateVoice={canModerateVoice} />
+          {user && <CallActions currentUserId={user.id} listenForCalls />}
           <PinnedSiteActions />
         </OnlinePresenceProvider>
       </body>

@@ -3218,15 +3218,19 @@ td {
 .voice-screen-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:135px; padding:15px; color:#a58dbf; text-align:center; }
 .voice-screen-empty p { margin:9px 0 4px; color:#d8cce7; font-size:11px; }
 .voice-screen-empty small { color:#8f859f; font-size:9px; line-height:1.5; }
+.voice-camera-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top:12px; }
+.voice-camera-track { overflow:hidden; border:1px solid #ffffff18; border-radius:10px; background:#05040a; }
+.voice-camera-track video { display:block; width:100%; aspect-ratio:16/9; object-fit:cover; }
+.voice-camera-track p { margin:0; padding:7px 9px; color:#b9adc8; font-size:10px; }
 .voice-screen-list { display:grid; gap:10px; margin-top:12px; }
 .voice-screen-track { overflow:hidden; border:1px solid #ffffff18; border-radius:10px; background:#05040a; }
 .voice-screen-track video { display:block; width:100%; max-height:360px; object-fit:contain; }
 .voice-screen-track p { margin:0; padding:8px 10px; color:#b9adc8; font-size:10px; }
-.voice-controls-panel { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:15px; margin-top:16px; padding:14px; border:1px solid #a77ad033; border-radius:14px; background:#09071180; }
-.voice-controls-panel > div:first-child { display:grid; gap:4px; margin-right:auto; }
+.voice-controls-panel { display:flex; align-items:center; justify-content:flex-start; flex-wrap:wrap; gap:10px; margin-top:16px; padding:14px; border:1px solid #a77ad033; border-radius:14px; background:#09071180; }
+.voice-controls-panel > div:first-child { display:grid; gap:4px; margin-right:8px; flex:1 1 150px; }
 .voice-controls-panel > div:first-child strong { color:#eee5fa; font-size:11px; }
 .voice-controls-panel > div:first-child small { color:#91879f; font-size:9px; }
-.voice-leave-button { display:flex; align-items:center; justify-content:center; gap:7px; min-height:40px; padding:9px 13px; border:1px solid #ff426d66; border-radius:10px; color:#ff9aaa; background:#ff426d16; font-size:10px; font-weight:800; cursor:pointer; }
+.voice-leave-button { display:flex; flex:0 0 auto; margin-left:auto; align-items:center; justify-content:center; gap:7px; min-height:40px; padding:9px 13px; border:1px solid #ff426d66; border-radius:10px; color:#ff9aaa; background:#ff426d16; font-size:10px; font-weight:800; cursor:pointer; }
 .voice-leave-button:hover { background:#ff426d28; }
 .voice-footnote { margin:12px 0 0; color:#8e859b; text-align:center; font-size:9px; line-height:1.6; }
 .voice-mini-dock-inner { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
@@ -3257,7 +3261,7 @@ td {
   .voice-session-title h2 { font-size:16px; }
   .voice-controls-panel { flex-direction:column; align-items:stretch; }
   .voice-controls-panel > div:first-child { margin:0; text-align:center; }
-  .voice-controls-panel .lk-control-bar { justify-content:center; }
+  .voice-controls-panel .lk-control-bar { justify-content:flex-start; }
   .voice-leave-button { width:100%; }
   .voice-mini-dock-inner { align-items:stretch; flex-direction:column; }
   .voice-mini-actions { width:100%; justify-content:center; }
@@ -3402,3 +3406,23 @@ td {
  .voice-floating-dock { right:12px; bottom:12px; width:min(260px,calc(100vw - 24px)); padding:9px; }
  .voice-drag-hint { display:none; }
 }
+
+
+.member-call-actions { display:flex; align-items:center; flex-wrap:wrap; gap:9px; }
+.call-incoming { display:flex; align-items:center; flex-wrap:wrap; gap:10px; padding:14px; margin-top:12px; }
+.call-incoming p { width:100%; margin:0; color:var(--muted); font-size:12px; }
+.call-session { width:100%; margin-top:14px; padding:14px; }
+.call-session-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+.call-media { display:grid; gap:12px; }
+.call-media > p { margin:0; color:var(--muted); font-size:12px; }
+@media (max-width:560px) {
+  .member-call-actions { width:100%; }
+  .member-call-actions > button { flex:1 1 100%; justify-content:center; }
+  .call-incoming { align-items:stretch; }
+  .call-incoming > button { flex:1 1 100%; justify-content:center; }
+}
+
+
+.global-call-listener .call-incoming { position:fixed; z-index:1200; right:20px; bottom:20px; width:min(360px,calc(100vw - 32px)); box-shadow:0 18px 60px #0009; border-color:#a855ff88; background:#171023; }
+.global-call-listener .call-session { position:fixed; z-index:1190; right:20px; bottom:20px; width:min(440px,calc(100vw - 32px)); max-height:min(75vh,680px); overflow:auto; box-shadow:0 18px 60px #0009; border-color:#a855ff88; background:#171023; }
+.global-call-listener .call-session video { max-width:100%; }
