@@ -113,6 +113,15 @@ function CallMedia({ mode }: { mode: "audio" | "video" }) {
   }, [localParticipant]);
   const participants = useParticipants();
   const tracks = useTracks([Track.Source.Camera]);
+  async function toggleCallMicrophone() {
+    try {
+      await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
+      setMicrophoneError("");
+    } catch (error) {
+      console.error("Call microphone toggle failed:", error);
+      setMicrophoneError("Не вдалося змінити мікрофон. Перевір дозвіл браузера.");
+    }
+  }
   useEffect(() => { if (mode === "video") void localParticipant.setCameraEnabled(true).catch(() => undefined); }, [mode, localParticipant]);
-  return <div className="call-media"><p>У дзвінку: {participants.length}</p>{microphoneError && <p className="voice-error" role="alert">{microphoneError}</p>}{mode === "video" && <div className="voice-camera-grid">{tracks.map((track) => <div className="voice-camera-track" key={track.publication.trackSid}><VideoTrack trackRef={track}/><p>{track.participant.name || track.participant.identity}</p></div>)}</div>}<div className="voice-action-group"><button className="voice-action-button" onClick={() => void localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}>{isMicrophoneEnabled ? <MicOff size={17}/> : <Mic size={17}/>} {isMicrophoneEnabled ? "Вимкнути мікрофон" : "Увімкнути мікрофон"}</button>{mode === "video" && <button className="voice-action-button" onClick={() => void localParticipant.setCameraEnabled(!isCameraEnabled)}>{isCameraEnabled ? <VideoOff size={17}/> : <Video size={17}/>} Камера</button>}</div></div>;
+  return <div className="call-media"><p>У дзвінку: {participants.length}</p>{microphoneError && <p className="voice-error" role="alert">{microphoneError}</p>}{mode === "video" && <div className="voice-camera-grid">{tracks.map((track) => <div className="voice-camera-track" key={track.publication.trackSid}><VideoTrack trackRef={track}/><p>{track.participant.name || track.participant.identity}</p></div>)}</div>}<div className="voice-action-group"><button className="voice-action-button" onClick={() => void toggleCallMicrophone()}>{isMicrophoneEnabled ? <MicOff size={17}/> : <Mic size={17}/>} {isMicrophoneEnabled ? "Вимкнути мікрофон" : "Увімкнути мікрофон"}</button>{mode === "video" && <button className="voice-action-button" onClick={() => void localParticipant.setCameraEnabled(!isCameraEnabled)}>{isCameraEnabled ? <VideoOff size={17}/> : <Video size={17}/>} Камера</button>}</div></div>;
 }
