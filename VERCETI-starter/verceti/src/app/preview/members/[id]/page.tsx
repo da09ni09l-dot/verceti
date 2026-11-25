@@ -7,7 +7,7 @@ import CallActions from "./CallActions";
 const roleLabels: Record<string, string> = {
   founder: "ЗАСНОВНИК",
   leader: "ЛІДЕР",
-  admin: "АДМІНІСТРАТОР",
+  admin: "ЗАСТАРІЛА РОЛЬ",
   moderator: "МОДЕРАТОР",
   senior: "СТАРШИЙ УЧАСНИК",
   local: "УЧАСНИК",
