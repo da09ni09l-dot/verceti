@@ -423,13 +423,13 @@ function VoiceRoomContent({ roomName, displayRoomName, onLeave, compact = false,
                       <button
                         type="button"
                         className={`voice-moderation-button ${microphone.isMuted ? "is-muted" : ""}`}
-                        disabled={moderating === participant.identity}
-                        onClick={() => void toggleParticipantMute(participant.identity, microphone.trackSid!, !microphone.isMuted)}
-                        title={microphone.isMuted ? "Увімкнути мікрофон учаснику" : "Вимкнути мікрофон учаснику"}
-                        aria-label={microphone.isMuted ? "Увімкнути мікрофон учаснику" : "Вимкнути мікрофон учаснику"}
+                        disabled={moderating === participant.identity || microphone.isMuted}
+                        onClick={() => void toggleParticipantMute(participant.identity, microphone.trackSid!, true)}
+                        title={microphone.isMuted ? "Учасник має самостійно ввімкнути мікрофон" : "Вимкнути мікрофон учаснику"}
+                        aria-label={microphone.isMuted ? "Учасник має самостійно ввімкнути мікрофон" : "Вимкнути мікрофон учаснику"}
                       >
                         {moderating === participant.identity ? <LoaderCircle size={15} className="voice-spin" /> : microphone.isMuted ? <Mic size={15} /> : <MicOff size={15} />}
-                        <span>{microphone.isMuted ? "Увімкнути" : "Вимкнути звук"}</span>
+                        <span>{microphone.isMuted ? "Вимкнено" : "Вимкнути звук"}</span>
                       </button>
                     )}
                   </div>

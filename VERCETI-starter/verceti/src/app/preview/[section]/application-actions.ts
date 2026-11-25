@@ -198,12 +198,12 @@ export async function submitApplication(formData: FormData) {
     .from("profiles").select("birth_day, birth_month").eq("id", user.id).single();
   if (birthdayReadError) redirect(`${formsPath}?status=application-error`);
   if (currentProfile.birth_day == null || currentProfile.birth_month == null) {
-    // Use the same authenticated profile update as the standalone birthday form.
-    // This avoids a dependency on the optional one-time RPC when submitting an application.
-    const { error: birthdayError } = await supabase
-      .from("profiles")
-      .update({ birth_day: birthDay, birth_month: birthMonth })
-      .eq("id", user.id);
+    // Use the existing one-time RPC: authenticated users do not have direct
+    // table UPDATE privileges on profiles.
+    const { error: birthdayError } = await supabase.rpc("set_my_birthday_once", {
+      p_birth_day: birthDay,
+      p_birth_month: birthMonth,
+    });
 
     if (birthdayError) {
       console.error("Save member birthday:", birthdayError.message);
@@ -406,11 +406,14 @@ export async function saveBirthday(formData: FormData) {
   if (!Number.isInteger(birthDay) || !Number.isInteger(birthMonth) || birthMonth < 1 || birthMonth > 12 || birthDay < 1 || birthDay > new Date(Date.UTC(2000, birthMonth, 0)).getUTCDate()) {
     redirect(`${formsPath}?status=birthday-required`);
   }
-  const { supabase, user } = await getUserAndClient();
-  const { error } = await supabase.from("profiles").update({ birth_day: birthDay, birth_month: birthMonth }).eq("id", user.id);
+  const { supabase } = await getUserAndClient();
+  const { error } = await supabase.rpc("set_my_birthday_once", {
+    p_birth_day: birthDay,
+    p_birth_month: birthMonth,
+  });
   if (error) {
     console.error("Save birthday:", error.message);
-    redirect(`${formsPath}?status=application-error`);
+    redirect(`${formsPath}?status=birthday-locked`);
   }
   revalidatePath(formsPath);
   redirect(`${formsPath}?status=birthday-saved`);
