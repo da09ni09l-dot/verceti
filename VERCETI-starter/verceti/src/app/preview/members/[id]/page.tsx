@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import CallActions from "./CallActions";
 
 const roleLabels: Record<string, string> = {
-  leader: "ЗАСНОВНИК",
+  founder: "ЗАСНОВНИК",
+  leader: "ЛІДЕР",
   admin: "АДМІНІСТРАТОР",
   moderator: "МОДЕРАТОР",
   senior: "СТАРШИЙ УЧАСНИК",
