@@ -11,8 +11,9 @@ import NewsBell from "./NewsBell";
 import MobileMenuToggle from "./MobileMenuToggle";
 
 const roleLabels: Record<string, string> = {
-  leader: "ЗАСНОВНИК",
-  admin: "АДМІНІСТРАТОР",
+  founder: "ЗАСНОВНИК",
+  leader: "ЛІДЕР",
+  admin: "ЗАСТАРІЛА РОЛЬ",
   moderator: "МОДЕРАТОР",
   senior: "СТАРШИЙ УЧАСНИК",
   local: "УЧАСНИК",
@@ -20,8 +21,9 @@ const roleLabels: Record<string, string> = {
 };
 
 const roleColors: Record<string, string> = {
-  leader: "orange",
-  admin: "orange",
+  founder: "orange",
+  leader: "purple",
+  admin: "muted",
   moderator: "purple",
   senior: "blue",
   local: "green",
@@ -52,10 +54,6 @@ export default async function Home() {
   if (membershipError || membershipStatus !== true) {
     redirect("/preview/forms");
   }
-
-  const { data: adminRole, error: adminRoleError } =
-    await supabase.rpc("current_verceti_role");
-
 
   const now = new Date().toISOString();
 
