@@ -35,9 +35,12 @@ async function getCurrentUser() {
 async function checkStaff() {
   const { supabase } = await getCurrentUser();
 
-  const { data, error } = await supabase.rpc("is_verceti_staff");
+  const [{ data, error }, { data: role, error: roleError }] = await Promise.all([
+    supabase.rpc("is_verceti_staff"),
+    supabase.rpc("current_verceti_role"),
+  ]);
 
-  if (error || data !== true) {
+  if (error || roleError || data !== true || role === "leader") {
     throw new Error("Недостатньо прав доступу.");
   }
 }
