@@ -337,7 +337,7 @@ export async function deleteMember(formData: FormData) {
     redirect("/admin?tab=members&error=member");
   }
 
-  if (member.role === "admin") {
+  if (["founder", "admin", "leader"].includes(String(member.role))) {
     redirect("/admin?tab=members&error=protected");
   }
 
@@ -421,7 +421,7 @@ export async function deleteMember(formData: FormData) {
 // ==========================================
 
 export async function createNews(formData: FormData) {
-  const { supabase, user } = await requireStaff();
+  const { supabase, user } = await requireAdmin();
 
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
@@ -553,7 +553,7 @@ export async function deleteNews(formData: FormData) {
     redirect("/admin?tab=news&error=news");
   }
 
-  const { supabase } = await requireStaff();
+  const { supabase } = await requireAdmin();
 
   const { error } = await supabase
     .from("news")
