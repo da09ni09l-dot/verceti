@@ -52,7 +52,7 @@ export async function reviewPasswordChangeRequest(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const { data: role, error: roleError } = await supabase.rpc("current_verceti_role");
-  if (roleError || role !== "admin") redirect("/");
+  if (roleError || role !== "founder") redirect("/");
 
   const admin = createAdminClient();
   const { error } = await admin.from("password_change_requests").update({
