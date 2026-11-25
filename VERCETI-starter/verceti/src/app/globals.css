@@ -3428,15 +3428,59 @@ td {
 .global-call-listener .call-session video { max-width:100%; }
 
 
-/* Keep fixed quick actions clear of the voice-room controls on desktop and mobile. */
+/* One compact fixed launcher for all pinned site tools. */
 .pinned-site-actions {
   position: fixed;
-  right: auto;
-  left: 16px;
+  left: max(16px, env(safe-area-inset-left));
   bottom: max(16px, env(safe-area-inset-bottom));
   z-index: 10000;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 14px;
+  gap: 12px;
+}
+
+.pinned-site-actions-trigger {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid rgba(193, 138, 255, .65);
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(145deg, #7134a8, #35164f);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .4);
+  font-size: 23px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.pinned-site-actions-trigger:hover {
+  border-color: #d8b4fe;
+  filter: brightness(1.12);
+}
+
+.pinned-site-actions-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  width: min(280px, calc(100vw - 40px));
+  padding: 12px;
+  border: 1px solid rgba(193, 138, 255, .35);
+  border-radius: 16px;
+  background: rgba(23, 16, 35, .97);
+  box-shadow: 0 14px 42px rgba(0, 0, 0, .48);
+  backdrop-filter: blur(12px);
+}
+
+.pinned-site-actions-menu .btn {
+  min-height: 46px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  line-height: 1.35;
+  text-align: left;
+  text-decoration: none;
 }
