@@ -29,6 +29,7 @@ export default async function AdminPage({
     news_deleted?: string;
     news_updated?: string;
     password_request_reviewed?: string;
+    maintenance_updated?: string;
     error?: string;
     tab?: string;
   }>;
