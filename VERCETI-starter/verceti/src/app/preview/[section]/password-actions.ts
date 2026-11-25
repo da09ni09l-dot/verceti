@@ -97,20 +97,36 @@ export async function completeApprovedPasswordChange(formData: FormData) {
     redirect("/preview/settings?status=password_not_approved");
   }
 
-  const { error: passwordError } = await supabase.auth.updateUser({ password });
-  if (passwordError) {
-    console.error("Approved password change:", passwordError.message);
-    redirect("/preview/settings?status=password_save_error");
-  }
-
-  const { error: completionError } = await admin.from("password_change_requests")
+  // Atomically consume the approval before changing the password.
+  // This prevents two concurrent requests from reusing the same approval.
+  const { data: claimedRequest, error: claimError } = await admin
+    .from("password_change_requests")
     .update({ status: "completed" })
     .eq("id", request.id)
     .eq("user_id", user.id)
-    .eq("status", "approved");
+    .eq("status", "approved")
+    .select("id")
+    .maybeSingle();
 
-  if (completionError) {
-    console.error("Mark password request completed:", completionError.message);
+  if (claimError || !claimedRequest) {
+    console.error("Claim approved password request:", claimError?.message);
+    redirect("/preview/settings?status=password_not_approved");
+  }
+
+  const { error: passwordError } = await supabase.auth.updateUser({ password });
+  if (passwordError) {
+    console.error("Approved password change:", passwordError.message);
+    // Restore the approval if Supabase rejected the password update.
+    const { error: restoreError } = await admin
+      .from("password_change_requests")
+      .update({ status: "approved" })
+      .eq("id", claimedRequest.id)
+      .eq("user_id", user.id)
+      .eq("status", "completed");
+    if (restoreError) {
+      console.error("Restore approved password request:", restoreError.message);
+    }
+    redirect("/preview/settings?status=password_save_error");
   }
 
   redirect("/preview/settings?status=password_saved");
