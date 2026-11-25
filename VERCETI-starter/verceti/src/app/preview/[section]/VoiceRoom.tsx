@@ -15,7 +15,7 @@ import { Track } from "livekit-client";
 import {
   Headphones, Mic2, Users, Plus, Trash2, DoorOpen, MonitorUp,
   Radio, LoaderCircle, X, CheckCircle2, Volume2,
-  Mic, MicOff, ScreenShare, ScreenShareOff, RadioTower,
+  Mic, MicOff, ScreenShare, ScreenShareOff, RadioTower, Camera, CameraOff,
 } from "lucide-react";
 
 type Room = {
@@ -293,7 +293,8 @@ export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: Voice
 function VoiceRoomContent({ roomName, displayRoomName, onLeave, compact = false, isStaffForRoom = false }: { roomName: string; displayRoomName: string; onLeave: () => void; compact?: boolean; isStaffForRoom?: boolean }) {
   const participants = useParticipants();
   const screenTracks = useTracks([Track.Source.ScreenShare]);
-  const { localParticipant, isMicrophoneEnabled, isScreenShareEnabled } = useLocalParticipant();
+  const cameraTracks = useTracks([Track.Source.Camera]);
+  const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const [moderating, setModerating] = useState<string | null>(null);
   const [moderationError, setModerationError] = useState("");
   const [dockPosition, setDockPosition] = useState<{ left: number; top: number } | null>(null);
@@ -332,7 +333,7 @@ function VoiceRoomContent({ roomName, displayRoomName, onLeave, compact = false,
     }
   }
 
-  async function toggleScreenShare() {
+  async function toggleCamera() {\n    try {\n      await localParticipant.setCameraEnabled(!isCameraEnabled);\n    } catch {\n      setModerationError("Не вдалося увімкнути камеру. Перевір дозвіл браузера.");\n    }\n  }\n\n  async function toggleScreenShare() {
     try {
       await localParticipant.setScreenShareEnabled(!isScreenShareEnabled);
     } catch {
@@ -379,7 +380,7 @@ function VoiceRoomContent({ roomName, displayRoomName, onLeave, compact = false,
           <button type="button" className={`voice-dock-icon-button ${isMicrophoneEnabled ? "" : "is-muted"}`} onClick={() => void toggleMicrophone()} title={isMicrophoneEnabled ? "Вимкнути мікрофон" : "Увімкнути мікрофон"} aria-label={isMicrophoneEnabled ? "Вимкнути мікрофон" : "Увімкнути мікрофон"}>
             {isMicrophoneEnabled ? <Mic size={17} /> : <MicOff size={17} />}
           </button>
-          <Link className="voice-dock-icon-button" href="/preview/voice" title="Відкрити голосову кімнату" aria-label="Відкрити голосову кімнату"><RadioTower size={17} /></Link>
+          <button type="button" className={`voice-dock-icon-button ${isCameraEnabled ? "is-muted" : ""}`} onClick={() => void toggleCamera()} title={isCameraEnabled ? "Вимкнути камеру" : "Увімкнути камеру"} aria-label={isCameraEnabled ? "Вимкнути камеру" : "Увімкнути камеру"}>{isCameraEnabled ? <CameraOff size={17} /> : <Camera size={17} />}</button>\n          <Link className="voice-dock-icon-button" href="/preview/voice" title="Відкрити голосову кімнату" aria-label="Відкрити голосову кімнату"><RadioTower size={17} /></Link>
           <button className="voice-dock-leave" type="button" onClick={onLeave}><DoorOpen size={16} /> Вийти з голосу</button>
         </div>
       </div>
@@ -430,8 +431,8 @@ function VoiceRoomContent({ roomName, displayRoomName, onLeave, compact = false,
         </section>
 
         <section className="voice-content-card voice-screen-card">
-          <div className="voice-card-heading"><MonitorUp size={17} /><h3>Демонстрація екрана</h3></div>
-          {screenTracks.length ? (
+          <div className="voice-card-heading"><MonitorUp size={17} /><h3>Відео та демонстрація екрана</h3></div>
+          {cameraTracks.length > 0 && (\n            <div className="voice-camera-grid">\n              {cameraTracks.map((track, index) => (\n                <div className="voice-camera-track" key={track.publication.trackSid || `camera-${index}`}>\n                  <VideoTrack trackRef={track} />\n                  <p>{track.participant.identity === localParticipant.identity ? "Ти" : (track.participant.name || track.participant.identity)}</p>\n                </div>\n              ))}\n            </div>\n          )}\n          {screenTracks.length ? (
             <div className="voice-screen-list">
               {screenTracks.map((track, index) => (
                 <div className="voice-screen-track" key={track.publication.trackSid || index}>
@@ -447,7 +448,7 @@ function VoiceRoomContent({ roomName, displayRoomName, onLeave, compact = false,
       </div>
 
       <div className="voice-controls-panel">
-        <div><strong>Керування звуком</strong><small>Мікрофон та демонстрація екрана</small></div>
+        <div><strong>Керування звуком і відео</strong><small>Мікрофон, камера та демонстрація екрана</small></div>
         <div className="voice-action-group"><button type="button" className={`voice-action-button ${isMicrophoneEnabled ? "" : "is-muted"}`} onClick={() => void toggleMicrophone()}><>{isMicrophoneEnabled ? <Mic size={18} /> : <MicOff size={18} />}{isMicrophoneEnabled ? "Мікрофон увімкнено" : "Мікрофон вимкнено"}</></button><button type="button" className={`voice-action-button ${isScreenShareEnabled ? "is-sharing" : ""}`} onClick={() => void toggleScreenShare()}><>{isScreenShareEnabled ? <ScreenShareOff size={18} /> : <ScreenShare size={18} />}{isScreenShareEnabled ? "Зупинити трансляцію" : "Транслювати екран"}</></button></div>
         <button className="voice-leave-button" type="button" onClick={onLeave}><DoorOpen size={17} /> Вийти з кімнати</button>
       </div>
