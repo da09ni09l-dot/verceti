@@ -1,6 +1,7 @@
 grant delete on public.workshop_bookings to authenticated;
 
 drop policy if exists "Users can delete own workshop bookings" on public.workshop_bookings;
+drop policy if exists "Members and founder can cancel workshop bookings" on public.workshop_bookings;
 create policy "Members and founder can cancel workshop bookings"
 on public.workshop_bookings
 for delete
