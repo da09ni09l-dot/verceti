@@ -46,7 +46,7 @@ export default async function AdminPage({
 
   const { data: role } = await supabase.rpc("current_verceti_role");
 
-  if (role !== "admin") {
+  if (!["founder", "admin", "leader"].includes(String(role))) {
     redirect("/");
   }
 
@@ -98,7 +98,7 @@ export default async function AdminPage({
     self_ban: "Не можна заблокувати власний акаунт.",
     self_delete: "Не можна видалити власний акаунт.",
     confirmation: "Для підтвердження видалення введи DELETE.",
-    protected: "Адміністратора не можна заблокувати або видалити.",
+    protected: "Засновника та Лідера не можна заблокувати або видалити.",
     ban: "Не вдалося заблокувати учасника.",
     unban: "Не вдалося розблокувати учасника.",
     delete_cleanup: "Не вдалося підготувати дані до видалення. Акаунт не видалено.",
@@ -115,6 +115,8 @@ export default async function AdminPage({
   };
 
   const roleLabels: Record<string, string> = {
+    founder: "Засновник",
+    leader: "Лідер",
     admin: "Адміністратор",
     junior: "Молодший учасник",
     local: "Учасник",
