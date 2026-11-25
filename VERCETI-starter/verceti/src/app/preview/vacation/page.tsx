@@ -72,22 +72,54 @@ export default async function VacationPage({ searchParams }: { searchParams: Pro
         <section className="panel" style={{ marginTop: 20 }}>
           <div className="eyebrow">{canReview ? "КЕРУВАННЯ ЗАЯВКАМИ" : "ТВОЇ ЗАЯВКИ"}</div>
           <h2 style={{ marginTop: 8 }}>{canReview ? "Заявки учасників" : "Історія відпусток"}</h2>
-          {error ? <p className="muted" style={{ marginTop: 14 }}>Не вдалося завантажити заявки. Переконайся, що міграцію бази даних застосовано.</p> : requests.length === 0 ? <p className="muted" style={{ marginTop: 14 }}>Заявок поки немає.</p> : (
+          {error ? (
+            <p className="muted" style={{ marginTop: 14 }}>
+              Не вдалося завантажити заявки. Переконайся, що міграцію бази даних застосовано.
+            </p>
+          ) : requests.length === 0 ? (
+            <p className="muted" style={{ marginTop: 14 }}>Заявок поки немає.</p>
+          ) : (
             <div className="member-list" style={{ marginTop: 14 }}>
-              {requests.map((request) => (
-                <article className="member-row" key={request.id} style={{ alignItems: "flex-start", flexWrap: "wrap" }}>
-                  <div style={{ flex: "1 1 260px", minWidth: 0 }}>
-                    <strong>{canReview ? nicknameById.get(request.user_id) ?? "Учасник" : "Твоя відпустка"}</strong>
-                    <p className="muted" style={{ marginTop: 6 }}>{formatDate(request.start_date)} — {formatDate(request.end_date)}</p>
-                    <p style={{ marginTop: 8, whiteSpace: "pre-wrap" }}>{request.reason}</p>
-                    <p className="notice-time" style={{ marginTop: 8 }}>Статус: {statusLabels[request.status]}</p>
-                  </div>
-                  {(canReview && request.status === "pending" || canDelete) && <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{canReview && request.status === "pending" && <>
-                    <form action={reviewVacationRequest}><input type="hidden" name="id" value={request.id} /><input type="hidden" name="decision" value="approved" /><button className="btn" type="submit">Схвалити</button></form>
-                    <form action={reviewVacationRequest}><input type="hidden" name="id" value={request.id} /><input type="hidden" name="decision" value="rejected" /><button className="btn secondary" type="submit">Відхилити</button></form>
-                  </>}{canDelete && <form action={deleteVacationRequest}><input type="hidden" name="id" value={request.id} /><button className="btn secondary" type="submit">Видалити</button></form>}</div>}
-                </article>
-              ))}
+              {requests.map((request) => {
+                const showReview = canReview && request.status === "pending";
+                const showActions = showReview || canDelete;
+                return (
+                  <article className="member-row" key={request.id} style={{ alignItems: "flex-start", flexWrap: "wrap" }}>
+                    <div style={{ flex: "1 1 260px", minWidth: 0 }}>
+                      <strong>{canReview ? nicknameById.get(request.user_id) ?? "Учасник" : "Твоя відпустка"}</strong>
+                      <p className="muted" style={{ marginTop: 6 }}>
+                        {formatDate(request.start_date)} — {formatDate(request.end_date)}
+                      </p>
+                      <p style={{ marginTop: 8, whiteSpace: "pre-wrap" }}>{request.reason}</p>
+                      <p className="notice-time" style={{ marginTop: 8 }}>Статус: {statusLabels[request.status]}</p>
+                    </div>
+                    {showActions && (
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {showReview && (
+                          <>
+                            <form action={reviewVacationRequest}>
+                              <input type="hidden" name="id" value={request.id} />
+                              <input type="hidden" name="decision" value="approved" />
+                              <button className="btn" type="submit">Схвалити</button>
+                            </form>
+                            <form action={reviewVacationRequest}>
+                              <input type="hidden" name="id" value={request.id} />
+                              <input type="hidden" name="decision" value="rejected" />
+                              <button className="btn secondary" type="submit">Відхилити</button>
+                            </form>
+                          </>
+                        )}
+                        {canDelete && (
+                          <form action={deleteVacationRequest}>
+                            <input type="hidden" name="id" value={request.id} />
+                            <button className="btn secondary" type="submit">Видалити</button>
+                          </form>
+                        )}
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>
