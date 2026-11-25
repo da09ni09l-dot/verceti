@@ -6,8 +6,8 @@ import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-type Source = "Audius" | "Jamendo" | "YouTube" | "SoundCloud";
-type CatalogSource = "Audius" | "Jamendo";
+type Source = "Audius" | "Jamendo" | "iTunes" | "YouTube" | "SoundCloud";
+type CatalogSource = "Audius" | "Jamendo" | "iTunes";
 type Tab = "personal" | "shared" | "recommendations" | "favorites";
 type PlaylistType = "personal" | "shared";
 type MusicMode = "trending" | "latest" | "ukrainian" | "search";
@@ -715,15 +715,28 @@ export default function MusicRoom() {
       )}/stream?app_name=VERCETI`
     : "";
 
-  function submitSearch(event: React.FormEvent<HTMLFormElement>) {
+  async function submitSearch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const query = search.trim();
+    if (!query) return;
 
-    if (!search.trim()) return;
+    setMusicLoading(true);
+    setMessage("");
+    setMusicMode("search");
 
-    if (catalogSource === "Audius") {
-      loadAudius("search", search.trim());
-    } else {
-      loadJamendo("search", search.trim());
+    try {
+      const response = await fetch(`/api/music-search?q=${encodeURIComponent(query)}`);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Не вдалося знайти музику.");
+
+      const items = Array.isArray(result.results) ? result.results : [];
+      setCatalogTracks(items);
+      if (items.length === 0) setMessage("У доступних музичних каталогах збігів не знайдено. Спробуй інший запит.");
+    } catch (error) {
+      setCatalogTracks([]);
+      setMessage(error instanceof Error ? error.message : "Помилка пошуку музики.");
+    } finally {
+      setMusicLoading(false);
     }
   }
 
@@ -833,7 +846,7 @@ export default function MusicRoom() {
                     onClick={() =>
                       playQueue(
                         recommendations
-                          .filter((track) => track.source === "Audius" || track.source === "Jamendo" || track.source === "SoundCloud")
+                          .filter((track) => track.source === "Audius" || track.source === "Jamendo" || track.source === "iTunes" || track.source === "SoundCloud")
                           .map((track) => ({
                             id: track.id,
                             title: track.title,
@@ -916,7 +929,7 @@ export default function MusicRoom() {
                 onClick={() =>
                   playQueue(
                     visibleTracks
-                      .filter((item) => item.source === "Audius" || item.source === "Jamendo" || item.source === "SoundCloud")
+                      .filter((item) => item.source === "Audius" || item.source === "Jamendo" || item.source === "iTunes" || item.source === "SoundCloud")
                       .map((item) => ({
                         id: item.id,
                         title: item.title,
@@ -970,70 +983,12 @@ export default function MusicRoom() {
         )}
       </section>
 
-      {/* ПОШУК МУЗИКИ ПІСЛЯ АЛЬБОМІВ */}
+      {/* ЄДИНИЙ ПОШУК ПО ВСІХ ДОСТУПНИХ ДЖЕРЕЛАХ */}
       <section className="panel">
         <h2 style={{ marginTop: 0 }}>🔎 Знайти музику</h2>
-
         <p className="muted">
-          Обери музичний каталог або введи назву композиції чи виконавця.
+          Введи назву пісні або виконавця — пошук перевірить одразу кілька музичних каталогів.
         </p>
-
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button
-            className="btn"
-            type="button"
-            onClick={() => loadAudius("trending")}
-            disabled={musicLoading}
-            style={{
-              background:
-                catalogSource === "Audius"
-                  ? "rgba(187,138,255,0.35)"
-                  : undefined,
-            }}
-          >
-            🎵 Audius
-          </button>
-
-          <button
-            className="btn"
-            type="button"
-            onClick={() => loadJamendo("ukrainian")}
-            disabled={musicLoading}
-            style={{
-              background:
-                catalogSource === "Jamendo"
-                  ? "rgba(187,138,255,0.35)"
-                  : undefined,
-            }}
-          >
-            🇺🇦 Jamendo
-          </button>
-        </div>
-
-        <div style={{ marginTop: 16 }}>
-          <h3 style={{ margin: "0 0 10px" }}>🎼 Музичні добірки</h3>
-          <p className="muted" style={{ marginTop: 0 }}>
-            Швидкий пошук у каталозі Audius — добірки оновлюються з доступних треків.
-          </p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {[
-              { label: "🇺🇦 Українська музика", query: "Ukrainian pop" },
-              { label: "🌍 Міжнародні хіти", query: "international pop hits" },
-              { label: "🔥 Ремікси та EDM", query: "dance remix EDM" },
-              { label: "🎼 Класика й хіти всіх часів", query: "classic hits" },
-            ].map((category) => (
-              <button
-                key={category.query}
-                className="btn secondary"
-                type="button"
-                onClick={() => loadAudius("search", category.query)}
-                disabled={musicLoading}
-              >
-                {category.label}
-              </button>
-            ))}
-          </div>
-        </div>
 
         <form
           onSubmit={submitSearch}
@@ -1047,7 +1002,7 @@ export default function MusicRoom() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Наприклад, українська музика або назва пісні"
+            placeholder="Назва пісні або виконавець"
             style={{ flex: 1, minWidth: 180 }}
           />
 
@@ -1060,47 +1015,8 @@ export default function MusicRoom() {
           </button>
         </form>
 
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
-          {catalogSource === "Audius" ? (
-            <>
-              <button
-                className="btn"
-                type="button"
-                onClick={() => loadAudius("trending")}
-                disabled={musicLoading}
-              >
-                🔥 Популярне
-              </button>
-
-              <button
-                className="btn"
-                type="button"
-                onClick={() => loadAudius("latest")}
-                disabled={musicLoading}
-              >
-                ✨ Новинки
-              </button>
-            </>
-          ) : (
-            <button
-              className="btn"
-              type="button"
-              onClick={() => loadJamendo("ukrainian")}
-              disabled={musicLoading}
-            >
-              🇺🇦 Український чарт
-            </button>
-          )}
-        </div>
-
         <h3 style={{ marginTop: 22 }}>
-          {musicMode === "trending"
-            ? "🔥 Популярні композиції Audius"
-            : musicMode === "latest"
-              ? "✨ Нові композиції Audius"
-              : musicMode === "ukrainian"
-                ? "🇺🇦 Український чарт Jamendo"
-                : `🔎 Результати пошуку — ${catalogSource}`}
+          {musicMode === "search" ? "🔎 Результати пошуку з усіх джерел" : "🎵 Музичні композиції"}
         </h3>
 
         {musicLoading ? (
@@ -1156,7 +1072,7 @@ export default function MusicRoom() {
                       ? ` · ${formatDuration(track.duration)}`
                       : ""}
                     {" · "}
-                    {track.source}
+                    {track.source === "iTunes" ? "Apple Music preview" : track.source}
                   </span>
                 </div>
 
@@ -1222,8 +1138,7 @@ export default function MusicRoom() {
         )}
 
         <p className="muted" style={{ fontSize: 12, marginTop: 14 }}>
-          Audius і Jamendo надають незалежні музичні каталоги. Доступність
-          композицій та можливість відтворення залежать від авторів і джерела.
+          Результати об’єднують Audius, Jamendo та каталог iTunes. Для iTunes доступні офіційні аудіофрагменти; повна версія може бути доступна на сторінці правовласника.
         </p>
       </section>
 
@@ -1292,7 +1207,7 @@ export default function MusicRoom() {
                       Твій браузер не підтримує аудіоплеєр.
                     </audio>
                   ) : null
-                ) : playing.source === "Jamendo" ? (
+                ) : playing.source === "Jamendo" || playing.source === "iTunes" ? (
                   <audio
                     ref={audioRef}
                     key={playing.url}
@@ -1302,7 +1217,7 @@ export default function MusicRoom() {
                     src={playing.url}
                     onError={() => {
                       setAudioError(
-                        "Jamendo не зміг передати аудіо. Спробуй іншу композицію."
+                        "Джерело не змогло передати аудіо. Спробуй іншу композицію."
                       );
                     }}
                     onCanPlay={() => setAudioError("")}
