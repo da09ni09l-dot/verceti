@@ -33,9 +33,11 @@ const roleLabels: Record<string, string> = {
 export default async function ApplicationsSection({
   status,
   showPendingOnly = false,
+  showDatabaseOnly = false,
 }: {
   status?: string;
   showPendingOnly?: boolean;
+  showDatabaseOnly?: boolean;
 }) {
   const supabase = await createClient();
 
@@ -59,7 +61,6 @@ export default async function ApplicationsSection({
   const { data: questionsData, error: questionsError } = await supabase
     .from("application_questions")
     .select("*")
-    .eq("is_active", true)
     .order("position", { ascending: true });
 
   const questions = questionsData ?? [];
@@ -114,7 +115,7 @@ export default async function ApplicationsSection({
         Заповнення анкет та перевірка заявок учасників спільноти.
       </p>
 
-      {!showPendingOnly && (
+      {!showPendingOnly && !showDatabaseOnly && (
       <div className="panel" style={{ marginTop: 18 }}>
         <h2>🎂 Дата народження</h2>
         <p className="muted">Вкажи день і місяць, щоб усі учасники отримували сповіщення у твій день народження. Рік не потрібен.</p>
@@ -225,7 +226,7 @@ export default async function ApplicationsSection({
         </div>
       )}
 
-      {isStaff && !showPendingOnly && (
+      {isStaff && !showPendingOnly && !showDatabaseOnly && (
         <div className="panel" style={{ marginTop: 24 }}>
           <h2>Конструктор анкети</h2>
 
@@ -514,13 +515,13 @@ export default async function ApplicationsSection({
         </div>
       )}
 
-      {isStaff && showPendingOnly && (
+      {isStaff && (showPendingOnly || showDatabaseOnly) && (
         <div style={{ marginTop: 28 }}>
-          <h2>Список заявок, що очікують рішення</h2>
+          <h2>{showDatabaseOnly ? "Усі збережені анкети" : "Список заявок, що очікують рішення"}</h2>
 
           {applications.length === 0 ? (
             <div className="panel">
-              {showPendingOnly ? "Немає анкет, які очікують підтвердження." : "Поки що учасники не надсилали анкет."}
+              {showDatabaseOnly ? "У базі поки немає анкет." : "Немає анкет, які очікують підтвердження."}
             </div>
           ) : (
             applications.map((application) => {
@@ -624,7 +625,7 @@ export default async function ApplicationsSection({
                     </form>
                   </details>
 
-                  {application.status === "pending" && (
+                  {!showDatabaseOnly && application.status === "pending" && (
                     <div
                       className="member-list"
                       style={{
