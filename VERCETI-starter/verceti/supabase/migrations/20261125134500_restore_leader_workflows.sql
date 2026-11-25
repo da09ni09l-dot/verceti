@@ -19,7 +19,8 @@ on public.vacation_requests
 for delete
 to authenticated
 using (
-  public.current_verceti_role() in ('founder'::public.verceti_role, 'leader'::public.verceti_role)
+  status = 'approved'
+  and public.current_verceti_role() in ('founder'::public.verceti_role, 'leader'::public.verceti_role)
 );
 
 drop policy if exists "Founder can review vacation requests" on public.vacation_requests;
