@@ -10,7 +10,7 @@ async function sendSupportRequest(formData: FormData) {
   const message = String(formData.get("message") ?? "").trim().slice(0, 4000);
   const website = String(formData.get("website") ?? "").trim();
   if (website) redirect("/support?sent=1");
-  if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || subject.length < 3 || message.length < 10) redirect("/support?error=1");
+  if (name.length < 2 || subject.length < 3 || message.length < 10) redirect("/support?error=1");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const admin = createAdminClient();
