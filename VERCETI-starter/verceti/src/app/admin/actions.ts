@@ -4,6 +4,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 const allowedRoles = [
   "junior",
@@ -600,4 +601,29 @@ export async function toggleNewsPin(formData: FormData) {
   }
 
   redirect(returnToPreview ? "/preview/news?status=pinned" : "/admin?tab=news&news_updated=1");
+}
+
+export async function setMaintenanceMode(formData: FormData) {
+  const enabled = formData.get("enabled") === "true";
+  const message = String(formData.get("message") ?? "").trim().slice(0, 300);
+  const { user } = await requireAdmin();
+  const admin = createAdminClient();
+
+  const { error } = await admin
+    .from("site_settings")
+    .upsert({
+      id: true,
+      maintenance_enabled: enabled,
+      maintenance_message: message || "Сайт тимчасово оновлюється. Будь ласка, зайдіть пізніше.",
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    }, { onConflict: "id" });
+
+  if (error) {
+    console.error("Set maintenance mode error:", error.message);
+    redirect("/admin?error=maintenance");
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/admin?maintenance_updated=1");
 }

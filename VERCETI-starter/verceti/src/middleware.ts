@@ -48,9 +48,37 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isLogin = request.nextUrl.pathname === "/login";
+  const isMaintenancePage = request.nextUrl.pathname === "/maintenance";
   const isPublicSupport = request.nextUrl.pathname === "/support" || request.nextUrl.pathname.startsWith("/support/chat");
 
-  if (!user && !isLogin && !isPublicSupport && request.nextUrl.pathname !== "/setup") {
+  // Check maintenance mode before authentication redirects so signed-out visitors
+  // also see the maintenance page instead of the login screen.
+  if (!isMaintenancePage) {
+    const { data: setting } = await supabase
+      .from("site_settings")
+      .select("maintenance_enabled")
+      .eq("id", true)
+      .maybeSingle();
+
+    if (setting?.maintenance_enabled) {
+      let isAdmin = false;
+      if (user) {
+        const { data: role } = await supabase.rpc("current_verceti_role");
+        isAdmin = role === "admin";
+      }
+
+      if (!isAdmin) {
+        const maintenanceUrl = new URL("/maintenance", request.url);
+        const maintenanceResponse = NextResponse.redirect(maintenanceUrl);
+        response.cookies.getAll().forEach((cookie) => {
+          maintenanceResponse.cookies.set(cookie);
+        });
+        return maintenanceResponse;
+      }
+    }
+  }
+
+  if (!user && !isLogin && !isMaintenancePage && !isPublicSupport && request.nextUrl.pathname !== "/setup") {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
