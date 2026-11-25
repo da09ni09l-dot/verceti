@@ -23,7 +23,7 @@ export default async function SupportChatPage({ searchParams }: { searchParams: 
   const p = await searchParams;
   if (!p.ticket || !p.key) notFound();
   const admin = createAdminClient();
-  const { data: ticket } = await admin.from("support_requests").select("id, sender_name, sender_email, subject, message, created_at, access_token").eq("id", p.ticket).eq("access_token", p.key).maybeSingle();
+  const { data: ticket } = await admin.from("support_requests").select("id, sender_name, subject, message, created_at, access_token").eq("id", p.ticket).eq("access_token", p.key).maybeSingle();
   if (!ticket) notFound();
   const { data: replies } = await admin.from("support_messages").select("id, sender_type, message, created_at").eq("request_id", ticket.id).order("created_at", { ascending: true });
   return (
