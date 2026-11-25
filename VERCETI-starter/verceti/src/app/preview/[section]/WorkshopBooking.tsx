@@ -110,23 +110,28 @@ export default function WorkshopBooking({ userId }: { userId: string }) {
     <div style={{ display: "grid", gap: 16, marginTop: 18 }}>
       <section style={panel}>
         <h2 style={{ marginTop: 0 }}>🏭 Бронювання цеху</h2>
-        <p className="muted">Розклад на добу: 24 часові проміжки від 00:00 до 00:00. Вільний час можна забронювати, обравши алко та/або петрушку. Розклад автоматично перемикається на нову дату опівночі.</p>
+        <p className="muted">Розклад на добу: 48 проміжків по 30 хвилин від 00:00 до 24:00. Вільний час можна забронювати, обравши алко та/або петрушку. Розклад автоматично перемикається на нову дату опівночі.</p>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <strong>Дата:</strong>
           <input type="date" value={date} onChange={(event) => setDate(event.target.value)} style={{ maxWidth: 190 }} />
           <button className="btn secondary" type="button" onClick={() => setDate(localDateKey())}>Сьогодні</button>
-          <span className="page-note">{bookings.length}/24 годин заброньовано</span>
+          <span className="page-note">{bookings.length}/48 проміжків заброньовано</span>
         </div>
       </section>
       {error && <p role="alert" style={{ color: "#ff9b9b", margin: 0 }}>{error}</p>}
       {notice && <p role="status" style={{ color: "#8fe0ad", margin: 0 }}>{notice}</p>}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 270px), 1fr))", gap: 10 }}>
-        {Array.from({ length: 24 }, (_, slot) => {
+        {Array.from({ length: 48 }, (_, slot) => {
           const booking = bookings.find((item) => item.hour_slot === slot);
           const own = booking?.user_id === userId;
           const choice = selected(slot);
-          const start = String(slot).padStart(2, "0") + ":00";
-          const end = String((slot + 1) % 24).padStart(2, "0") + ":00";
+          const startHour = Math.floor(slot / 2);
+          const startMinute = slot % 2 === 0 ? "00" : "30";
+          const endSlot = slot + 1;
+          const endHour = Math.floor(endSlot / 2) % 24;
+          const endMinute = endSlot % 2 === 0 ? "00" : "30";
+          const start = `${String(startHour).padStart(2, "0")}:${startMinute}`;
+          const end = `${String(endHour).padStart(2, "0")}:${endMinute}`;
           return (
             <article key={slot} style={{ ...panel, borderColor: booking ? "rgba(187,138,255,.38)" : "rgba(255,255,255,.12)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>

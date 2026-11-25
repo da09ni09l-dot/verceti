@@ -1,6 +1,7 @@
 
 import type { Metadata } from "next";
 import "./globals.css";
+import "@livekit/components-styles";
 import OnlinePresenceProvider from "./OnlinePresenceProvider";
 import MusicRoom from "./preview/[section]/MusicRoom";
 import PinnedSiteActions from "./PinnedSiteActions";
@@ -22,9 +23,14 @@ export default async function RootLayout({
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   let isStaff = false;
+  let canModerateVoice = false;
   if (user) {
-    const { data, error } = await supabase.rpc("is_verceti_staff");
-    isStaff = !error && data === true;
+    const [{ data: staffData, error: staffError }, { data: roleData, error: roleError }] = await Promise.all([
+      supabase.rpc("is_verceti_staff"),
+      supabase.rpc("current_verceti_role")
+    ]);
+    isStaff = !staffError && staffData === true;
+    canModerateVoice = !roleError && ["admin", "leader", "moderator"].includes(String(roleData));
   }
 
   return (
@@ -35,7 +41,7 @@ export default async function RootLayout({
           <ActivityTracker />
           {children}
           <MusicRoom />
-          <VoiceRoom isStaff={isStaff} />
+          <VoiceRoom isStaff={isStaff} canModerateVoice={canModerateVoice} />
           <PinnedSiteActions />
         </OnlinePresenceProvider>
       </body>

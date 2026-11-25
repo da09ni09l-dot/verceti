@@ -595,12 +595,13 @@ export async function deleteNews(formData: FormData) {
 
 export async function toggleNewsPin(formData: FormData) {
   const newsId = String(formData.get("news_id") ?? "").trim();
+  const returnToPreview = formData.get("return_to") === "/preview/news";
 
   if (!newsId || !/^[0-9a-f-]{36}$/i.test(newsId)) {
-    redirect("/admin?tab=news&error=news");
+    redirect(returnToPreview ? "/preview/news?status=invalid" : "/admin?tab=news&error=news");
   }
 
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireStaff();
 
   const { data: news, error: findError } = await supabase
     .from("news")
@@ -620,8 +621,8 @@ export async function toggleNewsPin(formData: FormData) {
 
   if (error) {
     console.error("Toggle news pin error:", error.message);
-    redirect("/admin?tab=news&error=news_update");
+    redirect(returnToPreview ? "/preview/news?status=pin-error" : "/admin?tab=news&error=news_update");
   }
 
-  redirect("/admin?tab=news&news_updated=1");
+  redirect(returnToPreview ? "/preview/news?status=pinned" : "/admin?tab=news&news_updated=1");
 }

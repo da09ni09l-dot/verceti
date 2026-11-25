@@ -4,7 +4,7 @@ import TestsSection from "./TestsSection";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "../../logout/actions";
-import { createNews, deleteNews } from "../../admin/actions";
+import { createNews, deleteNews, toggleNewsPin } from "../../admin/actions";
 import {
   createRule,
   updateRule,
@@ -21,6 +21,7 @@ import StatsSection from "./StatsSection";
 import ProductsBoard from "./ProductsBoard";
 import WorkshopBooking from "./WorkshopBooking";
 import { createRewardPrize, deleteRewardPrize, spinWeeklyRewards } from "./rewards-actions";
+import { requestPasswordChange, completeApprovedPasswordChange } from "./password-actions";
 
 const descriptions: Record<string, { title: string; text: string; items: string[] }> = {
   members: {
@@ -35,8 +36,8 @@ const descriptions: Record<string, { title: string; text: string; items: string[
   },
   workshop: {
     title: "Бронювання цеху",
-    text: "Погодинний розклад бронювання цеху з вибором виду продукції.",
-    items: ["Алко та петрушка", "Перегляд зайнятих годин", "Оновлення розкладу щодня опівночі"]
+    text: "Розклад бронювання цеху з інтервалами по 30 хвилин та вибором виду продукції.",
+    items: ["Алко та петрушка", "48 проміжків по 30 хвилин", "Оновлення розкладу щодня опівночі"]
   },
   voice: {
     title: "Голосові кімнати",
@@ -141,10 +142,10 @@ export default async function PreviewSection({
   searchParams
 }: {
   params: Promise<{ section: string }>;
-  searchParams: Promise<{ status?: string; q?: string; recipient?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; recipient?: string; view?: string }>;
 }) {
   const { section } = await params;
-  const { status, q = "", recipient } = await searchParams;
+  const { status, q = "", recipient, view } = await searchParams;
 
   const supabase = await createClient();
 
@@ -195,6 +196,7 @@ export default async function PreviewSection({
     content: string;
     category: string;
     event_date: string | null;
+    is_pinned: boolean;
     created_at: string;
     show_from: string | null;
     show_until: string | null;
@@ -611,7 +613,7 @@ export default async function PreviewSection({
 
     const { data, error } = await supabase
       .from("news")
-      .select("id, title, content, category, event_date, created_at, show_from, show_until")
+      .select("id, title, content, category, event_date, is_pinned, created_at, show_from, show_until")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -624,6 +626,19 @@ export default async function PreviewSection({
         (!item.show_until || new Date(item.show_until).getTime() > now)
       );
     }
+  }
+
+  let passwordRequestStatus: string | null = null;
+  if (section === "settings") {
+    const { data: passwordRequest } = await supabase
+      .from("password_change_requests")
+      .select("status")
+      .eq("user_id", user.id)
+      .in("status", ["pending", "approved"])
+      .order("requested_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    passwordRequestStatus = passwordRequest?.status ?? null;
   }
 
   let rewardPrizes: { id: string; title: string; description: string; weight: number; created_by: string }[] = [];
@@ -781,7 +796,7 @@ export default async function PreviewSection({
         {section === "workshop" ? (
           <>
             <h1>Бронювання цеху</h1>
-            <p className="muted">Обери вільну годину та познач продукцію.</p>
+            <p className="muted">Обери вільний проміжок на 30 хвилин та познач продукцію.</p>
             <WorkshopBooking userId={user.id} />
           </>
         ) : section === "products" ? (
@@ -823,7 +838,7 @@ export default async function PreviewSection({
             <MediaRoom />
           </>
         ) : section === "forms" ? (
-          <ApplicationsSection status={status} />
+          <ApplicationsSection status={status} showPendingOnly={view === "pending" && isStaff} />
         ) : section === "members" ? (
           <>
             <h1>Учасники VERCETI</h1>
@@ -1077,8 +1092,16 @@ export default async function PreviewSection({
                   <input
                     id="news-date"
                     name="event_date"
-                    type="date"
+                    type="datetime-local"
                   />
+
+                  <label htmlFor="news-show-from">Показувати з (необов’язково)</label>
+                  <input id="news-show-from" name="show_from" type="datetime-local" />
+                  <label htmlFor="news-show-until">Показувати до (необов’язково)</label>
+                  <input id="news-show-until" name="show_until" type="datetime-local" />
+                  <label style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                    <input name="is_pinned" type="checkbox" /> Закріпити на головній сторінці
+                  </label>
 
                   <button className="btn" type="submit">
                     Опублікувати новину
@@ -1117,6 +1140,8 @@ export default async function PreviewSection({
                 У тебе немає прав для цієї дії.
               </div>
             )}
+            {status === "pinned" && <div className="panel" style={{ marginTop: 16 }}>Закріплення новини оновлено.</div>}
+            {status === "pin-error" && <div className="panel" style={{ marginTop: 16 }}>Не вдалося змінити закріплення новини.</div>}
             {status === "error" && (
               <div className="panel" style={{ marginTop: 16 }}>
                 Не вдалося опублікувати новину. Перевір журнал помилок.
@@ -1147,6 +1172,7 @@ export default async function PreviewSection({
                     <div className="eyebrow">
                       {categoryLabels[item.category] ?? item.category.toUpperCase()}
                     </div>
+                    {item.is_pinned && <p className="notice-time">📌 Закріплено на головній</p>}
                     <h2>{item.title}</h2>
                     <p className="muted">{item.content}</p>
                     <div className="notice-time">
@@ -1154,6 +1180,12 @@ export default async function PreviewSection({
                     </div>
 
                     {isStaff && (
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+                      <form action={toggleNewsPin}>
+                        <input type="hidden" name="news_id" value={item.id} />
+                        <input type="hidden" name="return_to" value="/preview/news" />
+                        <button className="btn secondary" type="submit">{item.is_pinned ? "Відкріпити" : "Закріпити"}</button>
+                      </form>
                       <form
                         action={deleteNews}
                         style={{ marginTop: 14 }}
@@ -1175,6 +1207,7 @@ export default async function PreviewSection({
                           Видалити новину
                         </button>
                       </form>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -1217,29 +1250,29 @@ export default async function PreviewSection({
             </div>
             <div className="panel" style={{ marginTop: 18 }}>
               <h2>Безпека акаунта</h2>
-              <form action={async (formData: FormData) => {
-                "use server";
-                const password = String(formData.get("password") ?? "");
-                const confirmation = String(formData.get("password_confirmation") ?? "");
-                if (password.length < 8 || password !== confirmation) redirect("/preview/settings?status=password_error");
-                const client = await createClient();
-                const { data: { user: currentUser } } = await client.auth.getUser();
-                if (!currentUser) redirect("/login");
-                const { error } = await client.auth.updateUser({ password });
-                if (error) {
-                  console.error("VERCETI password update error:", error.message);
-                  redirect("/preview/settings?status=password_save_error");
-                }
-                redirect("/preview/settings?status=password_saved");
-              }} className="member-list" style={{ marginTop: 14, gap: 10 }}>
-                <label htmlFor="settings-password">Новий пароль</label>
-                <input id="settings-password" name="password" type="password" required minLength={8} autoComplete="new-password" />
-                <label htmlFor="settings-password-confirmation">Повторити новий пароль</label>
-                <input id="settings-password-confirmation" name="password_confirmation" type="password" required minLength={8} autoComplete="new-password" />
-                <button className="btn" type="submit">Оновити пароль</button>
-              </form>
+              <p className="muted">Зміна пароля виконується лише після схвалення адміністратором.</p>
+              {passwordRequestStatus === "pending" ? (
+                <p className="page-note">Запит на зміну пароля очікує рішення адміністратора.</p>
+              ) : passwordRequestStatus === "approved" ? (
+                <form action={completeApprovedPasswordChange} className="member-list" style={{ marginTop: 14, gap: 10 }}>
+                  <p className="page-note">Запит схвалено. Тепер можна встановити новий пароль.</p>
+                  <label htmlFor="settings-password">Новий пароль</label>
+                  <input id="settings-password" name="password" type="password" required minLength={8} maxLength={72} autoComplete="new-password" />
+                  <label htmlFor="settings-password-confirmation">Повторити новий пароль</label>
+                  <input id="settings-password-confirmation" name="password_confirmation" type="password" required minLength={8} maxLength={72} autoComplete="new-password" />
+                  <button className="btn" type="submit">Зберегти новий пароль</button>
+                </form>
+              ) : (
+                <form action={requestPasswordChange} style={{ marginTop: 14 }}>
+                  <button className="btn" type="submit">Надіслати запит на зміну пароля</button>
+                </form>
+              )}
+              {status === "password_request_sent" && <p className="page-note">Запит надіслано адміністратору.</p>}
+              {status === "password_request_exists" && <p className="page-note">Запит уже існує або очікує виконання.</p>}
+              {status === "password_request_error" && <p className="page-note">Не вдалося надіслати запит. Спробуй ще раз.</p>}
+              {status === "password_not_approved" && <p className="page-note">Адміністратор ще не схвалив зміну пароля.</p>}
               {status === "password_saved" && <p className="page-note">Пароль успішно оновлено.</p>}
-              {status === "password_error" && <p className="page-note">Паролі мають збігатися та містити щонайменше 8 символів.</p>}
+              {status === "password_error" && <p className="page-note">Паролі мають збігатися та містити від 8 до 72 символів.</p>}
               {status === "password_save_error" && <p className="page-note">Не вдалося оновити пароль. Спробуй ще раз.</p>}
             </div>
           </>

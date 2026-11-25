@@ -11,6 +11,8 @@ export default async function SectionNavigation() {
   } = await supabase.auth.getUser();
 
   let canSeeMainMenu = false;
+  let pendingApplications = 0;
+  let isStaff = false;
 
   if (user) {
     const { data: staffStatus } = await supabase.rpc(
@@ -19,6 +21,9 @@ export default async function SectionNavigation() {
 
     if (staffStatus === true) {
       canSeeMainMenu = true;
+      isStaff = true;
+      const { count } = await supabase.from("applications").select("id", { count: "exact", head: true }).eq("status", "pending");
+      pendingApplications = count ?? 0;
     } else {
       const { data: applications } = await supabase
         .from("applications")
@@ -50,6 +55,11 @@ export default async function SectionNavigation() {
       ) : (
         <Link className="btn" href="/preview/forms">
           📋 Моя анкета
+        </Link>
+      )}
+      {isStaff && (
+        <Link className="btn" href="/preview/forms?view=pending">
+          📋 Анкети на підтвердження{pendingApplications > 0 ? ` (${pendingApplications})` : ""}
         </Link>
       )}
       {user && <NewsBell userId={user.id} />}

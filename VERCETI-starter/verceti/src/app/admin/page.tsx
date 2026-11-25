@@ -14,6 +14,7 @@ import {
   deleteNews,
   toggleNewsPin,
 } from "./actions";
+import { reviewPasswordChangeRequest } from "../preview/[section]/password-actions";
 
 export default async function AdminPage({
   searchParams,
@@ -26,6 +27,7 @@ export default async function AdminPage({
     news_created?: string;
     news_deleted?: string;
     news_updated?: string;
+    password_request_reviewed?: string;
     error?: string;
     tab?: string;
   }>;
@@ -63,6 +65,17 @@ export default async function AdminPage({
       "id, title, content, category, is_pinned, show_from, show_until, created_at"
     )
     .order("created_at", { ascending: false });
+
+  const { data: passwordRequests } = await supabase
+    .from("password_change_requests")
+    .select("id,user_id,requested_at")
+    .eq("status", "pending")
+    .order("requested_at", { ascending: true });
+  const passwordUserIds = Array.from(new Set((passwordRequests ?? []).map((request) => request.user_id)));
+  const { data: passwordProfiles } = passwordUserIds.length
+    ? await supabase.from("profiles").select("id,nickname").in("id", passwordUserIds)
+    : { data: [] as { id: string; nickname: string }[] };
+  const passwordNicknames = new Map((passwordProfiles ?? []).map((profile) => [profile.id, profile.nickname]));
 
   const errorMessages: Record<string, string> = {
     nickname: "Нікнейм має містити 3–20 символів: латинські літери, цифри або _.",
@@ -228,6 +241,28 @@ export default async function AdminPage({
           <p style={{ color: "#ff8f9f", fontSize: 13 }}>
             {errorMessages[params.error]}
           </p>
+        )}
+
+        {params.password_request_reviewed === "1" && <p style={{ color: "#8ee6a5", fontSize: 13 }}>Рішення щодо запиту пароля збережено.</p>}
+        {params.error === "password_request" && <p style={{ color: "#ff8f9f", fontSize: 13 }}>Не вдалося обробити запит на зміну пароля.</p>}
+        {(passwordRequests ?? []).length > 0 && (
+          <section className="panel" style={{ marginTop: 20 }}>
+            <h2>Запити на зміну пароля ({passwordRequests!.length})</h2>
+            <p className="muted">Пароль зміниться лише після схвалення запиту самим учасником у налаштуваннях.</p>
+            {(passwordRequests ?? []).map((request) => (
+              <div className="member-row" key={request.id} style={{ alignItems: "center", flexWrap: "wrap" }}>
+                <div style={{ flex: "1 1 180px" }}>
+                  <strong>{passwordNicknames.get(request.user_id) ?? "Учасник"}</strong>
+                  <p className="muted" style={{ fontSize: 11 }}>Запит: {new Date(request.requested_at).toLocaleString("uk-UA")}</p>
+                </div>
+                <form action={reviewPasswordChangeRequest} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <input type="hidden" name="request_id" value={request.id} />
+                  <button className="btn" name="decision" value="approved" type="submit">Схвалити</button>
+                  <button className="btn secondary" name="decision" value="rejected" type="submit">Відхилити</button>
+                </form>
+              </div>
+            ))}
+          </section>
         )}
 
         {/* Створення акаунта */}

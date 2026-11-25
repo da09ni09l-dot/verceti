@@ -1010,6 +1010,31 @@ export default function MusicRoom() {
           </button>
         </div>
 
+        <div style={{ marginTop: 16 }}>
+          <h3 style={{ margin: "0 0 10px" }}>🎼 Музичні добірки</h3>
+          <p className="muted" style={{ marginTop: 0 }}>
+            Швидкий пошук у каталозі Audius — добірки оновлюються з доступних треків.
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[
+              { label: "🇺🇦 Українська музика", query: "Ukrainian pop" },
+              { label: "🌍 Міжнародні хіти", query: "international pop hits" },
+              { label: "🔥 Ремікси та EDM", query: "dance remix EDM" },
+              { label: "🎼 Класика й хіти всіх часів", query: "classic hits" },
+            ].map((category) => (
+              <button
+                key={category.query}
+                className="btn secondary"
+                type="button"
+                onClick={() => loadAudius("search", category.query)}
+                disabled={musicLoading}
+              >
+                {category.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <form
           onSubmit={submitSearch}
           style={{
