@@ -177,7 +177,7 @@ export default async function PreviewSection({
 
   const { data: viewerRole } = await supabase.rpc("current_verceti_role");
   const isFounder = viewerRole === "founder";
-  const isStaff = !staffError && staffStatus === true;
+  const isStaff = !staffError && staffStatus === true && viewerRole !== "leader";
   const canManageVoiceRooms = viewerRole === "founder" || viewerRole === "leader" || viewerRole === "moderator";
 
   const { data: membershipStatus, error: membershipError } =
