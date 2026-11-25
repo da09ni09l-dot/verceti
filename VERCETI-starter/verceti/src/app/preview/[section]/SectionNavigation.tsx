@@ -58,9 +58,14 @@ export default async function SectionNavigation() {
         </Link>
       )}
       {isStaff && (
-        <Link className="btn" href="/preview/forms?view=pending">
-          📋 Анкети на підтвердження{pendingApplications > 0 ? ` (${pendingApplications})` : ""}
-        </Link>
+        <>
+          <Link className="btn" href="/preview/forms?view=pending">
+            📋 Анкети на підтвердження{pendingApplications > 0 ? ` (${pendingApplications})` : ""}
+          </Link>
+          <Link className="btn" href="/preview/forms?view=database">
+            🗂️ База анкет
+          </Link>
+        </>
       )}
       {user && <NewsBell userId={user.id} />}
     </nav>
