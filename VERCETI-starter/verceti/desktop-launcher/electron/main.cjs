@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- Electron entrypoint is CommonJS. */
-const { app, BrowserWindow, shell } = require("electron");
+const { app, BrowserWindow, shell, desktopCapturer, dialog, session } = require("electron");
 
 const WEBSITE_URL = "https://verceti.vercel.app/";
 const WEBSITE_HOST = new URL(WEBSITE_URL).hostname;
+const APP_PARTITION = "persist:verceti";
 let mainWindow;
 
 function isTrustedAppUrl(rawUrl) {
@@ -16,6 +17,55 @@ function isTrustedAppUrl(rawUrl) {
   } catch {
     return false;
   }
+}
+
+function installMediaPermissions(appSession) {
+  appSession.setPermissionCheckHandler((webContents, permission, origin) => {
+    if (!webContents || !isTrustedAppUrl(origin)) return false;
+    return ["media", "display-capture", "notifications"].includes(permission);
+  });
+
+  appSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    const allowedOrigin = webContents && isTrustedAppUrl(details.requestingUrl || webContents.getURL());
+    const allowedPermission = ["media", "display-capture", "notifications"].includes(permission);
+    callback(Boolean(allowedOrigin && allowedPermission));
+  });
+
+  // Electron needs an explicit display-media handler for getDisplayMedia().
+  // Let the user choose a screen or application window before capture starts.
+  appSession.setDisplayMediaRequestHandler(async (_request, callback) => {
+    try {
+      const sources = await desktopCapturer.getSources({
+        types: ["screen", "window"],
+        fetchWindowIcons: true,
+      });
+      if (sources.length === 0) {
+        callback({});
+        return;
+      }
+
+      const labels = sources.map((source) => source.name.slice(0, 80));
+      const choice = await dialog.showMessageBox(mainWindow, {
+        type: "question",
+        title: "VERCETI — демонстрація екрана",
+        message: "Оберіть екран або вікно для демонстрації:",
+        buttons: [...labels, "Скасувати"],
+        cancelId: labels.length,
+        defaultId: 0,
+        noLink: true,
+      });
+
+      if (choice.response >= sources.length) {
+        callback({});
+        return;
+      }
+
+      callback({ video: sources[choice.response] });
+    } catch (error) {
+      console.error("VERCETI screen capture setup failed:", error);
+      callback({});
+    }
+  });
 }
 
 function installKeyboardShortcuts(window) {
@@ -63,8 +113,9 @@ async function createWindow() {
     show: false,
     backgroundColor: "#09070f",
     autoHideMenuBar: true,
-    title: "VERCETTI",
+    title: "VERCETI",
     webPreferences: {
+      partition: APP_PARTITION,
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
@@ -89,7 +140,10 @@ async function createWindow() {
   await mainWindow.loadURL(WEBSITE_URL);
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  installMediaPermissions(session.fromPartition(APP_PARTITION));
+  return createWindow();
+});
 app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
