@@ -14,7 +14,7 @@ alter table public.voice_room_assignments enable row level security;
 drop policy if exists "Everyone can view voice rooms" on public.voice_rooms;
 drop policy if exists "Authenticated users can view voice rooms" on public.voice_rooms;
 
--- Keep active-account and approved-member checks mandatory for every operation.
+-- Preserve active-account and approved-member guards for every voice-room operation.
 drop policy if exists "voice_rooms_active_member_guard" on public.voice_rooms;
 create policy "voice_rooms_active_member_guard"
 on public.voice_rooms as restrictive
@@ -33,6 +33,13 @@ using (
     where a.room_id = voice_rooms.id and a.user_id = (select auth.uid())
   )
 );
+
+drop policy if exists "Staff can update voice rooms" on public.voice_rooms;
+create policy "Staff can update voice rooms"
+on public.voice_rooms
+for update to authenticated
+using (public.is_verceti_staff())
+with check (public.is_verceti_staff());
 
 drop policy if exists "Staff can manage voice room assignments" on public.voice_room_assignments;
 create policy "Staff can manage voice room assignments"
