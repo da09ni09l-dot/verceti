@@ -288,7 +288,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
 
     setError("");
     setDirectLoading(false);
-  }, [supabase, selectedPlayer, resolveMediaContent]);
+  }, [supabase, selectedPlayer, resolveMediaContent, players]);
 
   useEffect(() => {
     void loadMessages();
