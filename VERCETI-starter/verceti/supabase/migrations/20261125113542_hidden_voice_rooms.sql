@@ -23,6 +23,7 @@ for all to authenticated
 using (public.is_verceti_account_active() and (public.is_verceti_member() or public.is_verceti_staff()))
 with check (public.is_verceti_account_active() and (public.is_verceti_member() or public.is_verceti_staff()));
 
+drop policy if exists "Members can view visible or assigned voice rooms" on public.voice_rooms;
 create policy "Members can view visible or assigned voice rooms"
 on public.voice_rooms
 for select to authenticated
