@@ -24,7 +24,7 @@ export default async function SectionNavigation() {
       canSeeMainMenu = true;
       isStaff = true;
       const { data: currentRole } = await supabase.rpc("current_verceti_role");
-      canViewApplicationDatabase = ["founder", "admin", "leader"].includes(String(currentRole));
+      canViewApplicationDatabase = currentRole === "founder";
       const { count } = await supabase.from("applications").select("id", { count: "exact", head: true }).eq("status", "pending");
       pendingApplications = count ?? 0;
     } else {
