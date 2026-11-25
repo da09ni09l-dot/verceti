@@ -620,9 +620,9 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
 
   return (
     <div
+      className="chat-room-layout"
       style={{
         display: "grid",
-        gridTemplateColumns: "minmax(200px, 260px) minmax(0, 1fr)",
         width: "100%",
         minWidth: 0,
         gap: 16,
@@ -631,6 +631,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
       }}
     >
       <aside
+        className="chat-room-participants"
         style={{
           position: "sticky",
           top: 16,
@@ -752,7 +753,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
         </div>
       </aside>
 
-      <section className="panel" style={{ minWidth: 0 }}>
+      <section className="panel chat-room-panel" style={{ minWidth: 0 }}>
         <div
           style={{
             display: "flex",
@@ -1124,6 +1125,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
         )}
 
         <form
+          className="chat-room-composer"
           onSubmit={sendMessage}
           style={{
             display: "flex",
@@ -1191,11 +1193,12 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
                 : "Напиши повідомлення..."
             }
             maxLength={2000}
-            style={{ flex: 1, minWidth: 120 }}
+            className="chat-room-composer-input"
+            style={{ flex: 1, minWidth: 0 }}
           />
 
           <button
-            className="btn"
+            className="btn chat-room-send-button"
             type="submit"
             disabled={sending || uploading || !content.trim()}
           >
