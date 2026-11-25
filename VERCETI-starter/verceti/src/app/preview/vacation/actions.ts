@@ -83,8 +83,8 @@ export async function deleteVacationRequest(formData: FormData) {
   const supabase = await createClient();
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) redirect("/login");
-  const { data: isStaff, error: staffError } = await supabase.rpc("is_verceti_staff");
-  if (staffError || isStaff !== true) redirect("/preview/vacation?status=forbidden");
+  const { data: role, error: roleError } = await supabase.rpc("current_verceti_role");
+  if (roleError || !["admin", "leader"].includes(String(role ?? ""))) redirect("/preview/vacation?status=forbidden");
   const { error } = await supabase.from("vacation_requests").delete().eq("id", id);
   if (error) {
     console.error("VERCETI vacation deletion error:", error.message);
