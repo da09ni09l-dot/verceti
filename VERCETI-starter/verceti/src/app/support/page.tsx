@@ -5,12 +5,12 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
 async function sendSupportRequest(formData: FormData) {
   "use server";
   const name = String(formData.get("name") ?? "").trim().slice(0, 80);
-  const email = String(formData.get("email") ?? "").trim().slice(0, 160);
+
   const subject = String(formData.get("subject") ?? "").trim().slice(0, 120);
   const message = String(formData.get("message") ?? "").trim().slice(0, 4000);
   const website = String(formData.get("website") ?? "").trim();
   if (website) redirect("/support?sent=1");
-  if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || subject.length < 3 || message.length < 10) redirect("/support?error=1");
+  if (name.length < 2 || subject.length < 3 || message.length < 10) redirect("/support?error=1");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const admin = createAdminClient();
@@ -18,7 +18,7 @@ async function sendSupportRequest(formData: FormData) {
   const { count, error: rateLimitError } = await admin
     .from("support_requests")
     .select("id", { count: "exact", head: true })
-    .ilike("sender_email", email)
+    .ilike("sender_name", name)
     .gte("created_at", cutoff);
   if (rateLimitError) {
     console.error("Support rate limit check:", rateLimitError.message);
@@ -28,7 +28,7 @@ async function sendSupportRequest(formData: FormData) {
 
   const accessToken = crypto.randomUUID();
   const { data: ticket, error } = await admin.from("support_requests").insert({
-    sender_name: name, sender_email: email, subject, message, user_id: user?.id ?? null, access_token: accessToken
+    sender_name: name, sender_email: null, subject, message, user_id: user?.id ?? null, access_token: accessToken
   }).select("id").single();
   if (error || !ticket) redirect("/support?error=1");
   redirect("/support/chat?ticket=" + ticket.id + "&key=" + accessToken);
@@ -40,10 +40,10 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
     <div className="eyebrow">VERCETI · ПІДТРИМКА</div><h1>Зв’язок з адміністрацією</h1>
     <p className="muted" style={{ lineHeight: 1.7 }}>Напиши адміністрації навіть якщо акаунт заблоковано або ти не можеш увійти. Після відправлення відкриється приватний чат для подальшого листування.</p>
     {params.error === "1" && <div className="panel" style={{ marginTop: 16 }}>Не вдалося створити чат. Перевір поля та спробуй ще раз.</div>}
-    {params.rate === "1" && <div className="panel" style={{ marginTop: 16 }}>З цієї адреси вже надіслано кілька звернень. Спробуй ще раз через 10 хвилин.</div>}
+    {params.rate === "1" && <div className="panel" style={{ marginTop: 16 }}>З цього нікнейму вже надіслано кілька звернень. Спробуй ще раз через 10 хвилин.</div>}
     <form action={sendSupportRequest} className="member-list" style={{ marginTop: 22, gap: 10 }}>
       <label htmlFor="support-name">Ім’я або нікнейм</label><input id="support-name" name="name" required minLength={2} maxLength={80} />
-      <label htmlFor="support-email">Email для відповіді</label><input id="support-email" name="email" type="email" required maxLength={160} />
+      
       <label htmlFor="support-subject">Тема звернення</label><input id="support-subject" name="subject" required minLength={3} maxLength={120} />
       <label htmlFor="support-message">Повідомлення</label><textarea id="support-message" name="message" required minLength={10} maxLength={4000} rows={6} />
       <div aria-hidden="true" style={{ position: "absolute", left: "-10000px" }}><label htmlFor="support-website">Website</label><input id="support-website" name="website" tabIndex={-1} autoComplete="off" /></div>

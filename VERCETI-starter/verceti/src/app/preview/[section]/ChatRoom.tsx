@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 type ChatMessage = {
   id: string;
   user_id: string;
+  group_id?: string | null;
   content: string;
   created_at: string;
   nickname: string;
@@ -30,6 +31,8 @@ type DirectMessage = {
   message_color?: string | null;
   message_font?: string | null;
 };
+
+type ChatGroup = { id: string; name: string; description: string; created_by: string; };
 
 type Player = {
   id: string;
@@ -107,6 +110,12 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
   const [directMessages, setDirectMessages] = useState<DirectMessage[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [groups, setGroups] = useState<ChatGroup[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupDescription, setNewGroupDescription] = useState("");
+  const [canCreateGroups, setCanCreateGroups] = useState(false);
+  const [creatingGroup, setCreatingGroup] = useState(false);
 
   const [content, setContent] = useState("");
   const [userId, setUserId] = useState("");
@@ -167,9 +176,9 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
       return;
     }
 
-    const { data: messageData, error: messagesError } = await supabase
-      .from("chat_messages")
-      .select("id, user_id, content, created_at")
+    let messagesQuery = supabase.from("chat_messages").select("id, user_id, group_id, content, created_at");
+    messagesQuery = selectedGroupId ? messagesQuery.eq("group_id", selectedGroupId) : messagesQuery.is("group_id", null);
+    const { data: messageData, error: messagesError } = await messagesQuery
       .order("created_at", { ascending: true })
       .limit(100);
 
@@ -219,7 +228,50 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
 
     setError("");
     setLoading(false);
-  }, [supabase, resolveMediaContent]);
+  }, [supabase, resolveMediaContent, selectedGroupId]);
+
+  const loadGroups = useCallback(async () => {
+    const [{ data }, { data: role }] = await Promise.all([
+      supabase.from("chat_groups").select("id,name,description,created_by").order("created_at", { ascending: true }),
+      supabase.rpc("current_verceti_role")
+    ]);
+    setGroups((data ?? []) as ChatGroup[]);
+    setCanCreateGroups(["admin", "leader", "moderator"].includes(String(role ?? "")));
+  }, [supabase]);
+
+  async function createGroup(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = newGroupName.trim();
+    const description = newGroupDescription.trim();
+    if (!canCreateGroups || creatingGroup || name.length < 2 || name.length > 60 || description.length > 240) return;
+    setCreatingGroup(true);
+    setError("");
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData.user) throw new Error("Потрібно увійти в акаунт.");
+      const { data, error: createError } = await supabase.from("chat_groups")
+        .insert({ name, description, created_by: authData.user.id })
+        .select("id,name,description,created_by").single();
+      if (createError || !data) throw new Error("Не вдалося створити груповий чат.");
+      setGroups((current) => [...current, data as ChatGroup]);
+      setSelectedPlayer(null);
+      setSelectedGroupId(data.id);
+      setNewGroupName("");
+      setNewGroupDescription("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Помилка створення чату.");
+    } finally {
+      setCreatingGroup(false);
+    }
+  }
+
+  function openGroupChat(group: ChatGroup) {
+    setSelectedPlayer(null);
+    setSelectedGroupId(group.id);
+    setContent("");
+    setError("");
+    setShowStickers(false);
+  }
 
   // Завантаження приватної переписки та позначення отриманих повідомлень прочитаними.
   const loadDirectMessages = useCallback(async () => {
@@ -292,6 +344,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
 
   useEffect(() => {
     void loadMessages();
+    void loadGroups();
 
     const channel = supabase
       .channel("verceti-chat")
@@ -328,7 +381,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
       void supabase.removeChannel(directChannel);
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
-  }, [loadMessages, loadDirectMessages, supabase]);
+  }, [loadMessages, loadDirectMessages, loadGroups, supabase]);
 
   useEffect(() => {
     void loadDirectMessages();
@@ -361,6 +414,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
         .from("chat_messages")
         .insert({
           user_id: authData.user.id,
+          group_id: selectedGroupId,
           content: messageContent
         });
 
@@ -600,6 +654,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
   function openPrivateChat(player: Player) {
     if (player.id === userId) return;
 
+    setSelectedGroupId(null);
     setSelectedPlayer(player);
     setContent("");
     setError("");
@@ -611,6 +666,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
     if (!initialRecipientId || selectedPlayer) return;
     const recipient = players.find((player) => player.id === initialRecipientId);
     if (!recipient || recipient.id === userId) return;
+    setSelectedGroupId(null);
     setSelectedPlayer(recipient);
     setContent("");
     setError("");
@@ -620,6 +676,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
 
   function openGeneralChat() {
     setSelectedPlayer(null);
+    setSelectedGroupId(null);
     setContent("");
     setError("");
     setShowStickers(false);
@@ -668,8 +725,8 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
             style={{
               width: "100%",
               textAlign: "left",
-              background: !selectedPlayer ? "rgba(155,92,255,0.2)" : undefined,
-              borderColor: !selectedPlayer ? "#9b5cff" : undefined
+              background: !selectedPlayer && !selectedGroupId ? "rgba(155,92,255,0.2)" : undefined,
+              borderColor: !selectedPlayer && !selectedGroupId ? "#9b5cff" : undefined
             }}
           >
             📌 Загальний чат
@@ -678,6 +735,8 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
           <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
             Основна кімната спільноти
           </p>
+          {groups.map((group) => <button key={group.id} type="button" className="btn secondary" onClick={() => openGroupChat(group)} style={{ width: "100%", marginTop: 8, textAlign: "left", borderColor: selectedGroupId === group.id ? "#9b5cff" : undefined }}>{group.name}</button>)}
+          {canCreateGroups && <form onSubmit={createGroup} style={{ display: "grid", gap: 7, marginTop: 12 }}><strong style={{ fontSize: 13 }}>Створити груповий чат</strong><input value={newGroupName} onChange={(event) => setNewGroupName(event.target.value)} placeholder="Назва чату" maxLength={60} minLength={2} required /><input value={newGroupDescription} onChange={(event) => setNewGroupDescription(event.target.value)} placeholder="Опис (необов’язково)" maxLength={240} /><button className="btn" type="submit" disabled={creatingGroup || newGroupName.trim().length < 2}>{creatingGroup ? "Створення…" : "＋ Створити чат"}</button></form>}
         </div>
 
         <div className="panel">
@@ -789,13 +848,13 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
             <h2 style={{ marginTop: 0, marginBottom: 5 }}>
               {selectedPlayer
                 ? `Особистий чат: ${selectedPlayer.nickname || "Учасник"}`
-                : "Загальний чат"}
+                : selectedGroupId ? (groups.find((group) => group.id === selectedGroupId)?.name ?? "Груповий чат") : "Загальний чат"}
             </h2>
 
             <p className="muted" style={{ margin: 0 }}>
               {selectedPlayer
                 ? "Приватна переписка між двома учасниками."
-                : "Повідомлення доступні всім авторизованим учасникам VERCETI."}
+                : selectedGroupId ? (groups.find((group) => group.id === selectedGroupId)?.description || "Груповий чат для учасників VERCETI.") : "Повідомлення доступні всім авторизованим учасникам VERCETI."}
             </p>
           </div>
 

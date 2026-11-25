@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import MenuBadges from "../../MenuBadges";
 import NewsBell from "../../NewsBell";
-import { createVacationRequest, reviewVacationRequest } from "./actions";
+import { createVacationRequest, reviewVacationRequest, deleteVacationRequest } from "./actions";
 
 type VacationRequest = {
   id: string; user_id: string; start_date: string; end_date: string; reason: string;
@@ -23,6 +23,8 @@ export default async function VacationPage({ searchParams }: { searchParams: Pro
   if (membershipError || membershipStatus !== true) redirect("/preview/forms");
   const { data: isStaff, error: staffError } = await supabase.rpc("is_verceti_staff");
   const canReview = !staffError && isStaff === true;
+  const { data: role } = await supabase.rpc("current_verceti_role");
+  const canDelete = ["admin", "leader"].includes(String(role ?? ""));
 
   let query = supabase.from("vacation_requests")
     .select("id, user_id, start_date, end_date, reason, status, created_at")
@@ -57,7 +59,7 @@ export default async function VacationPage({ searchParams }: { searchParams: Pro
           {status === "invalid" && <p className="page-note">Перевір дати та причину. Дата завершення має бути не раніше дати початку.</p>}
           {status === "overlap" && <p className="page-note">У тебе вже є заявка, яка перетинається з цими датами та очікує розгляду або схвалена.</p>}
           {status === "error" && <p className="page-note">Не вдалося зберегти заявку. Спробуй ще раз трохи пізніше.</p>}
-          {status === "reviewed" && <p className="page-note">Рішення щодо заявки збережено.</p>}
+          {status === "reviewed" && <p className="page-note">Рішення щодо заявки збережено.</p>}{status === "deleted" && <p className="page-note">Заявку видалено.</p>}
           {status === "forbidden" && <p className="page-note">Недостатньо прав для цієї дії.</p>}
           <form action={createVacationRequest} className="member-list" style={{ marginTop: 18, gap: 10, maxWidth: 620 }}>
             <label htmlFor="vacation-start">З якого числа</label><input id="vacation-start" name="start_date" type="date" required />
@@ -80,10 +82,10 @@ export default async function VacationPage({ searchParams }: { searchParams: Pro
                     <p style={{ marginTop: 8, whiteSpace: "pre-wrap" }}>{request.reason}</p>
                     <p className="notice-time" style={{ marginTop: 8 }}>Статус: {statusLabels[request.status]}</p>
                   </div>
-                  {canReview && request.status === "pending" && <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {(canReview && request.status === "pending" || canDelete) && <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{canReview && request.status === "pending" && <>
                     <form action={reviewVacationRequest}><input type="hidden" name="id" value={request.id} /><input type="hidden" name="decision" value="approved" /><button className="btn" type="submit">Схвалити</button></form>
                     <form action={reviewVacationRequest}><input type="hidden" name="id" value={request.id} /><input type="hidden" name="decision" value="rejected" /><button className="btn secondary" type="submit">Відхилити</button></form>
-                  </div>}
+                  </>}{canDelete && <form action={deleteVacationRequest}><input type="hidden" name="id" value={request.id} /><button className="btn secondary" type="submit">Видалити</button></form>}</div>}
                 </article>
               ))}
             </div>
