@@ -137,7 +137,7 @@ export async function resetMemberPassword(formData: FormData) {
   const admin = createAdminClient();
   const { data: member, error: memberError } = await admin.from("profiles").select("id, role").eq("id", memberId).single();
   if (memberError || !member) redirect("/admin?tab=members&error=member");
-  if (["founder", "admin", "leader"].includes(String(member.role))) redirect("/admin?tab=members&error=protected");
+  if (["founder", "admin"].includes(String(member.role))) redirect("/admin?tab=members&error=protected");
   const { error } = await admin.auth.admin.updateUserById(memberId, { password });
   if (error) {
     console.error("Reset member password error:", error.message);
@@ -173,7 +173,7 @@ export async function banMember(formData: FormData) {
     redirect("/admin?tab=members&error=member");
   }
 
-  if (["founder", "admin", "leader"].includes(String(member.role))) {
+  if (["founder", "admin"].includes(String(member.role))) {
     redirect("/admin?tab=members&error=protected");
   }
 
@@ -214,7 +214,7 @@ export async function changeMemberRole(formData: FormData) {
   if (memberId === user.id) redirect("/admin?tab=members&error=self_role");
   const { data: member, error: memberError } = await supabase.from("profiles").select("id, role").eq("id", memberId).single();
   if (memberError || !member) redirect("/admin?tab=members&error=member");
-  if (["founder", "admin", "leader"].includes(String(member.role))) redirect("/admin?tab=members&error=protected");
+  if (["founder", "admin"].includes(String(member.role))) redirect("/admin?tab=members&error=protected");
   const { error } = await supabase.rpc("change_member_role", {
     p_member_id: memberId, p_new_role: role, p_reason: "Зміна ролі адміністратором"
   });
@@ -252,7 +252,7 @@ export async function unbanMember(formData: FormData) {
     redirect("/admin?tab=members&error=member");
   }
 
-  if (["founder", "admin", "leader"].includes(String(member.role))) {
+  if (["founder", "admin"].includes(String(member.role))) {
     redirect("/admin?tab=members&error=protected");
   }
 
@@ -316,7 +316,7 @@ export async function deleteMember(formData: FormData) {
     redirect("/admin?tab=members&error=member");
   }
 
-  if (["founder", "admin", "leader"].includes(String(member.role))) {
+  if (["founder", "admin"].includes(String(member.role))) {
     redirect("/admin?tab=members&error=protected");
   }
 
