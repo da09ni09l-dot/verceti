@@ -36,27 +36,6 @@ async function requireAdmin() {
   return { supabase, user };
 }
 
-async function requireStaff() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    redirect("/login");
-  }
-
-  const { data: isStaff, error: staffError } =
-    await supabase.rpc("is_verceti_staff");
-
-  if (staffError || isStaff !== true) {
-    redirect("/preview/news?status=forbidden");
-  }
-
-  return { supabase, user };
-}
-
 // Надсилання особистого сповіщення
 async function notifyMember(
   userId: string,
