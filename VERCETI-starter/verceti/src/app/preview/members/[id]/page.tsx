@@ -120,7 +120,7 @@ export default async function MemberProfilePage({ params }: Props) {
         </div>
 
         <div style={{ marginTop: 20, display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {member.id !== user.id && <><Link href={`/preview/chat?recipient=${member.id}`} className="btn">✉ Надіслати повідомлення</Link><CallActions targetId={member.id} targetName={nickname} currentUserId={user.id} /></>}
+          {member.id !== user.id && <><Link href={`/preview/chat?recipient=${member.id}`} className="btn">✉ Надіслати повідомлення</Link><CallActions targetId={member.id} currentUserId={user.id} /></>}
           <Link href="/preview/members" className="tag">
             ← До списку учасників
           </Link>
