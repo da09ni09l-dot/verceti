@@ -383,7 +383,7 @@ export async function deleteApplication(formData: FormData) {
     "current_verceti_role"
   );
 
-  if (roleError || role !== "admin") {
+  if (roleError || !["founder", "admin", "leader"].includes(String(role))) {
     redirect(`${formsPath}?status=forbidden`);
   }
 
@@ -451,7 +451,7 @@ export async function adminUpdateBirthday(formData: FormData) {
   }
   const { supabase } = await getUserAndClient();
   const { data: role, error: roleError } = await supabase.rpc("current_verceti_role");
-  if (roleError || role !== "admin") redirect(`${formsPath}?status=forbidden`);
+  if (roleError || !["founder", "admin", "leader"].includes(String(role))) redirect(`${formsPath}?status=forbidden`);
   const { error } = await supabase.rpc("admin_update_member_birthday", {
     p_user_id: userId, p_birth_day: birthDay, p_birth_month: birthMonth,
   });
