@@ -658,7 +658,7 @@ export default async function PreviewSection({
   if (section === "rewards") {
     const { data: role } = await supabase.rpc("current_verceti_role");
     rewardsRole = typeof role === "string" ? role : null;
-    canManageRewards = ["admin", "leader", "moderator"].includes(rewardsRole ?? "");
+    canManageRewards = ["founder", "admin", "leader", "moderator"].includes(rewardsRole ?? "");
 
     const now = new Date();
     const kyivParts = new Intl.DateTimeFormat("en-CA", {
@@ -865,7 +865,7 @@ export default async function PreviewSection({
                         {member.game_id ? `Ігровий ID: ${member.game_id} · ` : ""}У спільноті з {new Date(member.created_at).toLocaleDateString("uk-UA")}
                       </div>
                     </div>
-                    <span className={`role ${member.role === "admin" || member.role === "leader" ? "orange" : member.role === "moderator" ? "purple" : member.role === "senior" ? "blue" : member.role === "local" ? "green" : "muted"}`}>{({ admin: "АДМІН", leader: "ЗАСНОВНИК", moderator: "МОДЕРАТОР", senior: "СТАРШИЙ", local: "УЧАСНИК", junior: "МОЛОДШИЙ" } as Record<string, string>)[member.role] ?? member.role}</span>
+                    <span className={`role ${member.role === "founder" || member.role === "admin" || member.role === "leader" ? "orange" : member.role === "moderator" ? "purple" : member.role === "senior" ? "blue" : member.role === "local" ? "green" : "muted"}`}>{({ founder: "ЗАСНОВНИК", admin: "АДМІН", leader: "ЛІДЕР", moderator: "МОДЕРАТОР", senior: "СТАРШИЙ", local: "УЧАСНИК", junior: "МОЛОДШИЙ" } as Record<string, string>)[member.role] ?? member.role}</span>
                     <span aria-hidden="true" style={{ color: "#bb8aff", fontSize: 18 }}>↗</span>
                   </Link>
                 ))}
@@ -1503,7 +1503,7 @@ export default async function PreviewSection({
                         {prize.description && <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>{prize.description}</p>}
                         <p className="notice-time">Вага випадіння: {prize.weight}</p>
                       </div>
-                      {(rewardsRole === "admin" || (rewardsRole === "leader" && prize.created_by === user.id)) && (
+                      {(["founder", "admin", "leader"].includes(rewardsRole ?? "")) && (
                         <form action={deleteRewardPrize}>
                           <input type="hidden" name="id" value={prize.id} />
                           <button className="btn" type="submit" style={{ background: "#8f303f", borderColor: "#b94b5c" }}>Видалити</button>
