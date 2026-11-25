@@ -64,7 +64,7 @@ export default async function ApplicationsSection({
   if (showDatabaseOnly && !canViewDatabase) {
     return (
       <div className="panel" role="alert">
-        Перегляд бази всіх анкет доступний лише Засновнику.
+        Перегляд бази всіх анкет доступний Засновнику та Лідеру.
       </div>
     );
   }
