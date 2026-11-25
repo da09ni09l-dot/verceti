@@ -8,6 +8,7 @@ import MembersOnlinePanel from "./MembersOnlinePanel";
 import TopMembersPanel from "./TopMembersPanel";
 import { logout } from "./logout/actions";
 import NewsBell from "./NewsBell";
+import MobileMenuToggle from "./MobileMenuToggle";
 
 const roleLabels: Record<string, string> = {
   leader: "ЗАСНОВНИК",
@@ -107,7 +108,8 @@ export default async function Home() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <MobileMenuToggle />
+      <aside id="verceti-sidebar" className="sidebar">
         <Link href="/" className="brand">
           VERCETTI
           <small>PRIVATE COMMUNITY</small>
