@@ -52,7 +52,7 @@ export default async function AdminSupportConversation({ params, searchParams }:
   const { data: replies } = await admin.from("support_messages").select("id, sender_type, message, created_at").eq("request_id", id).order("created_at", { ascending: true });
   return <main className="login-wrap"><section className="login-card" style={{ width: "100%", maxWidth: 700 }}>
     <Link href="/admin/support" className="btn secondary">← Усі звернення</Link>
-    <h1 style={{ marginTop: 22 }}>{ticket.subject}</h1><p className="muted">{ticket.sender_name} · {ticket.sender_email} · Статус: {ticket.status}</p>
+    <h1 style={{ marginTop: 22 }}>{ticket.subject}</h1><p className="muted">{ticket.sender_name} · Статус: {ticket.status}</p>
     <form action={updateSupportStatus} style={{ marginTop: 12 }}>
       <input type="hidden" name="ticket" value={ticket.id} />
       <input type="hidden" name="status" value={ticket.status === "closed" ? "in_progress" : "closed"} />
