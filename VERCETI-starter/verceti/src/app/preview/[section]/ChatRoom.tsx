@@ -34,6 +34,8 @@ type Player = {
   avatar_url: string | null;
   nickname_color?: string | null;
   nickname_font?: string | null;
+  message_color?: string | null;
+  message_font?: string | null;
 };
 
 const roleLabels: Record<string, string> = {
