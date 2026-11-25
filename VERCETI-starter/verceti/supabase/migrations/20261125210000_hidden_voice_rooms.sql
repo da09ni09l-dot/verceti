@@ -14,13 +14,14 @@ alter table public.voice_room_assignments enable row level security;
 drop policy if exists "Everyone can view voice rooms" on public.voice_rooms;
 drop policy if exists "Authenticated users can view voice rooms" on public.voice_rooms;
 
--- Preserve active-account and approved-member guards for every voice-room operation.
+-- Keep the active-account guard, but allow approved staff even if their membership flag is unset.
+drop policy if exists "approved_member_guard" on public.voice_rooms;
 drop policy if exists "voice_rooms_active_member_guard" on public.voice_rooms;
 create policy "voice_rooms_active_member_guard"
 on public.voice_rooms as restrictive
 for all to authenticated
-using (public.is_verceti_account_active() and public.is_verceti_member())
-with check (public.is_verceti_account_active() and public.is_verceti_member());
+using (public.is_verceti_account_active() and (public.is_verceti_member() or public.is_verceti_staff()))
+with check (public.is_verceti_account_active() and (public.is_verceti_member() or public.is_verceti_staff()));
 
 create policy "Members can view visible or assigned voice rooms"
 on public.voice_rooms
