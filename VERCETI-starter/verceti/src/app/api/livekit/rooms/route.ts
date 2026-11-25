@@ -45,7 +45,7 @@ export async function GET() {
       );
     }
 
-    if (!(await isCommunityMember(supabase))) {
+    if (!(await isCommunityMember(supabase)) && !(await checkStaff(supabase))) {
       return NextResponse.json(
         { error: "Голосові кімнати доступні після схвалення анкети." },
         { status: 403 }
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!(await isCommunityMember(supabase))) {
+    if (!(await isCommunityMember(supabase)) && !(await checkStaff(supabase))) {
       return NextResponse.json(
         { error: "Немає доступу до спільноти." },
         { status: 403 }
@@ -249,7 +249,7 @@ export async function PATCH(request: NextRequest) {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return NextResponse.json({ error: "Потрібно увійти в акаунт." }, { status: 401 });
-    if (!(await isCommunityMember(supabase)) || !(await checkStaff(supabase))) {
+    if (!(await isCommunityMember(supabase)) && !(await checkStaff(supabase))) {
       return NextResponse.json({ error: "Керувати голосовими кімнатами може тільки керівництво." }, { status: 403 });
     }
 
@@ -388,7 +388,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    if (!(await isCommunityMember(supabase))) {
+    if (!(await isCommunityMember(supabase)) && !(await checkStaff(supabase))) {
       return NextResponse.json(
         { error: "Немає доступу до спільноти." },
         { status: 403 }
