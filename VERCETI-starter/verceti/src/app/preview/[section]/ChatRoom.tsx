@@ -654,6 +654,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
   function openPrivateChat(player: Player) {
     if (player.id === userId) return;
 
+    setSelectedGroupId(null);
     setSelectedPlayer(player);
     setContent("");
     setError("");
@@ -665,6 +666,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
     if (!initialRecipientId || selectedPlayer) return;
     const recipient = players.find((player) => player.id === initialRecipientId);
     if (!recipient || recipient.id === userId) return;
+    setSelectedGroupId(null);
     setSelectedPlayer(recipient);
     setContent("");
     setError("");
@@ -733,6 +735,8 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
           <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
             Основна кімната спільноти
           </p>
+          {groups.map((group) => <button key={group.id} type="button" className="btn secondary" onClick={() => openGroupChat(group)} style={{ width: "100%", marginTop: 8, textAlign: "left", borderColor: selectedGroupId === group.id ? "#9b5cff" : undefined }}>{group.name}</button>)}
+          {canCreateGroups && <form onSubmit={createGroup} style={{ display: "grid", gap: 7, marginTop: 12 }}><strong style={{ fontSize: 13 }}>Створити груповий чат</strong><input value={newGroupName} onChange={(event) => setNewGroupName(event.target.value)} placeholder="Назва чату" maxLength={60} minLength={2} required /><input value={newGroupDescription} onChange={(event) => setNewGroupDescription(event.target.value)} placeholder="Опис (необов’язково)" maxLength={240} /><button className="btn" type="submit" disabled={creatingGroup || newGroupName.trim().length < 2}>{creatingGroup ? "Створення…" : "＋ Створити чат"}</button></form>}
         </div>
 
         <div className="panel">
