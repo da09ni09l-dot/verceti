@@ -29,7 +29,7 @@ async function requireAdmin() {
   const { data: currentRole, error: roleError } =
     await supabase.rpc("current_verceti_role");
 
-  if (roleError || currentRole !== "admin") {
+  if (roleError || !["founder", "admin", "leader"].includes(String(currentRole))) {
     redirect("/");
   }
 
@@ -158,7 +158,7 @@ export async function resetMemberPassword(formData: FormData) {
   const admin = createAdminClient();
   const { data: member, error: memberError } = await admin.from("profiles").select("id, role").eq("id", memberId).single();
   if (memberError || !member) redirect("/admin?tab=members&error=member");
-  if (member.role === "admin") redirect("/admin?tab=members&error=protected");
+  if (["founder", "admin", "leader"].includes(String(member.role))) redirect("/admin?tab=members&error=protected");
   const { error } = await admin.auth.admin.updateUserById(memberId, { password });
   if (error) {
     console.error("Reset member password error:", error.message);
