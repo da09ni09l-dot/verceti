@@ -3385,3 +3385,19 @@ td {
  .voice-floating-dock { right:12px; bottom:12px; width:min(260px,calc(100vw - 24px)); padding:9px; }
  .voice-drag-hint { display:none; }
 }
+
+
+/* Voice pages mount the persistent room panel immediately after the intro card.
+   Do not reserve a full viewport of empty height above that panel. */
+.login-wrap.voice-page-wrap {
+  min-height: 0;
+  padding-top: 16px;
+  padding-bottom: 12px;
+}
+@media (min-width: 761px) {
+  .login-wrap.workspace-wrap.voice-page-wrap {
+    min-height: 0;
+    padding-top: 16px;
+    padding-bottom: 12px;
+  }
+}
