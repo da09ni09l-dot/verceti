@@ -2,10 +2,8 @@ const statusEl = document.getElementById("status");
 const transcriptEl = document.getElementById("transcript");
 const orb = document.getElementById("orb");
 const confirmBox = document.getElementById("confirm");
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition;
-let active = false;
 let awaitingCommand = false;
+let listening = true;
 let wakeTimer;
 
 function say(text) {
@@ -19,108 +17,115 @@ function say(text) {
   utterance.voice = voices.find(v => v.lang?.toLowerCase().startsWith("uk")) || null;
   window.speechSynthesis.speak(utterance);
 }
+
 function normalize(value) {
-  return value.toLocaleLowerCase("uk-UA").replace(/[.,!?]/g, "").trim();
+  return value.toLocaleLowerCase("uk-UA").replace(/[.,!?;:]/g, " ").replace(/\s+/g, " ").trim();
 }
+
+async function openTarget(target, response) {
+  const result = await window.sofia.open(target);
+  say(result?.ok ? response : (result?.error || "Не вдалося виконати команду."));
+}
+
 async function handleCommand(raw) {
   const command = normalize(raw);
   transcriptEl.textContent = raw;
-  if (/^(відкрий|запусти)?\s*(ютуб|youtube)$/.test(command)) {
-    await window.sofia.open("youtube"); say("Відкриваю YouTube.");
+  if (/^(відкрий |запусти )?(ютуб|youtube)$/.test(command)) {
+    await openTarget("youtube", "Відкриваю YouTube.");
   } else if (/музик|youtube music/.test(command)) {
-    await window.sofia.open("music"); say("Відкриваю музику.");
+    await openTarget("music", "Відкриваю YouTube Music.");
   } else if (/провідник|папк/.test(command)) {
-    await window.sofia.open("explorer"); say("Відкриваю Провідник.");
+    await openTarget("explorer", "Відкриваю Провідник.");
   } else if (/налаштуванн/.test(command)) {
-    await window.sofia.open("settings"); say("Відкриваю налаштування Windows.");
+    await openTarget("settings", "Відкриваю налаштування Windows.");
   } else if (/браузер|google/.test(command)) {
-    await window.sofia.open("browser"); say("Відкриваю браузер.");
+    await openTarget("browser", "Відкриваю браузер.");
   } else if (/калькулятор/.test(command)) {
-    await window.sofia.open("calculator"); say("Відкриваю калькулятор.");
+    await openTarget("calculator", "Відкриваю калькулятор.");
   } else if (/блокнот/.test(command)) {
-    await window.sofia.open("notepad"); say("Відкриваю блокнот.");
+    await openTarget("notepad", "Відкриваю Блокнот.");
   } else if (/пошукай|знайди в інтернеті|загугли/.test(command)) {
-    const query = raw.replace(/^(софія[, ]*)?(пошукай|знайди в інтернеті|загугли)\s*/i, "").trim();
-    if (query) { await window.sofia.search(query); say("Шукаю в інтернеті: " + query); }
-    else say("Що саме пошукати?");
+    const query = raw.replace(/^(пошукай|знайди в інтернеті|загугли)\s*/i, "").trim();
+    if (query) {
+      const result = await window.sofia.search(query);
+      say(result?.ok ? "Шукаю в інтернеті: " + query : (result?.error || "Не вдалося виконати пошук."));
+    } else say("Що саме пошукати?");
   } else if (/котра година|яка година|час/.test(command)) {
     say("Зараз " + new Intl.DateTimeFormat("uk-UA", { hour: "2-digit", minute: "2-digit" }).format(new Date()));
   } else if (/(вимкни|виключи) (комп'ютер|компютер|пк|ноутбук)|заверши роботу|вимкнення комп'ютера/.test(command)) {
-    confirmBox.classList.remove("hidden"); say("Підтверди вимкнення комп'ютера на екрані.");
+    confirmBox.classList.remove("hidden");
+    say("Підтверди вимкнення комп'ютера на екрані.");
   } else if (/скасуй вимкнення/.test(command)) {
-    const result = await window.sofia.cancelShutdown(); say(result.ok ? "Вимкнення скасовано." : result.error);
+    const result = await window.sofia.cancelShutdown();
+    say(result.ok ? "Вимкнення скасовано." : result.error);
   } else if (/^(увімкни )?(ігровий режим|режим гри)$/.test(command)) {
-    say("Ігровий режим увімкнено. Ховаю аватар; розпізнавання може залежати від роботи Web Speech API у фоні.");
+    say("Ігровий режим увімкнено. Ховаю аватар.");
     setTimeout(() => window.sofia.hideForGame(), 1200);
   } else if (/^(вимкни )?(ігровий режим|режим гри)$/.test(command)) {
-    window.sofia.show(); say("Ігровий режим вимкнено. Я знову на екрані.");
+    window.sofia.show();
+    say("Ігровий режим вимкнено. Я знову на екрані.");
   } else if (/^(покажи|відкрий) (мене|софію)$/.test(command)) {
-    window.sofia.show(); say("Я знову на екрані.");
+    window.sofia.show();
+    say("Я знову на екрані.");
   } else if (/дякую/.test(command)) {
     say("Завжди рада допомогти.");
   } else {
     say("Я почула тебе. Цю команду ще не додано.");
   }
 }
-function startRecognition() {
-  if (active) return;
-  if (!SpeechRecognition) {
-    say("Розпізнавання мовлення недоступне. Ця версія використовує Web Speech API.");
+
+function processRecognizedPhrase(raw) {
+  const phrase = normalize(raw);
+  transcriptEl.textContent = raw;
+  if (awaitingCommand) {
+    awaitingCommand = false;
+    clearTimeout(wakeTimer);
+    handleCommand(raw);
     return;
   }
-  active = true;
-  recognition = new SpeechRecognition();
-  recognition.lang = "uk-UA";
-  recognition.continuous = true;
-  recognition.interimResults = false;
-  recognition.onresult = (event) => {
-    const text = event.results[event.results.length - 1][0].transcript.trim();
-    const normalized = normalize(text);
-    if (awaitingCommand) {
-      awaitingCommand = false; clearTimeout(wakeTimer); handleCommand(text);
-    } else if (normalized === "софія" || normalized.startsWith("софія ")) {
-      const remainder = text.replace(/^софія[, ]*/i, "").trim();
-      if (remainder) handleCommand(remainder);
-      else {
-        awaitingCommand = true; say("Так, я слухаю.");
-        wakeTimer = setTimeout(() => { awaitingCommand = false; statusEl.textContent = "Очікую слово «Софія»…"; }, 10000);
-      }
-    }
-  };
-  recognition.onerror = (event) => {
-    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-      active = false; statusEl.textContent = "Немає дозволу на мікрофон або сервіс розпізнавання недоступний.";
-    }
-  };
-  recognition.onend = () => {
-    if (!active) return;
-    // Chromium may reject an immediate restart while its speech service is still shutting down.
-    setTimeout(() => {
-      if (!active) return;
-      try {
-        recognition.start();
-      } catch {
-        active = false;
-        startRecognition();
-      }
-    }, 700);
-  };
-  try { recognition.start(); statusEl.textContent = "Очікую слово «Софія»…"; orb.style.background = "#8fe0bd"; }
-  catch { active = false; say("Не вдалося запустити мікрофон."); }
-}
-document.getElementById("stop").addEventListener("click", () => {
-  const control = document.getElementById("stop");
-  if (active) {
-    active = false;
-    recognition?.stop();
-    control.textContent = "Продовжити";
-    statusEl.textContent = "Мікрофон на паузі.";
-    orb.style.background = "#a77aff";
+  const wakeIndex = phrase.indexOf("софія");
+  if (wakeIndex < 0) return;
+  const match = raw.match(/софія[\s,]*/i);
+  const remainder = match ? raw.slice(match.index + match[0].length).trim() : "";
+  if (remainder) {
+    handleCommand(remainder);
   } else {
-    control.textContent = "Пауза";
-    startRecognition();
+    awaitingCommand = true;
+    say("Так, я слухаю.");
+    wakeTimer = setTimeout(() => {
+      awaitingCommand = false;
+      statusEl.textContent = listening ? "Очікую слово «Софія»…" : "Мікрофон на паузі.";
+    }, 10000);
+  }
+}
+
+window.sofia.onVoiceText(processRecognizedPhrase);
+window.sofia.onVoiceStatus((state) => {
+  if (state?.message) statusEl.textContent = state.message;
+  if (state?.active) {
+    listening = true;
+    orb.style.background = "#8fe0bd";
+    document.getElementById("stop").textContent = "Пауза";
   }
 });
+window.sofia.onVoiceError((error) => {
+  if (error?.message) statusEl.textContent = error.message;
+  orb.style.background = "#d89a67";
+});
+
+document.getElementById("stop").addEventListener("click", async () => {
+  const desired = !listening;
+  const result = await window.sofia.setListening(desired);
+  if (!result.ok) {
+    say(result.error || "Не вдалося змінити стан мікрофона.");
+    return;
+  }
+  listening = desired;
+  document.getElementById("stop").textContent = listening ? "Пауза" : "Продовжити";
+  statusEl.textContent = listening ? "Запускаю локальне розпізнавання…" : "Мікрофон на паузі.";
+  orb.style.background = listening ? "#8fe0bd" : "#a77aff";
+});
+
 document.getElementById("minimize").addEventListener("click", () => window.sofia.minimize());
 document.getElementById("close").addEventListener("click", () => window.sofia.close());
 document.getElementById("shutdown").addEventListener("click", async () => {
@@ -128,10 +133,10 @@ document.getElementById("shutdown").addEventListener("click", async () => {
   confirmBox.classList.add("hidden");
   say(result.ok ? "Комп'ютер вимкнеться через 30 секунд." : result.error);
 });
-document.getElementById("cancel").addEventListener("click", () => {
-  const result = await window.sofia.cancelShutdown(); confirmBox.classList.add("hidden"); say(result.ok ? "Вимкнення скасовано." : result.error);
+document.getElementById("cancel").addEventListener("click", async () => {
+  const result = await window.sofia.cancelShutdown();
+  confirmBox.classList.add("hidden");
+  say(result.ok ? "Вимкнення скасовано." : result.error);
 });
-window.addEventListener("DOMContentLoaded", () => {
-  // Browser permission must be granted once by the user; thereafter the app resumes listening.
-  startRecognition();
-});
+
+statusEl.textContent = "Запускаю локальне українське розпізнавання…";
