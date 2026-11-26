@@ -137,6 +137,13 @@ async function createWindow() {
     },
   });
 
+  // The download CTA belongs on the website, not inside the desktop launcher.
+  mainWindow.webContents.on("did-finish-load", () => {
+    mainWindow.webContents.insertCSS(
+      ".verceti-download-footer { display: none !important; }"
+    ).catch(() => {});
+  });
+
   installKeyboardShortcuts(mainWindow);
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
