@@ -68,7 +68,7 @@ async function handleCommand(raw) {
   } else if (/^(увімкни )?(ігровий режим|режим гри)$/.test(command)) {
     say("Ігровий режим увімкнено. Ховаю аватар.");
     setTimeout(() => window.sofia.hideForGame(), 1200);
-  } else if (/^(вимкни )?(ігровий режим|режим гри)$/.test(command)) {
+  } else if (/^(вимкни|заверши|вийди з) (ігровий режим|режим гри)$/.test(command) || /^(покажи|відкрий) (аватар|софію|мене)$/.test(command)) {
     window.sofia.show();
     say("Ігровий режим вимкнено. Я знову на екрані.");
   } else if (/^(покажи|відкрий) (мене|софію)$/.test(command)) {
