@@ -5,6 +5,7 @@ SOFIA AI is an early Windows 11 desktop companion prototype. It listens for the 
 ## Implemented in this prototype
 - Electron desktop window with a stylized avatar.
 - Starts speech recognition automatically when the app window loads (the user must grant microphone permission on first use); there is no activation button.
+- The microphone control can pause and resume recognition while the window is open.
 - Hides to the background when the window is closed; the process stays running on Windows.
 - Spoken “ігровий режим” command hides the avatar window; the app remains in the tray and can be reopened from its tray menu.
 - Registers the app to launch at Windows sign-in.
