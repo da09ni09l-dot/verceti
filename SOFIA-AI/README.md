@@ -1,19 +1,24 @@
 # SOFIA AI — Windows desktop assistant
 
-SOFIA AI is an early Windows 11 desktop companion prototype. It is designed to sit quietly on the desktop, listen for the wake phrase **“Софія”**, and then accept a short spoken command.
+SOFIA AI is an early Windows 11 desktop companion prototype. It listens for the Ukrainian wake phrase **“Софія”** and accepts a small set of spoken commands.
 
-## Current prototype scope
-- Electron desktop shell with a compact, always-available avatar window.
-- Ukrainian voice activation and speech output using the browser Speech Recognition / Speech Synthesis APIs.
-- Starter command set: open YouTube, open YouTube Music, tell the time, and request Windows shutdown.
-- Shutdown is never immediate: Sofia asks for an explicit on-screen confirmation first.
-- The window can be hidden/minimized while a full-screen game is active; a later milestone will add reliable game detection and tray controls.
+## Implemented in this prototype
+- Electron desktop window with a stylized avatar.
+- Starts speech recognition when the window loads (the user must grant microphone permission).
+- Hides to the background when the window is closed; the process stays running on Windows.
+- Registers the app to launch at Windows sign-in.
+- Basic tray menu actions to reopen the assistant or exit.
+- Ukrainian speech output using the system's available Ukrainian voice.
+- Commands: open YouTube, open YouTube Music, open Calculator, open Notepad, web search, tell the time.
+- Shutdown requires one explicit on-screen click and then schedules shutdown after 30 seconds.
 
-## Important limitations
-- The first voice prototype uses the Web Speech API. Speech recognition may send audio to the browser/platform speech service and requires an internet connection; it is **not** offline/private wake-word detection.
-- The wake phrase is detected by continuous speech recognition, so microphone permission must be granted while the app is running.
-- Do not run the app with elevated privileges. Shutdown is an explicit, delayed OS command after confirmation.
-- This is a starter implementation, not a finished installer or a full conversational AI. LLM chat, offline wake-word detection, a polished 3D avatar, game detection, and installer signing are planned milestones.
+## Important limitations — read before use
+- Wake-word detection currently relies on the browser **Web Speech API**. It is not an offline wake-word engine and recognition may send audio to a platform speech service. Do not treat it as a private/local-only microphone pipeline.
+- Microphone permission and a working speech recognition service are required. Browser speech recognition may stop or behave differently across Windows systems; automatic restart is best-effort.
+- This build does **not** yet implement full natural conversation, arbitrary PC control, file management, Bluetooth/Wi-Fi settings, reliable game/full-screen detection, or a production 3D avatar.
+- Full-screen game hiding is not yet implemented. The app can be hidden manually and remains in the background.
+- The tray icon and microphone behavior must be tested on a real Windows 11 PC before release.
+- Do not run the app with elevated privileges. Potentially destructive OS actions must remain allowlisted and explicitly confirmed.
 
 ## Development
 Requires Node.js 20+ and Windows 10/11 (Windows 11 recommended).
@@ -31,9 +36,9 @@ npm run dist
 
 The installer output is written to `dist/`.
 
-## Roadmap
-1. Desktop shell + wake phrase + safe starter commands.
-2. Reliable background/tray behavior and game-aware quiet mode.
-3. Offline wake-word engine and configurable speech provider.
-4. Conversational AI with explicit privacy/settings controls.
-5. Animated character, expressions, voice selection, and installer polish.
+## Next milestones
+1. Replace Web Speech API wake detection with an offline local wake-word engine.
+2. Add robust tray icon, audio-device handling, and full-screen/game-aware quiet mode.
+3. Add a conversational AI layer with clear privacy controls.
+4. Expand Windows commands through a strict allowlist and one-step visual confirmations for risky actions.
+5. Replace the stylized CSS avatar with an animated character and polish the installer.
