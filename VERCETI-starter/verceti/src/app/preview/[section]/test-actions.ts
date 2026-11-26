@@ -27,8 +27,13 @@ async function getCurrentUser() {
   if (profileError || !profile || profile.is_banned) {
     throw new Error("Обліковий запис не має доступу до тестування.");
   }
-  const { data: member, error: memberError } = await supabase.rpc("is_verceti_member");
-  if (memberError || member !== true) throw new Error("Тестування доступне лише після схвалення анкети.");
+  const [{ data: member, error: memberError }, { data: staff, error: staffError }] = await Promise.all([
+    supabase.rpc("is_verceti_member"),
+    supabase.rpc("is_verceti_staff"),
+  ]);
+  if ((memberError || member !== true) && (staffError || staff !== true)) {
+    throw new Error("Тестування доступне лише після схвалення анкети.");
+  }
   return { user, supabase };
 }
 
