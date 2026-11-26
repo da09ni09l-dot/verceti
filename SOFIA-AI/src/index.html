@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOFIA AI</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="window">
+    <header class="bar">
+      <span class="brand">SOFIA <i>AI</i></span>
+      <div class="window-actions">
+        <button id="minimize" aria-label="Згорнути">—</button>
+        <button id="close" aria-label="Сховати">×</button>
+      </div>
+    </header>
+    <section class="content">
+      <div class="avatar-wrap">
+        <div class="halo"></div>
+        <div class="avatar" aria-label="Аватар Софії">
+          <div class="hair"></div><div class="face">
+            <span class="eye left"></span><span class="eye right"></span>
+            <span class="nose"></span><span class="mouth"></span>
+          </div>
+          <div class="neck"></div><div class="shoulders"></div>
+        </div>
+      </div>
+      <h1>Софія</h1>
+      <p id="status">Я тут. Скажи «Софія»</p>
+      <div class="orb" id="orb"><span></span></div>
+      <p class="hint">Голосове керування · Українська</p>
+      <div class="transcript" id="transcript">Очікую на ключове слово…</div>
+      <div class="controls">
+        <button id="listen" class="primary">Увімкнути мікрофон</button>
+        <button id="stop" class="secondary">Пауза</button>
+      </div>
+      <div class="confirm hidden" id="confirm">
+        <p>Ти справді хочеш вимкнути комп'ютер? Вимкнення почнеться через 30 секунд.</p>
+        <div><button id="shutdown" class="danger">Так, вимкнути</button><button id="cancel" class="secondary">Скасувати</button></div>
+      </div>
+      <p class="privacy">Розпізнавання голосу працює через Web Speech API і може потребувати інтернету.</p>
+    </section>
+  </main>
+  <script src="renderer.js"></script>
+</body>
+</html>
