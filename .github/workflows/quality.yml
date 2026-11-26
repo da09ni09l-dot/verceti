@@ -63,6 +63,8 @@ jobs:
           if (-not $model) { throw "Ukrainian Vosk model archive was empty." }
           Move-Item $model.FullName voice/model
           pyinstaller --noconfirm --clean --onedir --name sofia-listener --distpath voice/dist --workpath voice/build --specpath voice --collect-all sounddevice --collect-all _sounddevice_data --collect-all vosk --add-data "voice/model;model" voice/sofia_listener.py
+          python -m py_compile voice/sofia_listener.py
+          if (-not (Test-Path "voice/dist/sofia-listener/sofia-listener.exe")) { throw "Offline voice listener executable was not built." }
       - name: Build Windows installer
         run: npm run dist
       - name: Verify installer output
@@ -73,6 +75,7 @@ jobs:
             throw "No Windows .exe installer was produced."
           }
           $installers | ForEach-Object { Write-Host "Built: $($_.Name) ($($_.Length) bytes)" }
+          if (-not (Test-Path "dist/win-unpacked/resources/sofia-listener/sofia-listener.exe")) { throw "Offline voice listener was not included in the Electron app." }
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
