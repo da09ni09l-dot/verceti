@@ -661,7 +661,7 @@ export default async function PreviewSection({
   if (section === "rewards") {
     const { data: role } = await supabase.rpc("current_verceti_role");
     rewardsRole = typeof role === "string" ? role : null;
-    canManageRewards = rewardsRole === "founder";
+    canManageRewards = rewardsRole === "founder" || rewardsRole === "leader";
 
     const now = new Date();
     const kyivParts = new Intl.DateTimeFormat("en-CA", {
@@ -834,7 +834,7 @@ export default async function PreviewSection({
             <MediaRoom />
           </>
         ) : section === "forms" ? (
-          <ApplicationsSection status={status} showPendingOnly={view === "pending" && isStaff} showDatabaseOnly={view === "database" && isStaff} />
+          <ApplicationsSection status={status} showPendingOnly={view === "pending" && (isStaff || viewerRole === "leader")} showDatabaseOnly={view === "database" && (isStaff || viewerRole === "leader")} />
         ) : section === "members" ? (
           <>
             <h1>Учасники VERCETI</h1>
@@ -868,7 +868,7 @@ export default async function PreviewSection({
                         {member.game_id ? `Ігровий ID: ${member.game_id} · ` : ""}У спільноті з {new Date(member.created_at).toLocaleDateString("uk-UA")}
                       </div>
                     </div>
-                    <span className={`role ${member.role === "founder" || member.role === "admin" || member.role === "leader" ? "orange" : member.role === "moderator" ? "purple" : member.role === "senior" ? "blue" : member.role === "local" ? "green" : "muted"}`}>{({ founder: "ЗАСНОВНИК", admin: "ЗАСТАРІЛА РОЛЬ", leader: "ЛІДЕР", moderator: "МОДЕРАТОР", senior: "СТАРШИЙ", local: "УЧАСНИК", junior: "МОЛОДШИЙ" } as Record<string, string>)[member.role] ?? member.role}</span>
+                    <span className={`role ${member.role === "founder" || member.role === "admin" || member.role === "leader" ? "orange" : member.role === "moderator" ? "purple" : member.role === "senior" ? "blue" : member.role === "local" ? "green" : "muted"}`}>{({ founder: "Засновник", admin: "ЗАСТАРІЛА РОЛЬ", leader: "Лідер", moderator: "МОДЕРАТОР", senior: "СТАРШИЙ", local: "УЧАСНИК", junior: "МОЛОДШИЙ" } as Record<string, string>)[member.role] ?? member.role}</span>
                     <span aria-hidden="true" style={{ color: "#bb8aff", fontSize: 18 }}>↗</span>
                   </Link>
                 ))}
@@ -1506,7 +1506,7 @@ export default async function PreviewSection({
                         {prize.description && <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>{prize.description}</p>}
                         <p className="notice-time">Вага випадіння: {prize.weight}</p>
                       </div>
-                      {rewardsRole === "founder" && (
+                      {(rewardsRole === "founder" || (rewardsRole === "leader" && prize.created_by === user.id)) && (
                         <form action={deleteRewardPrize}>
                           <input type="hidden" name="id" value={prize.id} />
                           <button className="btn" type="submit" style={{ background: "#8f303f", borderColor: "#b94b5c" }}>Видалити</button>

@@ -63,7 +63,7 @@ export async function reviewVacationRequest(formData: FormData) {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) redirect("/login");
   const { data: reviewerRole, error: roleError } = await supabase.rpc("current_verceti_role");
-  if (roleError || reviewerRole !== "founder") redirect("/preview/vacation?status=forbidden");
+  if (roleError || !(reviewerRole === "founder" || reviewerRole === "leader")) redirect("/preview/vacation?status=forbidden");
 
   const { error } = await supabase.from("vacation_requests").update({
     status: decision, reviewed_by: user.id, reviewed_at: new Date().toISOString()
@@ -84,7 +84,7 @@ export async function deleteVacationRequest(formData: FormData) {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) redirect("/login");
   const { data: role, error: roleError } = await supabase.rpc("current_verceti_role");
-  if (roleError || role !== "founder") redirect("/preview/vacation?status=forbidden");
+  if (roleError || !(role === "founder" || role === "leader")) redirect("/preview/vacation?status=forbidden");
   const { data: deleted, error } = await supabase
     .from("vacation_requests")
     .delete()

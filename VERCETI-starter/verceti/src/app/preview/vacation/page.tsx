@@ -22,8 +22,8 @@ export default async function VacationPage({ searchParams }: { searchParams: Pro
   const { data: membershipStatus, error: membershipError } = await supabase.rpc("is_verceti_member");
   if (membershipError || membershipStatus !== true) redirect("/preview/forms");
   const { data: role } = await supabase.rpc("current_verceti_role");
-  const canReview = role === "founder";
-  const canDelete = role === "founder";
+  const canReview = role === "founder" || role === "leader";
+  const canDelete = role === "founder" || role === "leader";
 
   let query = supabase.from("vacation_requests")
     .select("id, user_id, start_date, end_date, reason, status, created_at")
@@ -112,7 +112,7 @@ export default async function VacationPage({ searchParams }: { searchParams: Pro
                         {canClearApproved && (
                           <form action={deleteVacationRequest}>
                             <input type="hidden" name="id" value={request.id} />
-                            <button className="btn secondary" type="submit">Очистити схвалену</button>
+                            <button className="btn secondary" type="submit">Видалити відпустку</button>
                           </form>
                         )}
                       </div>
