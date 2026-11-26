@@ -699,7 +699,7 @@ export default async function PreviewSection({
       { data, error },
       { data: spinData, error: spinError }
     ] = await Promise.all([
-      supabase.from("rewards_prizes").select("id, title, description, weight, created_by").order("created_at", { ascending: true }),
+      supabase.from("rewards_prizes").select("id, title, description, weight, created_by").eq("is_active", true).order("created_at", { ascending: true }),
       supabase.from("rewards_spins").select("spun_at, prize:rewards_prizes(title, description)").eq("user_id", user.id).eq("spin_type", "daily").gte("spun_at", kyivDayStart.toISOString()).order("spun_at", { ascending: false }).limit(1).maybeSingle()
     ]);
 
@@ -1576,7 +1576,7 @@ export default async function PreviewSection({
                         {prize.description && <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>{prize.description}</p>}
                         <p className="notice-time">Вага випадіння: {prize.weight}</p>
                       </div>
-                      {(rewardsRole === "founder" || (["leader", "moderator"].includes(String(rewardsRole ?? "")) && prize.created_by === user.id)) && (
+                      {(["founder", "leader", "moderator"].includes(String(rewardsRole ?? ""))) && (
                         <form action={deleteRewardPrize}>
                           <input type="hidden" name="id" value={prize.id} />
                           <button className="btn" type="submit" style={{ background: "#8f303f", borderColor: "#b94b5c" }}>Видалити</button>
