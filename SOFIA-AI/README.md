@@ -6,6 +6,7 @@ SOFIA AI is an early Windows 11 desktop companion prototype. It listens for the 
 - Electron desktop window with a stylized avatar.
 - Starts speech recognition automatically when the app window loads (the user must grant microphone permission on first use); there is no activation button.
 - Hides to the background when the window is closed; the process stays running on Windows.
+- Spoken “ігровий режим” command hides the avatar window; the app remains in the tray and can be reopened from its tray menu.
 - Registers the app to launch at Windows sign-in.
 - Basic tray menu actions to reopen the assistant or exit.
 - Ukrainian speech output using the system's available Ukrainian voice.
@@ -16,7 +17,7 @@ SOFIA AI is an early Windows 11 desktop companion prototype. It listens for the 
 - Wake-word detection currently relies on the browser **Web Speech API**. It is not an offline wake-word engine and recognition may send audio to a platform speech service. Do not treat it as a private/local-only microphone pipeline.
 - Microphone permission and a working speech recognition service are required. Browser speech recognition may stop or behave differently across Windows systems; automatic restart is best-effort.
 - This build does **not** yet implement full natural conversation, arbitrary PC control, file management, Bluetooth/Wi-Fi settings, reliable game/full-screen detection, or a production 3D avatar.
-- Full-screen game hiding is not yet implemented. The app can be hidden manually and remains in the background.
+- Game mode currently hides the avatar on voice command; it does not yet detect full-screen games automatically. Background microphone recognition is best-effort and is not guaranteed while hidden.
 - The tray icon and microphone behavior must be tested on a real Windows 11 PC before release. Hiding the window does not guarantee that the underlying Web Speech service remains continuously active.
 - Do not run the app with elevated privileges. Potentially destructive OS actions must remain allowlisted and explicitly confirmed.
 
