@@ -1270,7 +1270,7 @@ export default async function PreviewSection({
               <form action={async (formData: FormData) => {
                 "use server";
                 const nickname = String(formData.get("nickname") ?? "").trim();
-                if (!/^[a-zA-Z0-9_]{3,20}$/.test(nickname)) redirect("/preview/settings?status=nickname_error");
+                if (!/^[A-Za-zА-Яа-яІіЇїЄєҐґ0-9 _-]{3,20}$/u.test(nickname)) redirect("/preview/settings?status=nickname_error");
                 const client = await createClient();
                 const { data: { user: currentUser } } = await client.auth.getUser();
                 if (!currentUser) redirect("/login");
@@ -1282,12 +1282,12 @@ export default async function PreviewSection({
                 redirect("/preview/settings?status=saved");
               }} className="member-list" style={{ marginTop: 14, gap: 10 }}>
                 <label htmlFor="settings-nickname">Нікнейм</label>
-                <input id="settings-nickname" name="nickname" required minLength={3} maxLength={20} pattern="[A-Za-z0-9_]+" defaultValue={profile?.nickname ?? ""} />
-                <p className="page-note">3–20 символів: латинські літери, цифри та _</p>
+                <input id="settings-nickname" name="nickname" required minLength={3} maxLength={20} pattern="[A-Za-zА-Яа-яІіЇїЄєҐґ0-9 _-]{3,20}" defaultValue={profile?.nickname ?? ""} />
+                <p className="page-note">3–20 символів: українські або латинські літери, цифри, пробіли, _ та -</p>
                 <button className="btn" type="submit">Зберегти нікнейм</button>
               </form>
               {status === "saved" && <p className="page-note">Нікнейм успішно оновлено.</p>}
-              {status === "nickname_error" && <p className="page-note">Перевір формат нікнейму: 3–20 дозволених символів.</p>}
+              {status === "nickname_error" && <p className="page-note">Нікнейм має містити 3–20 символів: українські або латинські літери, цифри, пробіли, _ чи -.</p>}
               {status === "save_error" && <p className="page-note">Не вдалося зберегти нікнейм. Можливо, він уже зайнятий.</p>}
             </div>
             <UserStyleSettings
