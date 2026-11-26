@@ -51,11 +51,20 @@ ipcMain.handle("sofia:open", async (_event, target) => {
   const fixed = {
     youtube: "https://www.youtube.com",
     music: "https://music.youtube.com",
-    google: "https://www.google.com"
+    google: "https://www.google.com",
+    browser: "https://www.google.com"
   };
-  if (target === "calculator" || target === "notepad") {
-    const executable = target === "calculator" ? "calc.exe" : "notepad.exe";
-    execFile(executable, [], () => {});
+  if (target === "calculator" || target === "notepad" || target === "explorer" || target === "settings") {
+    const commands = {
+      calculator: ["calc.exe", []],
+      notepad: ["notepad.exe", []],
+      explorer: ["explorer.exe", []],
+      settings: ["explorer.exe", ["ms-settings:"]]
+    };
+    const [executable, args] = commands[target];
+    execFile(executable, args, (error) => {
+      if (error) console.error(`Failed to open ${target}:`, error.message);
+    });
     return { ok: true };
   }
   const url = fixed[target];
