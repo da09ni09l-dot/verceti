@@ -32,7 +32,7 @@ type DirectMessage = {
   message_font?: string | null;
 };
 
-type ChatGroup = { id: string; name: string; description: string; created_by: string; };
+type ChatGroup = { id: string; name: string; description: string; created_by: string; is_private: boolean; };
 
 type Player = {
   id: string;
@@ -114,6 +114,8 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupDescription, setNewGroupDescription] = useState("");
+  const [newGroupIsPrivate, setNewGroupIsPrivate] = useState(false);
+  const [newGroupMemberIds, setNewGroupMemberIds] = useState<string[]>([]);
   const [canCreateGroups, setCanCreateGroups] = useState(false);
   const [creatingGroup, setCreatingGroup] = useState(false);
 
@@ -232,11 +234,11 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
 
   const loadGroups = useCallback(async () => {
     const [{ data }, { data: role }] = await Promise.all([
-      supabase.from("chat_groups").select("id,name,description,created_by").order("created_at", { ascending: true }),
+      supabase.from("chat_groups").select("id,name,description,created_by,is_private").order("created_at", { ascending: true }),
       supabase.rpc("current_verceti_role")
     ]);
     setGroups((data ?? []) as ChatGroup[]);
-    setCanCreateGroups(["admin", "leader", "moderator"].includes(String(role ?? "")));
+    setCanCreateGroups(["founder", "admin", "leader", "moderator"].includes(String(role ?? "")));
   }, [supabase]);
 
   async function createGroup(event: React.FormEvent<HTMLFormElement>) {
@@ -250,14 +252,29 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
       const { data: authData } = await supabase.auth.getUser();
       if (!authData.user) throw new Error("Потрібно увійти в акаунт.");
       const { data, error: createError } = await supabase.from("chat_groups")
-        .insert({ name, description, created_by: authData.user.id })
-        .select("id,name,description,created_by").single();
+        .insert({ name, description, created_by: authData.user.id, is_private: newGroupIsPrivate })
+        .select("id,name,description,created_by,is_private").single();
       if (createError || !data) throw new Error("Не вдалося створити груповий чат.");
+      if (newGroupIsPrivate) {
+        const memberIds = [...new Set([authData.user.id, ...newGroupMemberIds])];
+        if (memberIds.length < 2) {
+          await supabase.from("chat_groups").delete().eq("id", data.id);
+          throw new Error("Для чату з обмеженим доступом обери хоча б одного учасника.");
+        }
+        const { error: membersError } = await supabase.from("chat_group_members")
+          .insert(memberIds.map((userId) => ({ group_id: data.id, user_id: userId, added_by: authData.user!.id })));
+        if (membersError) {
+          await supabase.from("chat_groups").delete().eq("id", data.id);
+          throw new Error("Не вдалося налаштувати учасників приватного чату.");
+        }
+      }
       setGroups((current) => [...current, data as ChatGroup]);
       setSelectedPlayer(null);
       setSelectedGroupId(data.id);
       setNewGroupName("");
       setNewGroupDescription("");
+      setNewGroupIsPrivate(false);
+      setNewGroupMemberIds([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Помилка створення чату.");
     } finally {
@@ -735,8 +752,24 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
           <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
             Основна кімната спільноти
           </p>
-          {groups.map((group) => <button key={group.id} type="button" className="btn secondary" onClick={() => openGroupChat(group)} style={{ width: "100%", marginTop: 8, textAlign: "left", borderColor: selectedGroupId === group.id ? "#9b5cff" : undefined }}>{group.name}</button>)}
-          {canCreateGroups && <form onSubmit={createGroup} style={{ display: "grid", gap: 7, marginTop: 12 }}><strong style={{ fontSize: 13 }}>Створити груповий чат</strong><input value={newGroupName} onChange={(event) => setNewGroupName(event.target.value)} placeholder="Назва чату" maxLength={60} minLength={2} required /><input value={newGroupDescription} onChange={(event) => setNewGroupDescription(event.target.value)} placeholder="Опис (необов’язково)" maxLength={240} /><button className="btn" type="submit" disabled={creatingGroup || newGroupName.trim().length < 2}>{creatingGroup ? "Створення…" : "＋ Створити чат"}</button></form>}
+          {groups.map((group) => <button key={group.id} type="button" className="btn secondary" onClick={() => openGroupChat(group)} style={{ width: "100%", marginTop: 8, textAlign: "left", borderColor: selectedGroupId === group.id ? "#9b5cff" : undefined }}>{group.is_private ? "🔒 " : ""}{group.name}</button>)}
+          {canCreateGroups && <form onSubmit={createGroup} style={{ display: "grid", gap: 7, marginTop: 12 }}>
+            <strong style={{ fontSize: 13 }}>Створити груповий чат</strong>
+            <input value={newGroupName} onChange={(event) => setNewGroupName(event.target.value)} placeholder="Назва чату" maxLength={60} minLength={2} required />
+            <input value={newGroupDescription} onChange={(event) => setNewGroupDescription(event.target.value)} placeholder="Опис (необов’язково)" maxLength={240} />
+            <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 12 }}>
+              <input type="checkbox" checked={newGroupIsPrivate} onChange={(event) => setNewGroupIsPrivate(event.target.checked)} />
+              Чат з обмеженим доступом
+            </label>
+            {newGroupIsPrivate && <>
+              <label htmlFor="private-chat-members" style={{ fontSize: 12 }}>Кому надати доступ</label>
+              <select id="private-chat-members" multiple value={newGroupMemberIds} onChange={(event) => setNewGroupMemberIds(Array.from(event.target.selectedOptions, (option) => option.value))} style={{ minHeight: 120 }}>
+                {players.filter((player) => player.id !== userId).map((player) => <option key={player.id} value={player.id}>{player.nickname || "Учасник"} · {roleLabels[player.role] ?? player.role}</option>)}
+              </select>
+              <small className="muted">Утримуй Ctrl або ⌘, щоб обрати кількох учасників. Ти також матимеш доступ як автор чату.</small>
+            </>}
+            <button className="btn" type="submit" disabled={creatingGroup || newGroupName.trim().length < 2 || (newGroupIsPrivate && newGroupMemberIds.length === 0)}>{creatingGroup ? "Створення…" : "＋ Створити чат"}</button>
+          </form>}
         </div>
 
         <div className="panel">
