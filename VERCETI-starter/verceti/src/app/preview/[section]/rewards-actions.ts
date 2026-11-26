@@ -7,7 +7,7 @@ async function requireRewardsManager() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const { data: role, error } = await supabase.rpc("current_verceti_role");
-  if (error || (role !== "founder" && role !== "leader")) redirect("/preview/rewards?status=forbidden");
+  if (error || !["founder", "leader", "moderator"].includes(String(role ?? ""))) redirect("/preview/rewards?status=forbidden");
   return { supabase, user, role };
 }
 export async function createRewardPrize(formData: FormData) {
