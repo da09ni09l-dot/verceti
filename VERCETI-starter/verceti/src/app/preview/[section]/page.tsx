@@ -178,6 +178,8 @@ export default async function PreviewSection({
   const { data: viewerRole } = await supabase.rpc("current_verceti_role");
   const isFounder = viewerRole === "founder";
   const isStaff = !staffError && staffStatus === true && viewerRole !== "leader";
+  const canManageNews = ["founder", "leader", "moderator"].includes(String(viewerRole ?? ""));
+  const canManageTests = !staffError && staffStatus === true && ["founder", "admin", "leader", "moderator"].includes(String(viewerRole ?? ""));
   const canManageVoiceRooms = viewerRole === "founder" || viewerRole === "leader" || viewerRole === "moderator";
 
   const { data: membershipStatus, error: membershipError } =
@@ -663,7 +665,7 @@ export default async function PreviewSection({
   if (section === "rewards") {
     const { data: role } = await supabase.rpc("current_verceti_role");
     rewardsRole = typeof role === "string" ? role : null;
-    canManageRewards = rewardsRole === "founder" || rewardsRole === "leader";
+    canManageRewards = ["founder", "leader", "moderator"].includes(String(rewardsRole ?? ""));
 
     const now = new Date();
     const kyivParts = new Intl.DateTimeFormat("en-CA", {
@@ -1080,7 +1082,7 @@ export default async function PreviewSection({
             <h1>Новини</h1>
             <p className="muted">Новини спільноти, оголошення та події.</p>
 
-            {isFounder && (
+            {canManageNews && (
               <div className="panel" style={{ marginTop: 24 }}>
                 <h2>Створити новину</h2>
 
@@ -1212,7 +1214,7 @@ export default async function PreviewSection({
                       Дата: {new Date(item.event_date ?? item.created_at).toLocaleDateString("uk-UA")}
                     </div>
 
-                    {isFounder && (
+                    {canManageNews && (
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
                       <form action={toggleNewsPin}>
                         <input type="hidden" name="news_id" value={item.id} />
@@ -1595,7 +1597,7 @@ export default async function PreviewSection({
             )}
           </>
         ) : section === "tests" ? (
-          <TestsSection isStaff={isStaff} />
+          <TestsSection isStaff={isStaff || canManageTests} />
         ) : section === "activity" ? (
           <>
             <h1>Онлайн-активність</h1>
