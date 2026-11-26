@@ -46,6 +46,11 @@ jobs:
           pyinstaller --noconfirm --clean --onedir --name sofia-listener --distpath voice/dist --workpath voice/build --specpath voice --collect-all sounddevice --collect-all vosk --add-data "$sounddeviceData;_sounddevice_data" --add-data "$((Resolve-Path voice/model).Path);model" voice/sofia_listener.py
           python -m py_compile voice/sofia_listener.py
           if (-not (Test-Path "voice/dist/sofia-listener/sofia-listener.exe")) { throw "Offline voice listener executable was not built." }
+      - name: Validate Electron JavaScript syntax
+        run: |
+          node --check src/main.cjs
+          node --check src/preload.cjs
+          node --check src/renderer.js
       - name: Build Windows installer
         run: npm run dist
       - name: Verify installer output
