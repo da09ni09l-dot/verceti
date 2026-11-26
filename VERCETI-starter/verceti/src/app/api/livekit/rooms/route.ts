@@ -109,6 +109,7 @@ export async function GET() {
           ...room,
           participant_count: participantCount,
           can_manage: viewerRole === "founder" || room.created_by === user.id || (viewerRole === "admin" && room.is_hidden === false),
+          can_manage_visibility: viewerRole === "founder" || room.created_by === user.id,
         };
       })
     );
@@ -282,6 +283,16 @@ export async function PATCH(request: NextRequest) {
       if (!Number.isSafeInteger(id) || id <= 0 || typeof body.isHidden !== "boolean") {
         return NextResponse.json({ error: "Некоректні параметри кімнати." }, { status: 400 });
       }
+      const { data: targetRoom, error: targetRoomError } = await supabase
+        .from("voice_rooms").select("id, created_by").eq("id", id).maybeSingle();
+      if (targetRoomError || !targetRoom) {
+        return NextResponse.json({ error: "Кімнату не знайдено." }, { status: 404 });
+      }
+      const { data: actorRole, error: actorRoleError } = await supabase.rpc("current_verceti_role");
+      if (actorRoleError || (actorRole !== "founder" && targetRoom.created_by !== user.id)) {
+        return NextResponse.json({ error: "Керувати видимістю цієї кімнати може лише її автор або Засновник." }, { status: 403 });
+      }
+
       if (body.isHidden) {
         try {
           const livekit = getLiveKitService();
