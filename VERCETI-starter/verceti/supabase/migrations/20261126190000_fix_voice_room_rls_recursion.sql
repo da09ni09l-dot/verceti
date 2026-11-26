@@ -1,6 +1,9 @@
 -- Break the circular RLS dependency between voice_rooms and voice_room_assignments.
--- The voice_rooms SELECT policy must not query voice_room_assignments under its
--- own RLS policies, because assignment policies also inspect voice_rooms.
+-- Keep the helper private and restrict it to the authenticated caller's own assignment.
+
+create schema if not exists private;
+revoke all on schema private from public;
+grant usage on schema private to authenticated;
 
 create or replace function private.is_voice_room_assigned(
   p_room_id bigint,
@@ -12,12 +15,14 @@ stable
 security definer
 set search_path = ''
 as $$
-  select exists (
-    select 1
-    from public.voice_room_assignments a
-    where a.room_id = p_room_id
-      and a.user_id = p_user_id
-  );
+  select auth.uid() is not null
+    and p_user_id = auth.uid()
+    and exists (
+      select 1
+      from public.voice_room_assignments a
+      where a.room_id = p_room_id
+        and a.user_id = auth.uid()
+    );
 $$;
 
 revoke all on function private.is_voice_room_assigned(bigint, uuid) from public, anon;
