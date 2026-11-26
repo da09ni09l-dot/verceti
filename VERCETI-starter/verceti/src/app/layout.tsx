@@ -10,6 +10,7 @@ import ActivityTracker from "./preview/[section]/ActivityTracker";
 import VoiceRoom from "./preview/[section]/VoiceRoom";
 import CallActions from "./preview/members/[id]/CallActions";
 import { createClient } from "@/lib/supabase/server";
+import DownloadLauncherFooter from "./DownloadLauncherFooter";
 
 export const metadata: Metadata = {
   title: "VERCETI — закрита спільнота",
@@ -45,6 +46,7 @@ export default async function RootLayout({
           <VoiceRoom isStaff={isStaff} canModerateVoice={canModerateVoice} />
           {user && <CallActions currentUserId={user.id} listenForCalls />}
           <PinnedSiteActions />
+          <DownloadLauncherFooter />
         </OnlinePresenceProvider>
       </body>
     </html>
