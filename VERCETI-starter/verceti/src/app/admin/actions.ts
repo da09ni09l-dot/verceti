@@ -14,6 +14,15 @@ const allowedRoles = [
   "leader",
 ] as const;
 
+async function requireNewsManager() {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) redirect("/login");
+  const { data: role, error } = await supabase.rpc("current_verceti_role");
+  if (error || !["founder", "leader", "moderator"].includes(String(role))) redirect("/");
+  return { supabase, user };
+}
+
 async function requireAdmin() {
   const supabase = await createClient();
 
@@ -400,7 +409,7 @@ export async function deleteMember(formData: FormData) {
 // ==========================================
 
 export async function createNews(formData: FormData) {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user } = await requireNewsManager();
 
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
@@ -532,7 +541,7 @@ export async function deleteNews(formData: FormData) {
     redirect("/admin?tab=news&error=news");
   }
 
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireNewsManager();
 
   const { error } = await supabase
     .from("news")
@@ -556,7 +565,7 @@ export async function toggleNewsPin(formData: FormData) {
     redirect(returnToPreview ? "/preview/news?status=invalid" : "/admin?tab=news&error=news");
   }
 
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireNewsManager();
 
   const { data: news, error: findError } = await supabase
     .from("news")
