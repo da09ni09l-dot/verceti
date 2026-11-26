@@ -6,5 +6,6 @@ contextBridge.exposeInMainWorld("sofia", {
   shutdown: () => ipcRenderer.invoke("sofia:shutdown"),
   cancelShutdown: () => ipcRenderer.send("sofia:cancel-shutdown"),
   minimize: () => ipcRenderer.send("sofia:minimize"),
-  close: () => ipcRenderer.send("sofia:close")
+  close: () => ipcRenderer.send("sofia:close"),
+  hideForGame: () => ipcRenderer.send("sofia:hide-for-game")
 });
