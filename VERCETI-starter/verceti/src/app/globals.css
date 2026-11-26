@@ -3604,3 +3604,8 @@ td {
     width: 100%;
   }
 }
+
+
+/* Compact, consistently spaced voice-room management actions (web + Electron). */
+.voice-room-actions { display:flex; align-items:center; gap:4px; flex:none; }
+.voice-room-actions .voice-icon-button { width:30px; height:30px; border-radius:9px; }
