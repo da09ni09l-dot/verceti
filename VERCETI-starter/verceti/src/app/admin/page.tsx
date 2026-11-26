@@ -151,9 +151,14 @@ export default async function AdminPage({
             VERCETI
             <small>АДМІНІСТРУВАННЯ</small>
           </div>
-          <Link href="/" className="btn secondary" style={{ whiteSpace: "nowrap" }}>
-            ← Назад на сайт
-          </Link>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link href="/admin/support" className="btn secondary" style={{ whiteSpace: "nowrap" }}>
+              Звернення до адміністрації
+            </Link>
+            <Link href="/" className="btn secondary" style={{ whiteSpace: "nowrap" }}>
+              ← Назад на сайт
+            </Link>
+          </div>
         </div>
 
         <h1 style={{ fontSize: 27, marginTop: 28 }}>
