@@ -8,6 +8,7 @@ let wakeTimer;
 const conversation = [];
 let aiReady = false;
 let speaking = false;
+let speechFinishedAt = 0;
 
 function say(text) {
   statusEl.textContent = text;
@@ -18,7 +19,7 @@ function say(text) {
   utterance.rate = 0.96;
   const voices = window.speechSynthesis.getVoices();
   utterance.voice = voices.find(v => v.lang?.toLowerCase().startsWith("uk")) || null;
-  speaking = true;\n  utterance.onend = () => { speaking = false; };\n  utterance.onerror = () => { speaking = false; };\n  window.speechSynthesis.speak(utterance);
+  speaking = true;\n  utterance.onend = () => { speaking = false; speechFinishedAt = Date.now(); };\n  utterance.onerror = () => { speaking = false; speechFinishedAt = Date.now(); };\n  window.speechSynthesis.speak(utterance);
 }
 
 function normalize(value) {
@@ -73,7 +74,7 @@ async function handleCommand(raw) {
   } else if (/дякую/.test(command)) {
     say("Завжди рада допомогти.");
   } else {
-    say("Я почула тебе. Цю команду ще не додано.");
+    await askAssistant(raw);
   }
 }
 
@@ -110,6 +111,7 @@ async function refreshAiStatus() {
 function processRecognizedPhrase(raw) {
   const phrase = normalize(raw);
   transcriptEl.textContent = raw;
+  if (speaking || Date.now() - speechFinishedAt < 900) return;
   if (awaitingCommand) {
     awaitingCommand = false;
     clearTimeout(wakeTimer);
