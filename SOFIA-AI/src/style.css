@@ -20,6 +20,11 @@ h1 { margin:0;font-size:25px;font-weight:600;letter-spacing:.4px; }#status{margi
 .orb { width:14px;height:14px;border-radius:50%;background:#a77aff;box-shadow:0 0 18px #b48aff;display:grid;place-items:center;margin:2px 0 8px; }.orb span{width:5px;height:5px;background:white;border-radius:50%;}
 .hint{margin:0 0 9px;font-size:10px;letter-spacing:1px;color:#a99cbe;text-transform:uppercase;}
 .transcript{width:100%;min-height:35px;padding:9px 10px;border:1px solid #ffffff15;border-radius:12px;background:#ffffff09;font-size:11px;color:#cfc2e4;}
+.ai-status{font-size:10px;color:#d5a36e;margin:0 0 8px;max-width:100%;line-height:1.3}.ai-status.ready{color:#8fe0bd}
+.chat-row{display:flex;gap:7px;width:100%;margin:0 0 9px}
+.chat-row input{min-width:0;flex:1;border:1px solid #ffffff22;border-radius:10px;padding:9px 10px;background:#ffffff0d;color:#fff;font-size:11px;outline:none}
+.chat-row input::placeholder{color:#a99cbe}
+.chat-row button{border:0;border-radius:10px;padding:0 12px;background:linear-gradient(110deg,#9e70ef,#c07ce8);color:white;font-size:11px;font-weight:600;cursor:pointer}
 .controls{display:flex;gap:8px;margin-top:12px;width:100%;}.controls button,.confirm button{flex:1;border:0;border-radius:12px;padding:10px 8px;font-weight:600;cursor:pointer;font-size:11px;}
 .primary{background:linear-gradient(110deg,#9e70ef,#c07ce8);color:white}.secondary{background:#ffffff16;color:#eee6f8}.danger{background:#bd3d63;color:white}
 .confirm{width:100%;margin-top:10px;padding:10px;border-radius:13px;background:#a52f5226;border:1px solid #e46b873d;font-size:12px}.confirm div{display:flex;gap:8px}.hidden{display:none}
