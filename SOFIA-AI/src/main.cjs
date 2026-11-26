@@ -118,6 +118,16 @@ ipcMain.on("sofia:hide-for-game", () => mainWindow?.hide());
 ipcMain.on("sofia:show", () => showWindow());
 
 app.whenReady().then(() => {
+  // Allow microphone access only to this app's bundled local UI.
+  const { session } = require("electron");
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    const isLocalApp = webContents.getURL().startsWith("file://");
+    callback(isLocalApp && permission === "media");
+  });
+  session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+    const isLocalApp = webContents?.getURL().startsWith("file://");
+    return Boolean(isLocalApp && permission === "media");
+  });
   createWindow();
   createTray();
   if (process.platform === "win32") app.setLoginItemSettings({ openAtLogin: true });
