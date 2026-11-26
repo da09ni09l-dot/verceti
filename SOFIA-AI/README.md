@@ -7,7 +7,7 @@ SOFIA AI is an early Windows 11 desktop companion prototype with a Ukrainian voi
 - Electron desktop window with a stylized animated CSS avatar.
 - Local Ukrainian speech recognition using Vosk and the `vosk-model-small-uk-v3-nano` model. The microphone audio is processed on the PC; the wake-word listener does not stream audio to a cloud speech service.
 - Background listener runs as a separate bundled process and can keep listening while the avatar window is hidden or while a game is in the foreground. Actual microphone availability still depends on Windows privacy settings and the selected input device.
-- Wake phrase **«Софія»**, followed by a spoken command.
+- Wake phrase **«Софія»**, followed by a fixed Windows command or a natural-language request for the local AI.
 - Tray behavior: closing the window hides the assistant; the app can be restored from the tray.
 - Launch at Windows sign-in.
 - Ukrainian text-to-speech using an available Windows voice.
