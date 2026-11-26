@@ -1,0 +1,29 @@
+name: Build SOFIA AI for Windows
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "SOFIA-AI/**"
+      - ".github/workflows/build-sofia-windows.yml"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: SOFIA-AI
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: SOFIA-AI/package-lock.json
+      - run: npm install
+      - run: npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sofia-ai-windows-installer
+          path: SOFIA-AI/dist/*.exe
+          if-no-files-found: error
