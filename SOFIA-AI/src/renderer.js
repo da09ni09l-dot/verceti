@@ -49,6 +49,13 @@ async function handleCommand(raw) {
     confirmBox.classList.remove("hidden"); say("Підтверди вимкнення комп'ютера на екрані.");
   } else if (/скасуй вимкнення/.test(command)) {
     window.sofia.cancelShutdown(); say("Якщо було заплановане вимкнення, його скасовано.");
+  } else if (/^(увімкни )?(ігровий режим|режим гри)$/.test(command)) {
+    say("Ігровий режим увімкнено. Ховаю аватар; розпізнавання може залежати від роботи Web Speech API у фоні.");
+    setTimeout(() => window.sofia.hideForGame(), 1200);
+  } else if (/^(вимкни )?(ігровий режим|режим гри)$/.test(command)) {
+    say("Щоб повернути мене, відкрий SOFIA AI через значок біля годинника.");
+  } else if (/^(покажи|відкрий) (мене|софію)$/.test(command)) {
+    say("Я знову на екрані.");
   } else if (/дякую/.test(command)) {
     say("Завжди рада допомогти.");
   } else {
