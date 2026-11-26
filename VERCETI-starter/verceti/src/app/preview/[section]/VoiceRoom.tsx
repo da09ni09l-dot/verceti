@@ -25,6 +25,7 @@ type Room = {
   participant_count: number;
   created_by?: string | null;
   is_hidden?: boolean;
+  can_manage?: boolean;
 };
 type VoiceMember = { id: string; nickname: string; role: string };
 
@@ -271,12 +272,12 @@ export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: Voice
                       {full ? "Заповнена" : selected ? "Ти тут" : "Приєднатись"}
                     </span>
                   </button>
-                  {isStaff && (
+                  {room.can_manage && (
                     <button type="button" className="voice-icon-button" onClick={() => void setRoomHidden(room.id, !room.is_hidden)} disabled={busy} title={room.is_hidden ? "Зробити кімнату видимою" : "Приховати кімнату"} aria-label={room.is_hidden ? "Зробити кімнату видимою" : "Приховати кімнату"}>
                       {room.is_hidden ? "Показати" : "Приховати"}
                     </button>
                   )}
-                  {isStaff && (
+                  {room.can_manage && (
                     <button type="button" className="voice-icon-button is-danger" onClick={() => void deleteRoom(room.id)} disabled={busy} title="Видалити кімнату" aria-label={`Видалити кімнату ${room.name}`}>
                       <Trash2 size={15} />
                     </button>
