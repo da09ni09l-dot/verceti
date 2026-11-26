@@ -26,12 +26,20 @@ def main():
         emit({"type": "error", "message": "Не знайдено локальну українську модель розпізнавання."})
         return 2
 
-    audio_queue = queue.Queue()
+    audio_queue = queue.Queue(maxsize=20)
 
     def on_audio(indata, frames, time_info, status):
         if status:
             print(str(status), file=sys.stderr, flush=True)
-        audio_queue.put(bytes(indata))
+        chunk = bytes(indata)
+        try:
+            audio_queue.put_nowait(chunk)
+        except queue.Full:
+            try:
+                audio_queue.get_nowait()
+            except queue.Empty:
+                pass
+            audio_queue.put_nowait(chunk)
 
     try:
         model = Model(str(model_path))
