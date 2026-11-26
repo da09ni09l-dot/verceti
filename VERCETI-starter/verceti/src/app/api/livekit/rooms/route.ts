@@ -108,7 +108,7 @@ export async function GET() {
         return {
           ...room,
           participant_count: participantCount,
-          can_manage: viewerRole === "founder" || room.created_by === user.id,
+          can_manage: viewerRole === "founder" || room.created_by === user.id || (viewerRole === "admin" && room.is_hidden === false),
         };
       })
     );
