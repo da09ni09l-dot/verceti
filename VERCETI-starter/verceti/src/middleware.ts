@@ -1,4 +1,3 @@
-
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { CookieOptions } from "@supabase/ssr";
@@ -10,69 +9,39 @@ export async function middleware(request: NextRequest) {
   if (!url || !key || !/^https?:\/\/.+/.test(url)) {
     if (request.nextUrl.pathname === "/setup") return NextResponse.next();
     console.error("VERCETI: Supabase environment variables are missing or invalid", {
-      hasUrl: !!url,
-      validUrl: !!url && /^https?:\/\/.+/.test(url),
-      hasKey: !!key,
+      hasUrl: !!url, validUrl: !!url && /^https?:\/\/.+/.test(url), hasKey: !!key,
     });
-
     return NextResponse.redirect(new URL("/setup", request.url));
   }
 
   let response = NextResponse.next({ request });
-
   const supabase = createServerClient(url, key, {
     cookies: {
       getAll: () => request.cookies.getAll(),
-      setAll(
-        cookiesToSet: {
-          name: string;
-          value: string;
-          options?: CookieOptions;
-        }[]
-      ) {
-        cookiesToSet.forEach(({ name, value }) => {
-          request.cookies.set(name, value);
-        });
-
+      setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
-
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
-        });
+        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
       },
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { data: { user } } = await supabase.auth.getUser();
   const isLogin = request.nextUrl.pathname === "/login";
   const isMaintenancePage = request.nextUrl.pathname === "/maintenance";
   const isPublicSupport = request.nextUrl.pathname === "/support" || request.nextUrl.pathname.startsWith("/support/chat");
 
-  // Check maintenance mode before authentication redirects so signed-out visitors
-  // also see the maintenance page instead of the login screen.
   if (!isMaintenancePage) {
-    const { data: setting } = await supabase
-      .from("site_settings")
-      .select("maintenance_enabled")
-      .eq("id", true)
-      .maybeSingle();
-
+    const { data: setting } = await supabase.from("site_settings").select("maintenance_enabled").eq("id", true).maybeSingle();
     if (setting?.maintenance_enabled) {
-      let isAdmin = false;
+      let canBypassMaintenance = false;
       if (user) {
         const { data: role } = await supabase.rpc("current_verceti_role");
-        isAdmin = role === "admin";
+        canBypassMaintenance = role === "founder" || role === "admin";
       }
-
-      if (!isAdmin) {
-        const maintenanceUrl = new URL("/maintenance", request.url);
-        const maintenanceResponse = NextResponse.redirect(maintenanceUrl);
-        response.cookies.getAll().forEach((cookie) => {
-          maintenanceResponse.cookies.set(cookie);
-        });
+      if (!canBypassMaintenance) {
+        const maintenanceResponse = NextResponse.redirect(new URL("/maintenance", request.url));
+        response.cookies.getAll().forEach((cookie) => maintenanceResponse.cookies.set(cookie));
         return maintenanceResponse;
       }
     }
@@ -81,17 +50,10 @@ export async function middleware(request: NextRequest) {
   if (!user && !isLogin && !isMaintenancePage && !isPublicSupport && request.nextUrl.pathname !== "/setup") {
     return NextResponse.redirect(new URL("/login", request.url));
   }
-
-  if (user && isLogin) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
+  if (user && isLogin) return NextResponse.redirect(new URL("/", request.url));
   return response;
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };
-
