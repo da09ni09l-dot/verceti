@@ -158,6 +158,66 @@ ipcMain.handle("sofia:open", async (_event, target) => {
   return { ok: true };
 });
 
+const OLLAMA_BASE_URL = "http://127.0.0.1:11434";
+const OLLAMA_MODEL = process.env.SOFIA_OLLAMA_MODEL || "qwen2.5:3b";
+
+ipcMain.handle("sofia:ai-status", async () => {
+  try {
+    const response = await fetch(OLLAMA_BASE_URL + "/api/tags", { signal: AbortSignal.timeout(5000) });
+    if (!response.ok) return { ok: false, model: OLLAMA_MODEL, error: "Локальний Ollama відповів помилкою." };
+    const data = await response.json();
+    const models = Array.isArray(data.models) ? data.models : [];
+    const installed = models.some((item) => item.name === OLLAMA_MODEL || item.name?.startsWith(OLLAMA_MODEL + ":"));
+    return {
+      ok: installed,
+      model: OLLAMA_MODEL,
+      availableModels: models.map((item) => item.name).slice(0, 20),
+      error: installed ? null : "Модель " + OLLAMA_MODEL + " не встановлена в Ollama."
+    };
+  } catch {
+    return { ok: false, model: OLLAMA_MODEL, error: "Ollama не запущений. Встанови Ollama та завантаж модель " + OLLAMA_MODEL + "." };
+  }
+});
+
+ipcMain.handle("sofia:chat", async (_event, payload) => {
+  if (!payload || typeof payload.message !== "string" || !payload.message.trim() || payload.message.length > 2000) {
+    return { ok: false, error: "Повідомлення порожнє або задовге." };
+  }
+  const history = Array.isArray(payload.history) ? payload.history.slice(-10) : [];
+  const messages = [{
+    role: "system",
+    content: "Ти Софія — доброзичлива, розумна, тепла віртуальна співрозмовниця. Завжди відповідай українською, природно й стисло, з емпатією та легким гумором. Можеш підтримувати романтичний флірт у доречних межах. Не стверджуй, що виконала дію на комп'ютері або в інтернеті, якщо це не було зроблено окремою дозволеною командою. Не проси паролі, ключі чи приватні дані. Ти не маєш доступу до файлів, програм або системних команд. Якщо просять небезпечну дію, поясни, що її можна виконати лише через окреме підтвердження у програмі. Відповідай голосом зручно: без Markdown-таблиць і довгих списків."
+  }];
+  for (const item of history) {
+    if (item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string" && item.content.length <= 2000) {
+      messages.push({ role: item.role, content: item.content });
+    }
+  }
+  messages.push({ role: "user", content: payload.message.trim() });
+  try {
+    const response = await fetch(OLLAMA_BASE_URL + "/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: OLLAMA_MODEL, messages, stream: false }),
+      signal: AbortSignal.timeout(120000)
+    });
+    if (!response.ok) {
+      return { ok: false, error: response.status === 404
+        ? "Модель не знайдена. Відкрий Ollama та виконай: ollama pull " + OLLAMA_MODEL
+        : "Локальна модель повернула помилку HTTP " + response.status + "." };
+    }
+    const data = await response.json();
+    const answer = data.message?.content?.trim();
+    if (!answer) return { ok: false, error: "Модель не повернула відповідь. Спробуй ще раз." };
+    return { ok: true, answer, model: OLLAMA_MODEL };
+  } catch (error) {
+    const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError";
+    return { ok: false, error: timedOut
+      ? "Модель думає надто довго. Спробуй коротше запитання або легшу модель."
+      : "Не вдалося зв'язатися з Ollama. Переконайся, що Ollama запущений на цьому комп'ютері." };
+  }
+});
+
 ipcMain.handle("sofia:search", async (_event, query) => {
   if (typeof query !== "string" || !query.trim() || query.length > 300) {
     return { ok: false, error: "Пошуковий запит некоректний." };
