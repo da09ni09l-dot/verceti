@@ -26,7 +26,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -34,6 +36,15 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true
-    }
+    },
+    "extraResources": [
+      {
+        "from": "voice/dist/sofia-listener",
+        "to": "sofia-listener",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
   }
 }
