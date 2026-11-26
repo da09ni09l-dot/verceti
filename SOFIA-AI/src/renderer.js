@@ -83,6 +83,7 @@ async function handleCommand(raw) {
 
 
 async function askAssistant(message) {
+  if (!aiReady) await refreshAiStatus();
   if (!aiReady) {
     say("Для розмови зі мною запусти локальний Ollama та встанови модель Qwen 2.5 на цьому комп'ютері. Аудіо й текст залишаються локально.");
     return;
