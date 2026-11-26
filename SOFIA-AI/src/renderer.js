@@ -80,7 +80,17 @@ function startRecognition() {
     }
   };
   recognition.onend = () => {
-    if (active) { try { recognition.start(); } catch { setTimeout(startRecognition, 1000); } }
+    if (!active) return;
+    // Chromium may reject an immediate restart while its speech service is still shutting down.
+    setTimeout(() => {
+      if (!active) return;
+      try {
+        recognition.start();
+      } catch {
+        active = false;
+        startRecognition();
+      }
+    }, 700);
   };
   try { recognition.start(); statusEl.textContent = "Очікую слово «Софія»…"; orb.style.background = "#8fe0bd"; }
   catch { active = false; say("Не вдалося запустити мікрофон."); }
