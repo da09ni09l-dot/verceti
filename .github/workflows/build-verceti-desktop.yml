@@ -1,0 +1,40 @@
+name: Build VERCETI Windows launcher
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "VERCETI-starter/verceti/desktop-launcher/**"
+    branches:
+      - main
+      - "feat/verceti-windows-launcher"
+
+permissions:
+  contents: read
+
+jobs:
+  windows-installer:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: VERCETI-starter/verceti/desktop-launcher
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: VERCETI-starter/verceti/desktop-launcher/package-lock.json
+      - name: Install dependencies
+        run: npm install
+      - name: Build Windows installer
+        run: npm run dist:win
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: VERCETI-Windows-Installer
+          path: VERCETI-starter/verceti/desktop-launcher/release/*.exe
+          if-no-files-found: error
+          retention-days: 14
