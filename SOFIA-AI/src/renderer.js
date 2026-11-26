@@ -101,7 +101,6 @@ function startRecognition() {
   try { recognition.start(); statusEl.textContent = "Очікую слово «Софія»…"; orb.style.background = "#8fe0bd"; }
   catch { active = false; say("Не вдалося запустити мікрофон."); }
 }
-document.getElementById("listen").addEventListener("click", startRecognition);
 document.getElementById("stop").addEventListener("click", () => {
   active = false; recognition?.stop(); statusEl.textContent = "Мікрофон на паузі."; orb.style.background = "#a77aff";
 });
