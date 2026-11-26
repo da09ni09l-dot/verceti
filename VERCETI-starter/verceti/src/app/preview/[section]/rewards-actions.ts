@@ -24,8 +24,7 @@ export async function deleteRewardPrize(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!/^[0-9a-f-]{36}$/i.test(id)) redirect("/preview/rewards?status=invalid");
   const { supabase, user, role } = await requireRewardsManager();
-  let archive = supabase.from("rewards_prizes").update({ is_active: false }).eq("id", id);
-  if (role !== "founder") archive = archive.eq("created_by", user.id);
+  const archive = supabase.from("rewards_prizes").update({ is_active: false }).eq("id", id);
   const { data, error } = await archive.select("id").maybeSingle();
   if (error || !data) {
     console.error("Archive rewards prize:", error?.message ?? "Prize not found or not permitted");
