@@ -45,13 +45,20 @@ with check (
 );
 
 drop policy if exists "Leaders moderators admins delete chat groups" on public.chat_groups;
-create policy "Creators and founder manage chat groups"
-on public.chat_groups for all to authenticated
+drop policy if exists "Creators and founder manage chat groups" on public.chat_groups;
+create policy "Creators and founder update chat groups"
+on public.chat_groups for update to authenticated
 using (
   created_by = (select auth.uid())
   or public.current_verceti_role() = 'founder'::public.verceti_role
 )
 with check (
+  created_by = (select auth.uid())
+  or public.current_verceti_role() = 'founder'::public.verceti_role
+);
+create policy "Creators and founder delete chat groups"
+on public.chat_groups for delete to authenticated
+using (
   created_by = (select auth.uid())
   or public.current_verceti_role() = 'founder'::public.verceti_role
 );
