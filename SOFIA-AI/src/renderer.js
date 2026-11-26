@@ -109,7 +109,17 @@ function startRecognition() {
   catch { active = false; say("Не вдалося запустити мікрофон."); }
 }
 document.getElementById("stop").addEventListener("click", () => {
-  active = false; recognition?.stop(); statusEl.textContent = "Мікрофон на паузі."; orb.style.background = "#a77aff";
+  const control = document.getElementById("stop");
+  if (active) {
+    active = false;
+    recognition?.stop();
+    control.textContent = "Продовжити";
+    statusEl.textContent = "Мікрофон на паузі.";
+    orb.style.background = "#a77aff";
+  } else {
+    control.textContent = "Пауза";
+    startRecognition();
+  }
 });
 document.getElementById("minimize").addEventListener("click", () => window.sofia.minimize());
 document.getElementById("close").addEventListener("click", () => window.sofia.close());
