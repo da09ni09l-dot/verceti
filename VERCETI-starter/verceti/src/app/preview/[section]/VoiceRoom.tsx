@@ -25,6 +25,8 @@ type Room = {
   participant_count: number;
   created_by?: string | null;
   is_hidden?: boolean;
+  can_manage?: boolean;
+  can_manage_visibility?: boolean;
 };
 type VoiceMember = { id: string; nickname: string; role: string };
 
@@ -45,6 +47,9 @@ export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: Voice
   const [newRoom, setNewRoom] = useState("");
   const [capacity, setCapacity] = useState("unlimited");
   const [showCreate, setShowCreate] = useState(false);
+  const [editingRoomId, setEditingRoomId] = useState<number | null>(null);
+  const [editingRoomName, setEditingRoomName] = useState("");
+  const [editingRoomCapacity, setEditingRoomCapacity] = useState("unlimited");
   const [loadingRooms, setLoadingRooms] = useState(true);
 
   const currentRoom = rooms.find((room) => room.id === activeRoom);
@@ -206,6 +211,44 @@ export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: Voice
     }
   }
 
+  function startEditRoom(room: Room) {
+    setEditingRoomId(room.id);
+    setEditingRoomName(room.name);
+    setEditingRoomCapacity(room.max_participants === null ? "unlimited" : String(room.max_participants));
+    setError("");
+  }
+
+  async function saveRoomDetails() {
+    if (editingRoomId === null || busy) return;
+    const name = editingRoomName.trim();
+    if (!name || name.length > 40) {
+      setError("Назва кімнати має містити від 1 до 40 символів.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/livekit/rooms", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update-details",
+          id: editingRoomId,
+          name,
+          maxParticipants: editingRoomCapacity === "unlimited" ? null : Number(editingRoomCapacity),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Не вдалося зберегти налаштування кімнати.");
+      setEditingRoomId(null);
+      await loadRooms();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Помилка збереження кімнати.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function deleteRoom(id: number) {
     if (!isStaff || busy || !window.confirm("Видалити цю голосову кімнату?")) return;
     setBusy(true);
@@ -271,15 +314,32 @@ export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: Voice
                       {full ? "Заповнена" : selected ? "Ти тут" : "Приєднатись"}
                     </span>
                   </button>
-                  {isStaff && (
+                  {room.can_manage && (
+                    <button type="button" className="voice-icon-button" onClick={() => startEditRoom(room)} disabled={busy} title="Редагувати кімнату">Налаштування</button>
+                  )}
+                  {room.can_manage_visibility && (
                     <button type="button" className="voice-icon-button" onClick={() => void setRoomHidden(room.id, !room.is_hidden)} disabled={busy} title={room.is_hidden ? "Зробити кімнату видимою" : "Приховати кімнату"} aria-label={room.is_hidden ? "Зробити кімнату видимою" : "Приховати кімнату"}>
                       {room.is_hidden ? "Показати" : "Приховати"}
                     </button>
                   )}
-                  {isStaff && (
+                  {room.can_manage && (
                     <button type="button" className="voice-icon-button is-danger" onClick={() => void deleteRoom(room.id)} disabled={busy} title="Видалити кімнату" aria-label={`Видалити кімнату ${room.name}`}>
                       <Trash2 size={15} />
                     </button>
+                  )}
+                  {editingRoomId === room.id && (
+                    <div className="voice-create-form" style={{ flexBasis: "100%", marginTop: 8 }}>
+                      <label htmlFor={`voice-edit-name-${room.id}`}>Назва кімнати</label>
+                      <input id={`voice-edit-name-${room.id}`} value={editingRoomName} onChange={(event) => setEditingRoomName(event.target.value)} maxLength={40} />
+                      <label htmlFor={`voice-edit-capacity-${room.id}`}>Ліміт учасників</label>
+                      <select id={`voice-edit-capacity-${room.id}`} value={editingRoomCapacity} onChange={(event) => setEditingRoomCapacity(event.target.value)}>
+                        <option value="2">2 людини</option><option value="3">3 людини</option><option value="5">5 людей</option><option value="10">10 людей</option><option value="unlimited">Без обмеження</option>
+                      </select>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button type="button" className="btn" onClick={() => void saveRoomDetails()} disabled={busy || !editingRoomName.trim()}>Зберегти</button>
+                        <button type="button" className="btn secondary" onClick={() => setEditingRoomId(null)} disabled={busy}>Скасувати</button>
+                      </div>
+                    </div>
                   )}
                 </div>
               );
@@ -348,7 +408,7 @@ export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: Voice
             style={{ width: "100%" }}
           >
             <RoomAudioRenderer />
-            <VoiceRoomContent roomName={`verceti-voice-${currentRoom.id}`} displayRoomName={currentRoom.name} onLeave={leaveRoom} compact={!isVoicePage} isStaffForRoom={canModerateVoice} />
+            <VoiceRoomContent roomName={`verceti-voice-${currentRoom.id}`} displayRoomName={currentRoom.name} onLeave={leaveRoom} compact={!isVoicePage} isStaffForRoom={canModerateVoice && Boolean(currentRoom?.can_manage)} />
           </LiveKitRoom>
         )}
       </section>

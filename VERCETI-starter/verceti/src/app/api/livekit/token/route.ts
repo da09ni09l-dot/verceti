@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     // Перевірка існування кімнати в Supabase
     const { data: room, error: roomError } = await supabase
       .from("voice_rooms")
-      .select("id, name, max_participants, is_hidden")
+      .select("id, name, max_participants, is_hidden, created_by")
       .eq("id", roomId)
       .maybeSingle();
 
@@ -71,8 +71,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (room.is_hidden) {
-      const { data: staff } = await supabase.rpc("is_verceti_staff");
-      if (staff !== true) {
+      const { data: role, error: roleError } = await supabase.rpc("current_verceti_role");
+      const { data: roomCreatorIsStaff } = await supabase.rpc("is_verceti_staff");
+      if (roleError || (role !== "founder" && !(roomCreatorIsStaff === true && room.created_by === user.id))) {
         const { data: assignment, error: assignmentError } = await supabase
           .from("voice_room_assignments").select("room_id").eq("user_id", user.id).maybeSingle();
         if (assignmentError) {
