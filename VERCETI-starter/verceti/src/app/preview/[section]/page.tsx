@@ -180,6 +180,7 @@ export default async function PreviewSection({
   const isStaff = !staffError && staffStatus === true && viewerRole !== "leader";
   const canManageNews = ["founder", "leader", "moderator"].includes(String(viewerRole ?? ""));
   const canManageTests = !staffError && staffStatus === true && ["founder", "admin", "leader", "moderator"].includes(String(viewerRole ?? ""));
+  const canManageChat = ["founder", "admin", "leader", "moderator"].includes(String(viewerRole ?? ""));
   const canManageVoiceRooms = viewerRole === "founder" || viewerRole === "leader" || viewerRole === "moderator";
 
   const { data: membershipStatus, error: membershipError } =
@@ -190,6 +191,7 @@ export default async function PreviewSection({
     && !(section === "voice" && canManageVoiceRooms)
     && !(section === "news" && canManageNews)
     && !(section === "tests" && canManageTests)
+    && !(section === "chat" && canManageChat)
     && !(section === "rewards" && ["founder", "leader", "moderator"].includes(String(viewerRole ?? "")))
     && section !== "forms") {
     redirect("/preview/forms");
