@@ -5,6 +5,9 @@ const confirmBox = document.getElementById("confirm");
 let awaitingCommand = false;
 let listening = true;
 let wakeTimer;
+const conversation = [];
+let aiReady = false;
+let speaking = false;
 
 function say(text) {
   statusEl.textContent = text;
@@ -15,7 +18,7 @@ function say(text) {
   utterance.rate = 0.96;
   const voices = window.speechSynthesis.getVoices();
   utterance.voice = voices.find(v => v.lang?.toLowerCase().startsWith("uk")) || null;
-  window.speechSynthesis.speak(utterance);
+  speaking = true;\n  utterance.onend = () => { speaking = false; };\n  utterance.onerror = () => { speaking = false; };\n  window.speechSynthesis.speak(utterance);
 }
 
 function normalize(value) {
@@ -71,6 +74,36 @@ async function handleCommand(raw) {
     say("Завжди рада допомогти.");
   } else {
     say("Я почула тебе. Цю команду ще не додано.");
+  }
+}
+
+
+async function askAssistant(message) {
+  if (!aiReady) {
+    say("Для розмови зі мною запусти локальний Ollama та встанови модель Qwen 2.5 на цьому комп'ютері. Аудіо й текст залишаються локально.");
+    return;
+  }
+  say("Дай мені секунду подумати.");
+  const result = await window.sofia.chat({ message, history: conversation });
+  if (!result.ok) {
+    say(result.error || "Зараз не можу відповісти. Спробуй ще раз.");
+    return;
+  }
+  conversation.push({ role: "user", content: message });
+  conversation.push({ role: "assistant", content: result.answer });
+  if (conversation.length > 20) conversation.splice(0, conversation.length - 20);
+  say(result.answer);
+}
+
+async function refreshAiStatus() {
+  const result = await window.sofia.aiStatus();
+  aiReady = Boolean(result.ok);
+  const aiStatus = document.getElementById("ai-status");
+  if (aiStatus) {
+    aiStatus.textContent = aiReady
+      ? "Локальний ШІ підключено · " + result.model
+      : "ШІ офлайн · " + (result.error || "Ollama не готовий");
+    aiStatus.classList.toggle("ready", aiReady);
   }
 }
 
@@ -140,3 +173,19 @@ document.getElementById("cancel").addEventListener("click", async () => {
 });
 
 statusEl.textContent = "Запускаю локальне українське розпізнавання…";
+
+document.getElementById("send-chat").addEventListener("click", async () => {
+  const field = document.getElementById("chat-input");
+  const message = field.value.trim();
+  if (!message) return;
+  field.value = "";
+  transcriptEl.textContent = "Ти: " + message;
+  await askAssistant(message);
+});
+document.getElementById("chat-input").addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    document.getElementById("send-chat").click();
+  }
+});
+refreshAiStatus();
