@@ -1,9 +1,14 @@
 const { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage } = require("electron");
-const { execFile } = require("node:child_process");
+const { execFile, spawn } = require("node:child_process");
+const readline = require("node:readline");
+const fs = require("node:fs");
 const path = require("node:path");
 
 let mainWindow;
 let tray;
+let voiceProcess;
+let voiceEnabled = true;
+let voiceRestartTimer;
 
 function showWindow() {
   if (!mainWindow || mainWindow.isDestroyed()) createWindow();
@@ -12,6 +17,72 @@ function showWindow() {
     mainWindow.show();
     mainWindow.focus();
   }
+}
+
+function sendVoiceEvent(channel, payload) {
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
+    mainWindow.webContents.send(channel, payload);
+  }
+}
+
+function voiceExecutablePath() {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, "sofia-listener", "sofia-listener.exe")
+    : path.join(__dirname, "..", "voice", "dist", "sofia-listener", "sofia-listener.exe");
+}
+
+function stopVoiceListener() {
+  voiceEnabled = false;
+  if (voiceRestartTimer) clearTimeout(voiceRestartTimer);
+  voiceRestartTimer = null;
+  if (voiceProcess) {
+    const child = voiceProcess;
+    voiceProcess = null;
+    child.kill();
+  }
+  sendVoiceEvent("sofia:voice-status", { active: false, message: "Мікрофон на паузі." });
+}
+
+function startVoiceListener() {
+  voiceEnabled = true;
+  if (voiceProcess || app.isQuitting) return { ok: true };
+  const executable = voiceExecutablePath();
+  if (!fs.existsSync(executable)) {
+    const message = "Локальний голосовий модуль ще не зібраний. Потрібно встановити повну збірку SOFIA AI.";
+    sendVoiceEvent("sofia:voice-error", { message });
+    return { ok: false, error: message };
+  }
+
+  const child = spawn(executable, [], { windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+  voiceProcess = child;
+  const lines = readline.createInterface({ input: child.stdout });
+  lines.on("line", (line) => {
+    try {
+      const event = JSON.parse(line);
+      if (event.type === "transcript" && typeof event.text === "string") {
+        sendVoiceEvent("sofia:voice-text", event.text);
+      } else if (event.type === "status") {
+        sendVoiceEvent("sofia:voice-status", { active: true, message: event.message });
+      } else if (event.type === "error") {
+        sendVoiceEvent("sofia:voice-error", { message: event.message });
+      }
+    } catch {
+      console.warn("Ignoring invalid voice listener output.");
+    }
+  });
+  child.stderr.on("data", (chunk) => console.warn("SOFIA voice:", String(chunk).trim()));
+  child.on("error", (error) => {
+    if (voiceProcess === child) voiceProcess = null;
+    sendVoiceEvent("sofia:voice-error", { message: "Не вдалося запустити локальний голосовий модуль: " + error.message });
+  });
+  child.on("close", (code) => {
+    if (voiceProcess === child) voiceProcess = null;
+    if (voiceEnabled && !app.isQuitting && code !== 0) {
+      sendVoiceEvent("sofia:voice-error", { message: "Голосовий модуль зупинився. Спробую запустити його знову." });
+      voiceRestartTimer = setTimeout(startVoiceListener, 3000);
+    }
+  });
+  return { ok: true };
 }
 
 function createWindow() {
@@ -100,6 +171,12 @@ ipcMain.handle("sofia:shutdown", async () => {
     });
   });
 });
+ipcMain.handle("sofia:set-listening", async (_event, enabled) => {
+  if (typeof enabled !== "boolean") return { ok: false, error: "Некоректний стан мікрофона." };
+  if (enabled) return startVoiceListener();
+  stopVoiceListener();
+  return { ok: true };
+});
 ipcMain.handle("sofia:cancel-shutdown", async () => {
   if (process.platform !== "win32") return { ok: false, error: "Підтримується лише Windows." };
   return await new Promise((resolve) => {
@@ -129,11 +206,12 @@ app.whenReady().then(() => {
     return Boolean(isLocalApp && permission === "media");
   });
   createWindow();
+  mainWindow.webContents.once("did-finish-load", () => startVoiceListener());
   createTray();
   if (process.platform === "win32") app.setLoginItemSettings({ openAtLogin: true });
 });
 app.on("activate", showWindow);
-app.on("before-quit", () => { app.isQuitting = true; });
+app.on("before-quit", () => { app.isQuitting = true; stopVoiceListener(); });
 app.on("window-all-closed", () => {
   // Intentionally keep the app alive in the tray on Windows.
 });
