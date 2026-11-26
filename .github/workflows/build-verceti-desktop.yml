@@ -50,11 +50,11 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
+          tag_name: v1.0.1
           target_commitish: main
-          name: VERCETI для Windows v1.0.0
+          name: VERCETI для Windows v1.0.1
           body: Інсталятор VERCETI для Windows 10/11 (x64).
-          files: VERCETI-starter/verceti/desktop-launcher/release/VERCETI-Setup-1.0.0.exe
+          files: VERCETI-starter/verceti/desktop-launcher/release/VERCETI-Setup-1.0.1.exe
           fail_on_unmatched_files: true
           make_latest: true
         env:
