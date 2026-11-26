@@ -26,6 +26,7 @@ type Room = {
   created_by?: string | null;
   is_hidden?: boolean;
   can_manage?: boolean;
+  can_manage_visibility?: boolean;
 };
 type VoiceMember = { id: string; nickname: string; role: string };
 
@@ -316,7 +317,7 @@ export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: Voice
                   {room.can_manage && (
                     <button type="button" className="voice-icon-button" onClick={() => startEditRoom(room)} disabled={busy} title="Редагувати кімнату">Налаштування</button>
                   )}
-                  {room.can_manage && (
+                  {room.can_manage_visibility && (
                     <button type="button" className="voice-icon-button" onClick={() => void setRoomHidden(room.id, !room.is_hidden)} disabled={busy} title={room.is_hidden ? "Зробити кімнату видимою" : "Приховати кімнату"} aria-label={room.is_hidden ? "Зробити кімнату видимою" : "Приховати кімнату"}>
                       {room.is_hidden ? "Показати" : "Приховати"}
                     </button>
