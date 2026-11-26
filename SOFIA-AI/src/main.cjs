@@ -9,6 +9,7 @@ let tray;
 let voiceProcess;
 let voiceEnabled = true;
 let voiceRestartTimer;
+let voiceRestartAttempts = 0;
 
 function showWindow() {
   if (!mainWindow || mainWindow.isDestroyed()) createWindow();
@@ -62,6 +63,7 @@ function startVoiceListener() {
       if (event.type === "transcript" && typeof event.text === "string") {
         sendVoiceEvent("sofia:voice-text", event.text);
       } else if (event.type === "status") {
+        voiceRestartAttempts = 0;
         sendVoiceEvent("sofia:voice-status", { active: true, message: event.message });
       } else if (event.type === "error") {
         sendVoiceEvent("sofia:voice-error", { message: event.message });
@@ -78,8 +80,14 @@ function startVoiceListener() {
   child.on("close", (code) => {
     if (voiceProcess === child) voiceProcess = null;
     if (voiceEnabled && !app.isQuitting && code !== 0) {
-      sendVoiceEvent("sofia:voice-error", { message: "Голосовий модуль зупинився. Спробую запустити його знову." });
-      voiceRestartTimer = setTimeout(startVoiceListener, 3000);
+      voiceRestartAttempts += 1;
+      if (voiceRestartAttempts <= 3) {
+        sendVoiceEvent("sofia:voice-error", { message: "Голосовий модуль зупинився. Спробую запустити його знову." });
+        voiceRestartTimer = setTimeout(startVoiceListener, 3000);
+      } else {
+        voiceEnabled = false;
+        sendVoiceEvent("sofia:voice-error", { message: "Не вдалося запустити мікрофон після трьох спроб. Перевір дозвіл Windows на мікрофон і пристрій введення, потім натисни «Продовжити»." });
+      }
     }
   });
   return { ok: true };
@@ -173,7 +181,10 @@ ipcMain.handle("sofia:shutdown", async () => {
 });
 ipcMain.handle("sofia:set-listening", async (_event, enabled) => {
   if (typeof enabled !== "boolean") return { ok: false, error: "Некоректний стан мікрофона." };
-  if (enabled) return startVoiceListener();
+  if (enabled) {
+    voiceRestartAttempts = 0;
+    return startVoiceListener();
+  }
   stopVoiceListener();
   return { ok: true };
 });
