@@ -29,6 +29,12 @@ async function handleCommand(raw) {
     await window.sofia.open("youtube"); say("Відкриваю YouTube.");
   } else if (/музик|youtube music/.test(command)) {
     await window.sofia.open("music"); say("Відкриваю музику.");
+  } else if (/провідник|папк/.test(command)) {
+    await window.sofia.open("explorer"); say("Відкриваю Провідник.");
+  } else if (/налаштуванн/.test(command)) {
+    await window.sofia.open("settings"); say("Відкриваю налаштування Windows.");
+  } else if (/браузер|google/.test(command)) {
+    await window.sofia.open("browser"); say("Відкриваю браузер.");
   } else if (/калькулятор/.test(command)) {
     await window.sofia.open("calculator"); say("Відкриваю калькулятор.");
   } else if (/блокнот/.test(command)) {
@@ -39,7 +45,7 @@ async function handleCommand(raw) {
     else say("Що саме пошукати?");
   } else if (/котра година|яка година|час/.test(command)) {
     say("Зараз " + new Intl.DateTimeFormat("uk-UA", { hour: "2-digit", minute: "2-digit" }).format(new Date()));
-  } else if (/вимкни|виключи|заверши роботу/.test(command)) {
+  } else if (/(вимкни|виключи) (комп'ютер|компютер|пк|ноутбук)|заверши роботу|вимкнення комп'ютера/.test(command)) {
     confirmBox.classList.remove("hidden"); say("Підтверди вимкнення комп'ютера на екрані.");
   } else if (/скасуй вимкнення/.test(command)) {
     window.sofia.cancelShutdown(); say("Якщо було заплановане вимкнення, його скасовано.");
