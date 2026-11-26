@@ -75,6 +75,7 @@ export async function GET() {
       console.error("LiveKit presence unavailable:", error);
     }
 
+    const { data: viewerRole } = await supabase.rpc("current_verceti_role");
     const roomsWithCounts = await Promise.all(
       (rooms || []).map(async (room) => {
         let participantCount = 0;
@@ -107,6 +108,7 @@ export async function GET() {
         return {
           ...room,
           participant_count: participantCount,
+          can_manage: viewerRole === "founder" || room.created_by === user.id,
         };
       })
     );
