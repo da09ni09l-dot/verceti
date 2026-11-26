@@ -74,6 +74,7 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
 
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isFounder, setIsFounder] = useState(false);
 
   const loadCounts = useCallback(async () => {
     const messagesResult = await supabase
@@ -86,6 +87,14 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
       setUnreadMessages(messagesResult.count ?? 0);
     }
   }, [supabase, userId]);
+
+  useEffect(() => {
+    let active = true;
+    void supabase.rpc("current_verceti_role").then(({ data, error }) => {
+      if (active) setIsFounder(!error && data === "founder");
+    });
+    return () => { active = false; };
+  }, [supabase]);
 
   useEffect(() => {
     void loadCounts();
@@ -224,6 +233,20 @@ export default function MenuBadges({ userId }: MenuBadgesProps) {
             {group.items.map((item) => renderItem(item))}
           </div>
         ))}
+
+        {isFounder && (
+          <div className="menu-group">
+            <div className="menu-group-title">АДМІНІСТРУВАННЯ</div>
+            <Link href="/admin" onClick={() => setMobileOpen(false)} className={`menu-link ${pathname.startsWith("/admin") && !pathname.startsWith("/admin/support") ? "active" : ""}`} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span className="menu-icon"><Settings size={19} strokeWidth={1.9} aria-hidden="true" /></span>
+              <span style={{ flex: 1 }}>Адмін-панель</span>
+            </Link>
+            <Link href="/admin/support" onClick={() => setMobileOpen(false)} className={`menu-link ${pathname.startsWith("/admin/support") ? "active" : ""}`} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span className="menu-icon"><MessageCircle size={19} strokeWidth={1.9} aria-hidden="true" /></span>
+              <span style={{ flex: 1 }}>Звернення до адміністрації</span>
+            </Link>
+          </div>
+        )}
 
         <div className="menu-group menu-bottom">
           <div className="menu-group-title">ПРОФІЛЬ</div>

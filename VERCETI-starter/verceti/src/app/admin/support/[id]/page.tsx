@@ -11,7 +11,7 @@ async function updateSupportStatus(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const { data: role } = await supabase.rpc("current_verceti_role");
-  if (role !== "admin") redirect("/");
+  if (role !== "founder") redirect("/");
   if (!/^[0-9a-f-]{36}$/i.test(id) || !["closed", "in_progress"].includes(status)) redirect("/admin/support");
   const admin = createAdminClient();
   const { error } = await admin.from("support_requests").update({ status }).eq("id", id);
@@ -27,7 +27,7 @@ async function sendAdminReply(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const { data: role } = await supabase.rpc("current_verceti_role");
-  if (role !== "admin") redirect("/");
+  if (role !== "founder") redirect("/");
   if (!/^[0-9a-f-]{36}$/i.test(id) || message.length < 2) redirect("/admin/support");
   const admin = createAdminClient();
   const { data: ticket } = await admin.from("support_requests").select("status").eq("id", id).maybeSingle();
@@ -45,7 +45,7 @@ export default async function AdminSupportConversation({ params, searchParams }:
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const { data: role } = await supabase.rpc("current_verceti_role");
-  if (role !== "admin") redirect("/");
+  if (role !== "founder") redirect("/");
   const admin = createAdminClient();
   const { data: ticket } = await admin.from("support_requests").select("id, sender_name, subject, message, status, created_at, access_token").eq("id", id).maybeSingle();
   if (!ticket) notFound();

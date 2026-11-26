@@ -8,7 +8,7 @@ export default async function AdminSupportPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const { data: role } = await supabase.rpc("current_verceti_role");
-  if (role !== "admin") redirect("/");
+  if (role !== "founder") redirect("/");
   const admin = createAdminClient();
   const { data: requests, error } = await admin.from("support_requests").select("id, sender_name, subject, message, created_at, status").order("created_at", { ascending: false }).limit(200);
   return <main className="login-wrap"><section className="login-card" style={{ width: "100%", maxWidth: 760 }}>
