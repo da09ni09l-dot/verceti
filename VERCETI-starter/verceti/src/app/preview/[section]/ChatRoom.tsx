@@ -275,6 +275,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
         }
       }
       setGroups((current) => [...current, data as ChatGroup]);
+      setGroupMemberIds([...new Set([authData.user.id, ...(newGroupIsPrivate ? newGroupMemberIds : [])])]);
       setSelectedPlayer(null);
       setSelectedGroupId(data.id);
       setNewGroupName("");
