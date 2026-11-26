@@ -63,16 +63,28 @@ using (
   or public.current_verceti_role() = 'founder'::public.verceti_role
 );
 
+create or replace function public.is_chat_group_manager(p_group_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $
+  select auth.uid() is not null and exists (
+    select 1 from public.chat_groups g
+    where g.id = p_group_id
+      and (g.created_by = auth.uid()
+        or public.current_verceti_role() = 'founder'::public.verceti_role)
+  );
+$;
+revoke all on function public.is_chat_group_manager(uuid) from public;
+grant execute on function public.is_chat_group_manager(uuid) to authenticated;
+
 create policy "Group members and managers read memberships"
 on public.chat_group_members for select to authenticated
 using (
   user_id = (select auth.uid())
-  or exists (
-    select 1 from public.chat_groups g
-    where g.id = chat_group_members.group_id
-      and (g.created_by = (select auth.uid())
-        or public.current_verceti_role() = 'founder'::public.verceti_role)
-  )
+  or public.is_chat_group_manager(group_id)
 );
 
 create policy "Group managers add memberships"
