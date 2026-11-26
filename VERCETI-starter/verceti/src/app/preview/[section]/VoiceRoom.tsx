@@ -407,7 +407,7 @@ export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: Voice
             style={{ width: "100%" }}
           >
             <RoomAudioRenderer />
-            <VoiceRoomContent roomName={`verceti-voice-${currentRoom.id}`} displayRoomName={currentRoom.name} onLeave={leaveRoom} compact={!isVoicePage} isStaffForRoom={canModerateVoice} />
+            <VoiceRoomContent roomName={`verceti-voice-${currentRoom.id}`} displayRoomName={currentRoom.name} onLeave={leaveRoom} compact={!isVoicePage} isStaffForRoom={canModerateVoice && Boolean(currentRoom?.can_manage)} />
           </LiveKitRoom>
         )}
       </section>
