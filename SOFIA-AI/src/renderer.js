@@ -48,14 +48,14 @@ async function handleCommand(raw) {
   } else if (/(вимкни|виключи) (комп'ютер|компютер|пк|ноутбук)|заверши роботу|вимкнення комп'ютера/.test(command)) {
     confirmBox.classList.remove("hidden"); say("Підтверди вимкнення комп'ютера на екрані.");
   } else if (/скасуй вимкнення/.test(command)) {
-    window.sofia.cancelShutdown(); say("Якщо було заплановане вимкнення, його скасовано.");
+    const result = await window.sofia.cancelShutdown(); say(result.ok ? "Вимкнення скасовано." : result.error);
   } else if (/^(увімкни )?(ігровий режим|режим гри)$/.test(command)) {
     say("Ігровий режим увімкнено. Ховаю аватар; розпізнавання може залежати від роботи Web Speech API у фоні.");
     setTimeout(() => window.sofia.hideForGame(), 1200);
   } else if (/^(вимкни )?(ігровий режим|режим гри)$/.test(command)) {
-    say("Щоб повернути мене, відкрий SOFIA AI через значок біля годинника.");
+    window.sofia.show(); say("Ігровий режим вимкнено. Я знову на екрані.");
   } else if (/^(покажи|відкрий) (мене|софію)$/.test(command)) {
-    say("Я знову на екрані.");
+    window.sofia.show(); say("Я знову на екрані.");
   } else if (/дякую/.test(command)) {
     say("Завжди рада допомогти.");
   } else {
@@ -129,7 +129,7 @@ document.getElementById("shutdown").addEventListener("click", async () => {
   say(result.ok ? "Комп'ютер вимкнеться через 30 секунд." : result.error);
 });
 document.getElementById("cancel").addEventListener("click", () => {
-  window.sofia.cancelShutdown(); confirmBox.classList.add("hidden"); say("Вимкнення скасовано.");
+  const result = await window.sofia.cancelShutdown(); confirmBox.classList.add("hidden"); say(result.ok ? "Вимкнення скасовано." : result.error);
 });
 window.addEventListener("DOMContentLoaded", () => {
   // Browser permission must be granted once by the user; thereafter the app resumes listening.
