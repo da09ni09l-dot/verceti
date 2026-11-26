@@ -76,6 +76,7 @@ export async function GET() {
     }
 
     const { data: viewerRole } = await supabase.rpc("current_verceti_role");
+    const viewerIsStaff = ["founder", "admin", "leader", "moderator"].includes(String(viewerRole ?? ""));
     const roomsWithCounts = await Promise.all(
       (rooms || []).map(async (room) => {
         let participantCount = 0;
@@ -108,8 +109,8 @@ export async function GET() {
         return {
           ...room,
           participant_count: participantCount,
-          can_manage: viewerRole === "founder" || room.created_by === user.id || (viewerRole === "admin" && room.is_hidden === false),
-          can_manage_visibility: viewerRole === "founder" || room.created_by === user.id,
+          can_manage: viewerRole === "founder" || (viewerIsStaff && room.created_by === user.id) || (viewerRole === "admin" && room.is_hidden === false),
+          can_manage_visibility: viewerRole === "founder" || (viewerIsStaff && room.created_by === user.id),
         };
       })
     );
@@ -289,7 +290,8 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: "Кімнату не знайдено." }, { status: 404 });
       }
       const { data: actorRole, error: actorRoleError } = await supabase.rpc("current_verceti_role");
-      if (actorRoleError || (actorRole !== "founder" && targetRoom.created_by !== user.id)) {
+      const actorIsStaff = await checkStaff(supabase);
+      if (actorRoleError || (actorRole !== "founder" && !(actorIsStaff && targetRoom.created_by === user.id))) {
         return NextResponse.json({ error: "Керувати видимістю цієї кімнати може лише її автор або Засновник." }, { status: 403 });
       }
 
