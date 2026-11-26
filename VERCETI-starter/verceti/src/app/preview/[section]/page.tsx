@@ -1536,7 +1536,7 @@ export default async function PreviewSection({
             {status === "won" && <div className="panel" style={{ marginTop: 14 }}><strong>🎉 Твій результат</strong><p style={{ marginTop: 8 }}>{(lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.title ?? "Оберт успішно зафіксовано."}</p>{(lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.description && <p className="muted" style={{ marginTop: 6 }}>{(lastRewardSpin as { prize: { title: string; description: string } | null } | null)?.prize?.description}</p>}</div>}
             {status === "used" && <div className="panel" style={{ marginTop: 14 }}>Ти вже використав(ла) безкоштовний оберт сьогодні. Повертайся завтра!</div>}
             {status === "empty" && <div className="panel" style={{ marginTop: 14 }}>Активних призів поки немає.</div>}
-            {status === "forbidden" && <div className="panel" style={{ marginTop: 14 }}>Керувати спільними призами може лише Засновник.</div>}
+            {status === "forbidden" && <div className="panel" style={{ marginTop: 14 }}>Керувати призами можуть Засновник, Лідер і Модератор у межах своїх призів.</div>}
             {(status === "invalid" || status === "error" || status === "spin-error") && <div className="panel" style={{ marginTop: 14 }}>Не вдалося виконати дію. Перевір дані та налаштування бази.</div>}
             <div className="panel" style={{ marginTop: 20 }}>
               <RewardsWheel prizes={rewardPrizes} alreadySpun={dailySpinUsed || status === "used"} />
@@ -1576,7 +1576,7 @@ export default async function PreviewSection({
                         {prize.description && <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>{prize.description}</p>}
                         <p className="notice-time">Вага випадіння: {prize.weight}</p>
                       </div>
-                      {(rewardsRole === "founder" || (rewardsRole === "leader" && prize.created_by === user.id)) && (
+                      {(rewardsRole === "founder" || (["leader", "moderator"].includes(String(rewardsRole ?? "")) && prize.created_by === user.id)) && (
                         <form action={deleteRewardPrize}>
                           <input type="hidden" name="id" value={prize.id} />
                           <button className="btn" type="submit" style={{ background: "#8f303f", borderColor: "#b94b5c" }}>Видалити</button>
