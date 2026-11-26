@@ -116,6 +116,11 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
   const [newGroupDescription, setNewGroupDescription] = useState("");
   const [newGroupIsPrivate, setNewGroupIsPrivate] = useState(false);
   const [newGroupMemberIds, setNewGroupMemberIds] = useState<string[]>([]);
+  const [isFounderRole, setIsFounderRole] = useState(false);
+  const [groupMemberIds, setGroupMemberIds] = useState<string[]>([]);
+  const [memberToAdd, setMemberToAdd] = useState("");
+  const [editGroupName, setEditGroupName] = useState("");
+  const [editGroupDescription, setEditGroupDescription] = useState("");
   const [canCreateGroups, setCanCreateGroups] = useState(false);
   const [creatingGroup, setCreatingGroup] = useState(false);
 
@@ -238,6 +243,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
       supabase.rpc("current_verceti_role")
     ]);
     setGroups((data ?? []) as ChatGroup[]);
+    setIsFounderRole(role === "founder");
     setCanCreateGroups(["founder", "admin", "leader", "moderator"].includes(String(role ?? "")));
   }, [supabase]);
 
@@ -282,12 +288,82 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
     }
   }
 
-  function openGroupChat(group: ChatGroup) {
+  async function openGroupChat(group: ChatGroup) {
     setSelectedPlayer(null);
     setSelectedGroupId(group.id);
     setContent("");
     setError("");
     setShowStickers(false);
+    setEditGroupName(group.name);
+    setEditGroupDescription(group.description);
+    const { data, error: memberError } = await supabase
+      .from("chat_group_members").select("user_id").eq("group_id", group.id);
+    if (memberError) {
+      setGroupMemberIds([]);
+      if (group.is_private) setError("Не вдалося завантажити учасників приватного чату.");
+    } else {
+      setGroupMemberIds((data ?? []).map((item) => item.user_id));
+    }
+  }
+
+  const selectedGroup = groups.find((group) => group.id === selectedGroupId) ?? null;
+  const canManageSelectedGroup = !!selectedGroup && (isFounderRole || selectedGroup.created_by === userId);
+
+  async function saveGroupDetails() {
+    if (!selectedGroup || !canManageSelectedGroup) return;
+    const name = editGroupName.trim();
+    const description = editGroupDescription.trim();
+    if (name.length < 2 || name.length > 60 || description.length > 240) {
+      setError("Назва має містити 2–60 символів, опис — до 240.");
+      return;
+    }
+    const { data, error: updateError } = await supabase.from("chat_groups")
+      .update({ name, description }).eq("id", selectedGroup.id)
+      .select("id,name,description,created_by,is_private").single();
+    if (updateError || !data) {
+      setError("Не вдалося зберегти налаштування чату.");
+      return;
+    }
+    setGroups((current) => current.map((group) => group.id === selectedGroup.id ? data as ChatGroup : group));
+    setError("Налаштування чату збережено.");
+  }
+
+  async function addGroupMember() {
+    if (!selectedGroup || !canManageSelectedGroup || !memberToAdd) return;
+    const { error: addError } = await supabase.from("chat_group_members").upsert({
+      group_id: selectedGroup.id, user_id: memberToAdd, added_by: userId
+    }, { onConflict: "group_id,user_id" });
+    if (addError) {
+      setError("Не вдалося додати учасника.");
+      return;
+    }
+    setGroupMemberIds((current) => current.includes(memberToAdd) ? current : [...current, memberToAdd]);
+    setMemberToAdd("");
+    setError("Учасника додано до чату.");
+  }
+
+  async function removeGroupMember(memberId: string) {
+    if (!selectedGroup || !canManageSelectedGroup || memberId === selectedGroup.created_by) return;
+    const { error: removeError } = await supabase.from("chat_group_members")
+      .delete().eq("group_id", selectedGroup.id).eq("user_id", memberId);
+    if (removeError) {
+      setError("Не вдалося видалити учасника.");
+      return;
+    }
+    setGroupMemberIds((current) => current.filter((id) => id !== memberId));
+    setError("Доступ учасника відкликано.");
+  }
+
+  async function deleteSelectedGroup() {
+    if (!selectedGroup || !canManageSelectedGroup || !window.confirm("Видалити цей чат разом із повідомленнями?")) return;
+    const { error: deleteError } = await supabase.from("chat_groups").delete().eq("id", selectedGroup.id);
+    if (deleteError) {
+      setError("Не вдалося видалити чат.");
+      return;
+    }
+    setGroups((current) => current.filter((group) => group.id !== selectedGroup.id));
+    openGeneralChat();
+    setError("Чат видалено.");
   }
 
   // Завантаження приватної переписки та позначення отриманих повідомлень прочитаними.
@@ -694,6 +770,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
   function openGeneralChat() {
     setSelectedPlayer(null);
     setSelectedGroupId(null);
+    setGroupMemberIds([]);
     setContent("");
     setError("");
     setShowStickers(false);
@@ -901,6 +978,30 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
             </button>
           )}
         </div>
+
+        {canManageSelectedGroup && selectedGroup && (
+          <div className="panel" style={{ marginTop: 12, display: "grid", gap: 8 }}>
+            <strong>Керування чатом</strong>
+            <input aria-label="Назва чату" value={editGroupName} onChange={(event) => setEditGroupName(event.target.value)} maxLength={60} />
+            <input aria-label="Опис чату" value={editGroupDescription} onChange={(event) => setEditGroupDescription(event.target.value)} maxLength={240} />
+            <button type="button" className="btn" onClick={() => void saveGroupDetails()}>Зберегти назву й опис</button>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <select aria-label="Додати учасника" value={memberToAdd} onChange={(event) => setMemberToAdd(event.target.value)}>
+                <option value="">Обрати учасника…</option>
+                {players.filter((player) => player.id !== userId && !groupMemberIds.includes(player.id)).map((player) => <option key={player.id} value={player.id}>{player.nickname || "Учасник"}</option>)}
+              </select>
+              <button type="button" className="btn secondary" disabled={!memberToAdd} onClick={() => void addGroupMember()}>Додати</button>
+            </div>
+            {groupMemberIds.map((memberId) => {
+              const member = players.find((player) => player.id === memberId);
+              return <div key={memberId} className="member-row" style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                <span>{member?.nickname || (memberId === userId ? "Ти" : "Учасник")}{memberId === selectedGroup.created_by ? " · автор" : ""}</span>
+                {memberId !== selectedGroup.created_by && <button type="button" className="btn secondary" onClick={() => void removeGroupMember(memberId)}>Забрати доступ</button>}
+              </div>;
+            })}
+            <button type="button" className="btn" style={{ background: "#8f303f", borderColor: "#b94b5c" }} onClick={() => void deleteSelectedGroup()}>Видалити чат</button>
+          </div>
+        )}
 
         <div
           style={{
