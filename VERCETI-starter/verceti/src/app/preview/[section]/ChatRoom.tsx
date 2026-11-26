@@ -354,6 +354,30 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
     setError("Доступ учасника відкликано.");
   }
 
+  async function toggleSelectedGroupPrivacy() {
+    if (!selectedGroup || !canManageSelectedGroup) return;
+    if (!selectedGroup.is_private) {
+      const { error: memberError } = await supabase.from("chat_group_members").upsert({
+        group_id: selectedGroup.id, user_id: userId, added_by: userId
+      }, { onConflict: "group_id,user_id" });
+      if (memberError) {
+        setError("Не вдалося підготувати приватний доступ.");
+        return;
+      }
+      setGroupMemberIds((current) => current.includes(userId) ? current : [...current, userId]);
+    }
+    const { data, error: privacyError } = await supabase.from("chat_groups")
+      .update({ is_private: !selectedGroup.is_private })
+      .eq("id", selectedGroup.id)
+      .select("id,name,description,created_by,is_private").single();
+    if (privacyError || !data) {
+      setError("Не вдалося змінити видимість чату.");
+      return;
+    }
+    setGroups((current) => current.map((group) => group.id === selectedGroup.id ? data as ChatGroup : group));
+    setError(data.is_private ? "Чат став приватним." : "Чат знову відкритий для учасників.");
+  }
+
   async function deleteSelectedGroup() {
     if (!selectedGroup || !canManageSelectedGroup || !window.confirm("Видалити цей чат разом із повідомленнями?")) return;
     const { error: deleteError } = await supabase.from("chat_groups").delete().eq("id", selectedGroup.id);
@@ -985,6 +1009,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
             <input aria-label="Назва чату" value={editGroupName} onChange={(event) => setEditGroupName(event.target.value)} maxLength={60} />
             <input aria-label="Опис чату" value={editGroupDescription} onChange={(event) => setEditGroupDescription(event.target.value)} maxLength={240} />
             <button type="button" className="btn" onClick={() => void saveGroupDetails()}>Зберегти назву й опис</button>
+            <button type="button" className="btn secondary" onClick={() => void toggleSelectedGroupPrivacy()}>{selectedGroup.is_private ? "Зробити чат відкритим" : "Обмежити доступ до чату"}</button>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
               <select aria-label="Додати учасника" value={memberToAdd} onChange={(event) => setMemberToAdd(event.target.value)}>
                 <option value="">Обрати учасника…</option>
