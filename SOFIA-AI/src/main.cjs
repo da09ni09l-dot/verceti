@@ -62,10 +62,16 @@ ipcMain.handle("sofia:open", async (_event, target) => {
       settings: ["explorer.exe", ["ms-settings:"]]
     };
     const [executable, args] = commands[target];
-    execFile(executable, args, (error) => {
-      if (error) console.error(`Failed to open ${target}:`, error.message);
+    return await new Promise((resolve) => {
+      execFile(executable, args, (error) => {
+        if (error) {
+          console.error(`Failed to open ${target}:`, error.message);
+          resolve({ ok: false, error: `Не вдалося відкрити ${target}.` });
+          return;
+        }
+        resolve({ ok: true });
+      });
     });
-    return { ok: true };
   }
   const url = fixed[target];
   if (!url) return { ok: false, error: "Цю дію не дозволено." };
@@ -83,11 +89,28 @@ ipcMain.handle("sofia:search", async (_event, query) => {
 
 ipcMain.handle("sofia:shutdown", async () => {
   if (process.platform !== "win32") return { ok: false, error: "Підтримується лише Windows." };
-  execFile("shutdown.exe", ["/s", "/t", "30"], (error) => {});
-  return { ok: true };
+  return await new Promise((resolve) => {
+    execFile("shutdown.exe", ["/s", "/t", "30"], (error) => {
+      if (error) {
+        console.error("Failed to schedule shutdown:", error.message);
+        resolve({ ok: false, error: "Windows не змогла запланувати вимкнення." });
+        return;
+      }
+      resolve({ ok: true });
+    });
+  });
 });
-ipcMain.on("sofia:cancel-shutdown", () => {
-  if (process.platform === "win32") execFile("shutdown.exe", ["/a"], () => {});
+ipcMain.handle("sofia:cancel-shutdown", async () => {
+  if (process.platform !== "win32") return { ok: false, error: "Підтримується лише Windows." };
+  return await new Promise((resolve) => {
+    execFile("shutdown.exe", ["/a"], (error) => {
+      if (error) {
+        resolve({ ok: false, error: "Не вдалося скасувати вимкнення. Можливо, таймер не був запущений." });
+        return;
+      }
+      resolve({ ok: true });
+    });
+  });
 });
 ipcMain.on("sofia:minimize", () => mainWindow?.minimize());
 ipcMain.on("sofia:close", () => mainWindow?.hide());
