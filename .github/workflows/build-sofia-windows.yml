@@ -7,21 +7,39 @@ on:
       - "SOFIA-AI/**"
       - ".github/workflows/build-sofia-windows.yml"
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: SOFIA-AI
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
-      - run: npm run dist
-      - uses: actions/upload-artifact@v4
+      - name: Install dependencies
+        run: npm install
+      - name: Build Windows installer
+        run: npm run dist
+      - name: Verify installer output
+        shell: pwsh
+        run: |
+          $installers = Get-ChildItem -Path dist -Filter *.exe -File
+          if (-not $installers -or $installers.Count -eq 0) {
+            throw "No Windows .exe installer was produced."
+          }
+          $installers | ForEach-Object { Write-Host "Built: $($_.FullName) ($($_.Length) bytes)" }
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
         with:
           name: sofia-ai-windows-installer
           path: SOFIA-AI/dist/*.exe
           if-no-files-found: error
+          retention-days: 14
