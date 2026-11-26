@@ -35,11 +35,14 @@ function createWindow() {
 
 function createTray() {
   if (tray) return;
-  tray = new Tray(nativeImage.createEmpty());
+  // A real, visible SVG icon avoids creating an empty native tray image on Windows.
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c58bff"/><stop offset="1" stop-color="#7651c8"/></linearGradient></defs><circle cx="16" cy="16" r="15" fill="#211b3b" stroke="url(#g)" stroke-width="2"/><path d="M10 10h12v3h-4.5v10h-3V13H10z" fill="#fff"/></svg>';
+  tray = new Tray(nativeImage.createFromDataURL("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg)));
   tray.setToolTip("SOFIA AI — голосовий помічник");
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: "Відкрити Софію", click: showWindow },
-    { label: "Вийти", click: () => { app.isQuitting = true; app.quit(); } }
+    { type: "separator" },
+    { label: "Вийти з SOFIA AI", click: () => { app.isQuitting = true; app.quit(); } }
   ]));
   tray.on("double-click", showWindow);
 }
@@ -48,13 +51,11 @@ ipcMain.handle("sofia:open", async (_event, target) => {
   const fixed = {
     youtube: "https://www.youtube.com",
     music: "https://music.youtube.com",
-    google: "https://www.google.com",
-    calculator: null,
-    notepad: null
+    google: "https://www.google.com"
   };
   if (target === "calculator" || target === "notepad") {
     const executable = target === "calculator" ? "calc.exe" : "notepad.exe";
-    execFile(executable, [], (error) => {});
+    execFile(executable, [], () => {});
     return { ok: true };
   }
   const url = fixed[target];
@@ -88,6 +89,7 @@ app.whenReady().then(() => {
   if (process.platform === "win32") app.setLoginItemSettings({ openAtLogin: true });
 });
 app.on("activate", showWindow);
+app.on("before-quit", () => { app.isQuitting = true; });
 app.on("window-all-closed", () => {
-  // Keep the assistant process and tray alive on Windows.
+  // Intentionally keep the app alive in the tray on Windows.
 });
