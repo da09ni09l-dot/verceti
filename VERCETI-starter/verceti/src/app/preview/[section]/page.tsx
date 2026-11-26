@@ -186,7 +186,12 @@ export default async function PreviewSection({
     await supabase.rpc("is_verceti_member");
   const hasCommunityAccess = !membershipError && membershipStatus === true;
 
-  if (!hasCommunityAccess && !isStaff && !(section === "voice" && canManageVoiceRooms) && section !== "forms") {
+  if (!hasCommunityAccess && !isStaff
+    && !(section === "voice" && canManageVoiceRooms)
+    && !(section === "news" && canManageNews)
+    && !(section === "tests" && canManageTests)
+    && !(section === "rewards" && ["founder", "leader", "moderator"].includes(String(viewerRole ?? "")))
+    && section !== "forms") {
     redirect("/preview/forms");
   }
 
