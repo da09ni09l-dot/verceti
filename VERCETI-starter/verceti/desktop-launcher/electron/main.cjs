@@ -26,10 +26,10 @@ function openExternal(rawUrl) {
   }
 }
 
-function installMediaPermissions() {
+function installMediaPermissions(appSession) {
   const appOrigin = new URL(WEBSITE_URL).origin;
 
-  session.defaultSession.setPermissionRequestHandler(
+  appSession.setPermissionRequestHandler(
     (webContents, permission, callback, details) => {
       let requestingOrigin = "";
       try {
@@ -49,7 +49,7 @@ function installMediaPermissions() {
     }
   );
 
-  session.defaultSession.setPermissionCheckHandler(
+  appSession.setPermissionCheckHandler(
     (webContents, permission, requestingOrigin) => {
       let origin = "";
       try {
@@ -128,12 +128,20 @@ async function createWindow() {
     autoHideMenuBar: true,
     title: "VERCETI",
     webPreferences: {
+      partition: "persist:verceti",
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
       webSecurity: true,
       allowRunningInsecureContent: false,
     },
+  });
+
+  // The download CTA belongs on the website, not inside the desktop launcher.
+  mainWindow.webContents.on("did-finish-load", () => {
+    mainWindow.webContents.insertCSS(
+      ".verceti-download-footer { display: none !important; }"
+    ).catch(() => {});
   });
 
   installKeyboardShortcuts(mainWindow);
@@ -171,7 +179,8 @@ async function createWindow() {
 
 app.whenReady().then(() => {
   app.setAppUserModelId("com.verceti.desktop");
-  installMediaPermissions();
+  const appSession = session.fromPartition("persist:verceti");
+  installMediaPermissions(appSession);
   createWindow();
 });
 

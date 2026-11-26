@@ -7,7 +7,7 @@ export default function DownloadLauncherFooter() {
       </div>
       <a
         className="verceti-download-footer__button"
-        href="https://github.com/da09ni09l-dot/verceti/releases/latest/download/VERCETI-Setup-1.0.0.exe"
+        href="https://github.com/da09ni09l-dot/verceti/releases/latest/download/VERCETI-Setup-1.0.1.exe"
         aria-label="Завантажити VERCETI для Windows"
       >
         <span aria-hidden="true">↓</span>
