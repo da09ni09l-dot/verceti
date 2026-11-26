@@ -657,6 +657,8 @@ export default async function PreviewSection({
   let canManageRewards = false;
   let rewardsRole: string | null = null;
   let lastRewardSpin: { spun_at: string; prize: { title: string; description: string } | null } | null = null;
+  let rewardSpinHistory: { id: number; user_id: string; spun_at: string; spin_type: string; nickname: string; prizeTitle: string }[] = [];
+  let rewardSpinHistoryError = false;
   let dailySpinUsed = false;
   if (section === "rewards") {
     const { data: role } = await supabase.rpc("current_verceti_role");
@@ -699,6 +701,41 @@ export default async function PreviewSection({
     rewardPrizes = data ?? [];
     lastRewardSpin = spinData as typeof lastRewardSpin;
     dailySpinUsed = !!spinData;
+
+    const { data: historyData, error: historyError } = await supabase
+      .from("rewards_spins")
+      .select("id, user_id, spun_at, spin_type, prize:rewards_prizes(title)")
+      .order("spun_at", { ascending: false })
+      .limit(50);
+
+    if (historyError) {
+      console.error("VERCETI public rewards history loading error:", historyError.message);
+      rewardSpinHistoryError = true;
+    } else if (historyData?.length) {
+      const historyUserIds = Array.from(new Set(historyData.map((item) => item.user_id)));
+      const { data: historyProfiles, error: historyProfilesError } = await supabase
+        .from("profiles")
+        .select("id, nickname")
+        .in("id", historyUserIds);
+
+      if (historyProfilesError) {
+        console.error("VERCETI rewards history profiles loading error:", historyProfilesError.message);
+        rewardSpinHistoryError = true;
+      } else {
+        const nicknameById = new Map((historyProfiles ?? []).map((item) => [item.id, item.nickname]));
+        rewardSpinHistory = historyData.map((item) => {
+          const prize = item.prize as unknown as { title: string } | null;
+          return {
+            id: item.id,
+            user_id: item.user_id,
+            spun_at: item.spun_at,
+            spin_type: item.spin_type,
+            nickname: nicknameById.get(item.user_id) ?? "Учасник",
+            prizeTitle: prize?.title ?? "Приз недоступний"
+          };
+        });
+      }
+    }
   }
 
   if (section === "rules") {
@@ -1494,6 +1531,30 @@ export default async function PreviewSection({
             {(status === "invalid" || status === "error" || status === "spin-error") && <div className="panel" style={{ marginTop: 14 }}>Не вдалося виконати дію. Перевір дані та налаштування бази.</div>}
             <div className="panel" style={{ marginTop: 20 }}>
               <RewardsWheel prizes={rewardPrizes} alreadySpun={dailySpinUsed || status === "used"} />
+            </div>
+            <div className="panel" style={{ marginTop: 20 }}>
+              <h2>Історія обертань</h2>
+              <p className="muted" style={{ marginTop: 6 }}>Останні 50 результатів рулетки для всієї спільноти.</p>
+              {rewardSpinHistoryError ? (
+                <p className="muted" style={{ marginTop: 14 }}>Не вдалося завантажити історію обертань.</p>
+              ) : rewardSpinHistory.length === 0 ? (
+                <p className="muted" style={{ marginTop: 14 }}>Поки ніхто не крутив рулетку.</p>
+              ) : (
+                <div className="member-list" style={{ marginTop: 14 }}>
+                  {rewardSpinHistory.map((spin) => (
+                    <div className="member-row" key={spin.id} style={{ alignItems: "center", flexWrap: "wrap" }}>
+                      <div style={{ flex: "1 1 180px" }}>
+                        <strong>{spin.nickname}</strong>
+                        <p className="notice-time" style={{ marginTop: 4 }}>
+                          {new Date(spin.spun_at).toLocaleString("uk-UA")}
+                          {spin.spin_type === "weekly" ? " · Щотижневий оберт" : " · Щоденний оберт"}
+                        </p>
+                      </div>
+                      <strong style={{ color: "#d8baff" }}>🎁 {spin.prizeTitle}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="panel" style={{ marginTop: 20 }}>
               <h2>Загальні призи</h2>
