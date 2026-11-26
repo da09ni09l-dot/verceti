@@ -3,6 +3,8 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("sofia", {
   open: (target) => ipcRenderer.invoke("sofia:open", target),
   search: (query) => ipcRenderer.invoke("sofia:search", query),
+  chat: (payload) => ipcRenderer.invoke("sofia:chat", payload),
+  aiStatus: () => ipcRenderer.invoke("sofia:ai-status"),
   shutdown: () => ipcRenderer.invoke("sofia:shutdown"),
   setListening: (enabled) => ipcRenderer.invoke("sofia:set-listening", enabled),
   onVoiceText: (callback) => ipcRenderer.on("sofia:voice-text", (_event, text) => callback(text)),
