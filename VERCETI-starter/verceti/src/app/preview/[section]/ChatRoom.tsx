@@ -302,7 +302,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
       setGroupMemberIds([]);
       if (group.is_private) setError("Не вдалося завантажити учасників приватного чату.");
     } else {
-      setGroupMemberIds((data ?? []).map((item) => item.user_id));
+      setGroupMemberIds([...new Set([group.created_by, ...(data ?? []).map((item) => item.user_id)])]);
     }
   }
 
