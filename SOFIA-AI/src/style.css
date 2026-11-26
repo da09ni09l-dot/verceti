@@ -1,0 +1,31 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 100%; height: 100%; background: transparent; color: #f7f2ff; font-family: Segoe UI, Arial, sans-serif; }
+body { padding: 10px; }
+.window { height: 100%; overflow: hidden; border: 1px solid #ffffff24; border-radius: 25px; background: linear-gradient(155deg, #211b3bf2, #111326f5 65%, #241735f5); box-shadow: 0 18px 55px #0009, inset 0 1px #ffffff18; }
+.bar { height: 42px; display:flex; align-items:center; justify-content:space-between; padding: 0 13px; -webkit-app-region: drag; }
+.brand { font-size: 11px; letter-spacing: 3px; font-weight: 800; color:#e9ddff; }.brand i { color:#c58bff; font-style:normal; }
+.window-actions { display:flex; gap:7px; -webkit-app-region:no-drag; }.window-actions button { width:25px;height:25px;border:0;border-radius:50%;background:#ffffff16;color:white;font-size:16px;cursor:pointer; }
+.content { height:calc(100% - 42px); display:flex;align-items:center;flex-direction:column;padding:0 22px 16px;text-align:center; }
+.avatar-wrap { position:relative;width:170px;height:190px;margin-top:2px;display:grid;place-items:center; }
+.halo { position:absolute;width:155px;height:155px;border-radius:50%;background:radial-gradient(circle,#a879ff52,transparent 70%);filter:blur(7px); }
+.avatar { position:relative;width:112px;height:168px; }
+.face { position:absolute;z-index:2;top:29px;left:26px;width:62px;height:76px;border-radius:48% 48% 46% 46%;background:linear-gradient(110deg,#f4c7b7,#d99488);box-shadow:inset -7px -2px 10px #9c5d6b33; }
+.hair { position:absolute;z-index:3;top:17px;left:18px;width:79px;height:108px;border-radius:48% 48% 35% 35%;background:linear-gradient(100deg,#211326,#58334e 55%,#171324);clip-path:polygon(12% 0,85% 0,100% 42%,92% 100%,76% 78%,70% 30%,43% 23%,28% 43%,19% 100%,0 72%,0 26%); }
+.eye { position:absolute;top:34px;width:5px;height:3px;border-radius:50%;background:#392337;z-index:4; }.eye.left{left:16px}.eye.right{right:16px}
+.nose { position:absolute;top:42px;left:30px;width:3px;height:8px;border-radius:50%;background:#c77f78;z-index:4;opacity:.7; }
+.mouth { position:absolute;top:57px;left:26px;width:11px;height:5px;border-bottom:1.5px solid #9d4e65;border-radius:50%;z-index:4; }
+.neck {position:absolute;top:98px;left:46px;width:22px;height:20px;background:#d99c91;}
+.shoulders {position:absolute;top:112px;left:6px;width:102px;height:60px;border-radius:48% 48% 15% 15%;background:linear-gradient(100deg,#3b2a55,#a17ab5 55%,#30223f);}
+h1 { margin:0;font-size:25px;font-weight:600;letter-spacing:.4px; }#status{margin:5px 0 8px;color:#d3c5e9;font-size:13px;}
+.orb { width:14px;height:14px;border-radius:50%;background:#a77aff;box-shadow:0 0 18px #b48aff;display:grid;place-items:center;margin:2px 0 8px; }.orb span{width:5px;height:5px;background:white;border-radius:50%;}
+.hint{margin:0 0 9px;font-size:10px;letter-spacing:1px;color:#a99cbe;text-transform:uppercase;}
+.transcript{width:100%;min-height:35px;padding:9px 10px;border:1px solid #ffffff15;border-radius:12px;background:#ffffff09;font-size:11px;color:#cfc2e4;}
+.ai-status{font-size:10px;color:#d5a36e;margin:0 0 8px;max-width:100%;line-height:1.3}.ai-status.ready{color:#8fe0bd}
+.chat-row{display:flex;gap:7px;width:100%;margin:0 0 9px}
+.chat-row input{min-width:0;flex:1;border:1px solid #ffffff22;border-radius:10px;padding:9px 10px;background:#ffffff0d;color:#fff;font-size:11px;outline:none}
+.chat-row input::placeholder{color:#a99cbe}
+.chat-row button{border:0;border-radius:10px;padding:0 12px;background:linear-gradient(110deg,#9e70ef,#c07ce8);color:white;font-size:11px;font-weight:600;cursor:pointer}
+.controls{display:flex;gap:8px;margin-top:12px;width:100%;}.controls button,.confirm button{flex:1;border:0;border-radius:12px;padding:10px 8px;font-weight:600;cursor:pointer;font-size:11px;}
+.primary{background:linear-gradient(110deg,#9e70ef,#c07ce8);color:white}.secondary{background:#ffffff16;color:#eee6f8}.danger{background:#bd3d63;color:white}
+.confirm{width:100%;margin-top:10px;padding:10px;border-radius:13px;background:#a52f5226;border:1px solid #e46b873d;font-size:12px}.confirm div{display:flex;gap:8px}.hidden{display:none}
+.privacy{font-size:9px;color:#827993;line-height:1.4;margin:10px 0 0;}

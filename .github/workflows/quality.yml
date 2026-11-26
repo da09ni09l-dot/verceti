@@ -20,6 +20,11 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run lint
       - run: npm run typecheck
+      - name: Validate SOFIA Electron JavaScript syntax
+        run: |
+          node --check ../../SOFIA-AI/src/main.cjs
+          node --check ../../SOFIA-AI/src/preload.cjs
+          node --check ../../SOFIA-AI/src/renderer.js
       - name: Build Next.js application
         run: npm run build
         env:

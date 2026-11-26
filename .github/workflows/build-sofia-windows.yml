@@ -1,0 +1,76 @@
+name: Build SOFIA AI for Windows
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "SOFIA-AI/**"
+      - ".github/workflows/build-sofia-windows.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "SOFIA-AI/**"
+      - ".github/workflows/build-sofia-windows.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: SOFIA-AI
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Set up Python for offline Ukrainian speech recognition
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Prepare offline Ukrainian Vosk model
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r voice/requirements.txt pyinstaller==6.19.0
+          New-Item -ItemType Directory -Force -Path voice/model-extract | Out-Null
+          Invoke-WebRequest -Uri "https://alphacephei.com/vosk/models/vosk-model-small-uk-v3-nano.zip" -OutFile "$env:TEMP/vosk-uk.zip"
+          Expand-Archive -Path "$env:TEMP/vosk-uk.zip" -DestinationPath voice/model-extract -Force
+          $model = Get-ChildItem voice/model-extract -Directory | Select-Object -First 1
+          if (-not $model) { throw "Ukrainian Vosk model archive was empty." }
+          Move-Item $model.FullName voice/model
+          $sounddeviceData = python -c 'import pathlib, sounddevice; print(pathlib.Path(sounddevice.__file__).parent / "_sounddevice_data")'
+          if (-not (Test-Path $sounddeviceData)) { throw "sounddevice PortAudio binaries were not found." }
+          pyinstaller --noconfirm --clean --onedir --name sofia-listener --distpath voice/dist --workpath voice/build --specpath voice --collect-all sounddevice --collect-all vosk --add-data "$sounddeviceData;_sounddevice_data" --add-data "$((Resolve-Path voice/model).Path);model" voice/sofia_listener.py
+          python -m py_compile voice/sofia_listener.py
+          if (-not (Test-Path "voice/dist/sofia-listener/sofia-listener.exe")) { throw "Offline voice listener executable was not built." }
+      - name: Validate Electron JavaScript syntax
+        run: |
+          node --check src/main.cjs
+          node --check src/preload.cjs
+          node --check src/renderer.js
+      - name: Build Windows installer
+        run: npm run dist
+      - name: Verify installer output
+        shell: pwsh
+        run: |
+          $installers = Get-ChildItem -Path dist -Filter *.exe -File
+          if (-not $installers -or $installers.Count -eq 0) {
+            throw "No Windows .exe installer was produced."
+          }
+          $installers | ForEach-Object { Write-Host "Built: $($_.FullName) ($($_.Length) bytes)" }
+          if (-not (Test-Path "dist/win-unpacked/resources/sofia-listener/sofia-listener.exe")) { throw "Offline voice listener was not included in the Electron app." }
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: sofia-ai-windows-installer
+          path: SOFIA-AI/dist/*.exe
+          if-no-files-found: error
+          retention-days: 14
