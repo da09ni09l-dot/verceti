@@ -19,7 +19,10 @@ function say(text) {
   utterance.rate = 0.96;
   const voices = window.speechSynthesis.getVoices();
   utterance.voice = voices.find(v => v.lang?.toLowerCase().startsWith("uk")) || null;
-  speaking = true;\n  utterance.onend = () => { speaking = false; speechFinishedAt = Date.now(); };\n  utterance.onerror = () => { speaking = false; speechFinishedAt = Date.now(); };\n  window.speechSynthesis.speak(utterance);
+  speaking = true;
+  utterance.onend = () => { speaking = false; speechFinishedAt = Date.now(); };
+  utterance.onerror = () => { speaking = false; speechFinishedAt = Date.now(); };
+  window.speechSynthesis.speak(utterance);
 }
 
 function normalize(value) {
