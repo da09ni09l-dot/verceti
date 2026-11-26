@@ -13,7 +13,7 @@ import {
 } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import {
-  Headphones, Mic2, Users, Plus, Trash2, DoorOpen, MonitorUp,
+  Headphones, Mic2, Users, Plus, Trash2, DoorOpen, MonitorUp, Settings, Eye, EyeOff,
   Radio, LoaderCircle, X, CheckCircle2, Volume2,
   Mic, MicOff, ScreenShare, ScreenShareOff, RadioTower, Camera, CameraOff,
 } from "lucide-react";
@@ -314,19 +314,23 @@ export default function VoiceRoom({ isStaff, canModerateVoice = isStaff }: Voice
                       {full ? "Заповнена" : selected ? "Ти тут" : "Приєднатись"}
                     </span>
                   </button>
-                  {room.can_manage && (
-                    <button type="button" className="voice-icon-button" onClick={() => startEditRoom(room)} disabled={busy} title="Редагувати кімнату">Налаштування</button>
-                  )}
-                  {room.can_manage_visibility && (
-                    <button type="button" className="voice-icon-button" onClick={() => void setRoomHidden(room.id, !room.is_hidden)} disabled={busy} title={room.is_hidden ? "Зробити кімнату видимою" : "Приховати кімнату"} aria-label={room.is_hidden ? "Зробити кімнату видимою" : "Приховати кімнату"}>
-                      {room.is_hidden ? "Показати" : "Приховати"}
-                    </button>
-                  )}
-                  {room.can_manage && (
-                    <button type="button" className="voice-icon-button is-danger" onClick={() => void deleteRoom(room.id)} disabled={busy} title="Видалити кімнату" aria-label={`Видалити кімнату ${room.name}`}>
-                      <Trash2 size={15} />
-                    </button>
-                  )}
+                  <div className="voice-room-actions">
+                    {room.can_manage && (
+                      <button type="button" className="voice-icon-button" onClick={() => startEditRoom(room)} disabled={busy} title="Налаштування кімнати" aria-label="Налаштування кімнати">
+                        <Settings size={15} />
+                      </button>
+                    )}
+                    {room.can_manage_visibility && (
+                      <button type="button" className="voice-icon-button" onClick={() => void setRoomHidden(room.id, !room.is_hidden)} disabled={busy} title={room.is_hidden ? "Зробити кімнату видимою" : "Приховати кімнату"} aria-label={room.is_hidden ? "Зробити кімнату видимою" : "Приховати кімнату"}>
+                        {room.is_hidden ? <Eye size={15} /> : <EyeOff size={15} />}
+                      </button>
+                    )}
+                    {room.can_manage && (
+                      <button type="button" className="voice-icon-button is-danger" onClick={() => void deleteRoom(room.id)} disabled={busy} title="Видалити кімнату" aria-label={`Видалити кімнату ${room.name}`}>
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </div>
                   {editingRoomId === room.id && (
                     <div className="voice-create-form" style={{ flexBasis: "100%", marginTop: 8 }}>
                       <label htmlFor={`voice-edit-name-${room.id}`}>Назва кімнати</label>
