@@ -40,7 +40,7 @@ async function checkStaff() {
     supabase.rpc("current_verceti_role"),
   ]);
 
-  if (error || roleError || data !== true || role === "leader") {
+  if (error || roleError || data !== true || !["founder", "admin", "leader", "moderator"].includes(String(role ?? ""))) {
     throw new Error("Недостатньо прав доступу.");
   }
 }
