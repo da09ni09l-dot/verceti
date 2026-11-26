@@ -72,7 +72,8 @@ export async function POST(request: NextRequest) {
 
     if (room.is_hidden) {
       const { data: role, error: roleError } = await supabase.rpc("current_verceti_role");
-      if (roleError || (role !== "founder" && room.created_by !== user.id)) {
+      const { data: roomCreatorIsStaff } = await supabase.rpc("is_verceti_staff");
+      if (roleError || (role !== "founder" && !(roomCreatorIsStaff === true && room.created_by === user.id))) {
         const { data: assignment, error: assignmentError } = await supabase
           .from("voice_room_assignments").select("room_id").eq("user_id", user.id).maybeSingle();
         if (assignmentError) {
