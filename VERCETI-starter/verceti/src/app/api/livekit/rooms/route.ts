@@ -256,6 +256,27 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
+    if (body.action === "update-details") {
+      const id = Number(body.id);
+      const name = typeof body.name === "string" ? body.name.trim() : "";
+      const maxParticipants = body.maxParticipants;
+      if (!Number.isSafeInteger(id) || id <= 0 || !name || name.length > 40 ||
+          (maxParticipants !== null && (!Number.isInteger(maxParticipants) || maxParticipants < 2 || maxParticipants > 100))) {
+        return NextResponse.json({ error: "Перевір назву кімнати та ліміт учасників." }, { status: 400 });
+      }
+      const { data, error } = await supabase.from("voice_rooms")
+        .update({ name, max_participants: maxParticipants })
+        .eq("id", id)
+        .select("id, name, max_participants, is_hidden, created_by")
+        .maybeSingle();
+      if (error) {
+        console.error("Voice room details update:", error);
+        return NextResponse.json({ error: "Не вдалося зберегти налаштування кімнати." }, { status: 500 });
+      }
+      if (!data) return NextResponse.json({ error: "Немає прав на цю кімнату або її не знайдено." }, { status: 404 });
+      return NextResponse.json({ room: data });
+    }
+
     if (body.action === "set-hidden") {
       const id = Number(body.id);
       if (!Number.isSafeInteger(id) || id <= 0 || typeof body.isHidden !== "boolean") {
