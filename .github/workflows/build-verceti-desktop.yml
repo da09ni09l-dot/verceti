@@ -5,9 +5,15 @@ on:
   pull_request:
     paths:
       - "VERCETI-starter/verceti/desktop-launcher/**"
+      - "VERCETI-starter/verceti/src/app/layout.tsx"
+      - "VERCETI-starter/verceti/src/app/globals.css"
+      - "VERCETI-starter/verceti/src/app/DownloadLauncherFooter.tsx"
   push:
     paths:
       - "VERCETI-starter/verceti/desktop-launcher/**"
+      - "VERCETI-starter/verceti/src/app/layout.tsx"
+      - "VERCETI-starter/verceti/src/app/globals.css"
+      - "VERCETI-starter/verceti/src/app/DownloadLauncherFooter.tsx"
     branches:
       - main
       - "feat/verceti-windows-launcher"
