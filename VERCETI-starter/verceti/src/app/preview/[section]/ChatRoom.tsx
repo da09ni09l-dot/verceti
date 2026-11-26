@@ -312,7 +312,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
   const selectedGroup = groups.find((group) => group.id === selectedGroupId) ?? null;
   const canManageSelectedGroup = !!selectedGroup && (
     isFounderRole
-    || selectedGroup.created_by === userId
+    || (canCreateGroups && selectedGroup.created_by === userId)
     || (isAdminRole && !selectedGroup.is_private)
   );
 
