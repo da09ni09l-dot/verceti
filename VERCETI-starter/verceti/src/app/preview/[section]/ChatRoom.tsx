@@ -117,6 +117,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
   const [newGroupIsPrivate, setNewGroupIsPrivate] = useState(false);
   const [newGroupMemberIds, setNewGroupMemberIds] = useState<string[]>([]);
   const [isFounderRole, setIsFounderRole] = useState(false);
+  const [isAdminRole, setIsAdminRole] = useState(false);
   const [groupMemberIds, setGroupMemberIds] = useState<string[]>([]);
   const [memberToAdd, setMemberToAdd] = useState("");
   const [editGroupName, setEditGroupName] = useState("");
@@ -244,6 +245,7 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
     ]);
     setGroups((data ?? []) as ChatGroup[]);
     setIsFounderRole(role === "founder");
+    setIsAdminRole(role === "admin");
     setCanCreateGroups(["founder", "admin", "leader", "moderator"].includes(String(role ?? "")));
   }, [supabase]);
 
@@ -308,7 +310,11 @@ export default function ChatRoom({ initialRecipientId = null }: { initialRecipie
   }
 
   const selectedGroup = groups.find((group) => group.id === selectedGroupId) ?? null;
-  const canManageSelectedGroup = !!selectedGroup && (isFounderRole || selectedGroup.created_by === userId);
+  const canManageSelectedGroup = !!selectedGroup && (
+    isFounderRole
+    || selectedGroup.created_by === userId
+    || (isAdminRole && !selectedGroup.is_private)
+  );
 
   async function saveGroupDetails() {
     if (!selectedGroup || !canManageSelectedGroup) return;
