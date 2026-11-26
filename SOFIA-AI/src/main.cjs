@@ -91,6 +91,7 @@ ipcMain.on("sofia:cancel-shutdown", () => {
 });
 ipcMain.on("sofia:minimize", () => mainWindow?.minimize());
 ipcMain.on("sofia:close", () => mainWindow?.hide());
+ipcMain.on("sofia:hide-for-game", () => mainWindow?.hide());
 
 app.whenReady().then(() => {
   createWindow();
