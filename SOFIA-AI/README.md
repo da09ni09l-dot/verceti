@@ -10,14 +10,16 @@ SOFIA AI is an early Windows 11 desktop companion prototype with a Ukrainian voi
 - Wake phrase **«Софія»**, followed by a spoken command.
 - Tray behavior: closing the window hides the assistant; the app can be restored from the tray.
 - Launch at Windows sign-in.
-- Ukrainian text-to-speech using an available Windows voice.\n- Local conversational AI through Ollama on `127.0.0.1:11434`, using the `qwen2.5:3b` model by default. Voice requests that are not recognized as fixed commands are sent to the local model; typed chat is also available. Conversation history is kept in app memory only and is not written to disk or sent to a cloud service.
+- Ukrainian text-to-speech using an available Windows voice.
+- Local conversational AI through Ollama on `127.0.0.1:11434`, using the `qwen2.5:3b` model by default. Voice requests that are not recognized as fixed commands are sent to the local model; typed chat is also available. Conversation history is kept in app memory only and is not written to disk or sent to a cloud service.
 - Voice commands: open YouTube, YouTube Music, default browser, File Explorer, Windows Settings, Calculator, Notepad; web search; tell the time; hide/show the avatar for game mode.
 - Shutdown requires one explicit on-screen click and schedules shutdown after 30 seconds. Cancellation reports whether Windows accepted the request.
 - The microphone can be paused and resumed from the window.
 
 ## Important limitations
 
-- Conversational AI requires Ollama to be installed and running locally, plus the model downloaded once. It is not bundled in the Windows installer. Install Ollama, then run `ollama pull qwen2.5:3b`. The app checks model availability on launch.\n- The local chat endpoint is fixed to `http://127.0.0.1:11434`; no API key is needed and prompts are not sent to a remote AI provider. Model output is generated on the user’s PC. Actual performance depends on available RAM/CPU/GPU.
+- Conversational AI requires Ollama to be installed and running locally, plus the model downloaded once. It is not bundled in the Windows installer. Install Ollama, then run `ollama pull qwen2.5:3b`. The app checks model availability on launch.
+- The local chat endpoint is fixed to `http://127.0.0.1:11434`; no API key is needed and prompts are not sent to a remote AI provider. Model output is generated on the user’s PC. Actual performance depends on available RAM/CPU/GPU.
 - The supported Windows actions are a small allowlist; arbitrary file operations, Bluetooth/Wi-Fi controls, volume/brightness control, and unrestricted system control are not implemented.
 - Game mode hides the avatar on voice command; automatic full-screen/game detection is not implemented.
 - The avatar is a CSS illustration, not a production 3D character.
@@ -47,7 +49,7 @@ npm run dist
 
 ## Remaining milestones
 
-1. Add a natural conversational AI layer with clear privacy controls.
-2. Expand Windows actions safely through a strict allowlist and one-step visual confirmations for risky operations.
-3. Add robust automatic full-screen/game detection and device selection.
-4. Improve the avatar, voice options, installer polish, and test coverage.
+1. Expand Windows actions safely through a strict allowlist and one-step visual confirmations for risky operations.
+2. Add robust automatic full-screen/game detection and microphone device selection.
+3. Improve the avatar, voice options, installer polish, and automated tests.
+4. Run full microphone, wake-word, local-model, and installer acceptance tests on Windows 11 hardware.
