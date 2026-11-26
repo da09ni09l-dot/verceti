@@ -26,10 +26,10 @@ function openExternal(rawUrl) {
   }
 }
 
-function installMediaPermissions() {
+function installMediaPermissions(appSession) {
   const appOrigin = new URL(WEBSITE_URL).origin;
 
-  session.defaultSession.setPermissionRequestHandler(
+  appSession.setPermissionRequestHandler(
     (webContents, permission, callback, details) => {
       let requestingOrigin = "";
       try {
@@ -49,7 +49,7 @@ function installMediaPermissions() {
     }
   );
 
-  session.defaultSession.setPermissionCheckHandler(
+  appSession.setPermissionCheckHandler(
     (webContents, permission, requestingOrigin) => {
       let origin = "";
       try {
@@ -128,6 +128,7 @@ async function createWindow() {
     autoHideMenuBar: true,
     title: "VERCETI",
     webPreferences: {
+      partition: "persist:verceti",
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
@@ -171,7 +172,8 @@ async function createWindow() {
 
 app.whenReady().then(() => {
   app.setAppUserModelId("com.verceti.desktop");
-  installMediaPermissions();
+  const appSession = session.fromPartition("persist:verceti");
+  installMediaPermissions(appSession);
   createWindow();
 });
 
