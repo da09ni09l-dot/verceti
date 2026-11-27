@@ -24,7 +24,7 @@ npm install
 npm run dist:win
 ```
 
-Готовий інсталятор з'явиться в папці `release` як `VERCETI-Setup-1.0.1.exe`.
+Готовий інсталятор з'явиться в папці `release` як `VERCETI-Setup-1.0.2.exe`.
 
 ## Створення пакета для Microsoft Store
 
@@ -32,6 +32,8 @@ npm run dist:win
 npm install
 npm run dist:store
 ```
+
+Перед сборкой Store-пакета команда генерирует собственные брендированные плитки VERCETI в `build/appx/` (StoreLogo, Square44, Square150, Wide310, SmallTile и LargeTile) через `scripts/generate-appx-assets.ps1`. Это заменяет стандартные изображения electron-builder. Сборка AppX выполняется на Windows и требует проверки итогового манифеста и плиток перед отправкой в Partner Center.
 
 Команда створює AppX-пакет для завантаження в чернетку Microsoft Store. Ідентифікація пакета налаштована за даними Partner Center для продукту `verceti-media`; назва, яку бачить користувач, — `VERCETI`. Microsoft Store приймає AppX/MSIX-пакети в потоці подання MSIX/PWA та підписує пакет під час публікації. Цей артефакт ще потрібно перевірити в CI та завантажити в Partner Center; сам по собі він не публікує застосунок.
 

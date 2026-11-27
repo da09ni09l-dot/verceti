@@ -1,6 +1,6 @@
 {
   "name": "verceti-desktop",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "VERCETI desktop launcher for Windows",
   "main": "electron/main.cjs",
@@ -8,7 +8,7 @@
     "desktop": "electron .",
     "dist:win": "electron-builder --win nsis --x64 --publish never",
     "dist:win:dir": "electron-builder --win dir --x64 --publish never",
-    "dist:store": "electron-builder --win appx --x64 --publish never"
+    "dist:store": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\generate-appx-assets.ps1 && electron-builder --win appx --x64 --publish never"
   },
   "devDependencies": {
     "electron": "^37.2.6",
