@@ -17,7 +17,7 @@ npm install
 npm run desktop
 ```
 
-## Створення інсталятора
+## Створення звичайного Windows-інсталятора
 
 ```powershell
 npm install
@@ -25,6 +25,15 @@ npm run dist:win
 ```
 
 Готовий інсталятор з'явиться в папці `release` як `VERCETI-Setup-1.0.1.exe`.
+
+## Створення пакета для Microsoft Store
+
+```powershell
+npm install
+npm run dist:store
+```
+
+Команда створює AppX-пакет для завантаження в чернетку Microsoft Store. Ідентифікація пакета налаштована за даними Partner Center для продукту `verceti-media`; назва, яку бачить користувач, — `VERCETI`. Microsoft Store приймає AppX/MSIX-пакети в потоці подання MSIX/PWA та підписує пакет під час публікації. Цей артефакт ще потрібно перевірити в CI та завантажити в Partner Center; сам по собі він не публікує застосунок.
 
 ## Можливості оболонки
 
