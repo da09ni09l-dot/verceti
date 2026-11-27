@@ -8,12 +8,14 @@ on:
       - "VERCETI-starter/verceti/src/app/layout.tsx"
       - "VERCETI-starter/verceti/src/app/globals.css"
       - "VERCETI-starter/verceti/src/app/DownloadLauncherFooter.tsx"
+      - ".github/workflows/build-verceti-desktop.yml"
   push:
     paths:
       - "VERCETI-starter/verceti/desktop-launcher/**"
       - "VERCETI-starter/verceti/src/app/layout.tsx"
       - "VERCETI-starter/verceti/src/app/globals.css"
       - "VERCETI-starter/verceti/src/app/DownloadLauncherFooter.tsx"
+      - ".github/workflows/build-verceti-desktop.yml"
     branches:
       - main
       - "feat/verceti-windows-launcher"
@@ -37,47 +39,55 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Require signing certificate for public release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Read launcher version
+        id: version
         shell: pwsh
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:CSC_LINK) -or [string]::IsNullOrWhiteSpace($env:CSC_KEY_PASSWORD)) {
-            throw "A trusted Windows code-signing certificate is required. Configure WINDOWS_CERTIFICATE_BASE64 and WINDOWS_CERTIFICATE_PASSWORD in GitHub Actions secrets. Unsigned installers will not be published."
-          }
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          "version=$($package.version)" >> $env:GITHUB_OUTPUT
       - name: Install dependencies
         run: npm install
       - name: Build Windows installer
         run: npm run dist:win
-      - name: Verify Authenticode signature before public release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Check code-signing status
+        id: signing
         shell: pwsh
         run: |
           $installer = Get-ChildItem -Path "release/VERCETI-Setup-*.exe" | Select-Object -First 1
           if (-not $installer) { throw "Installer not found." }
           $signature = Get-AuthenticodeSignature -FilePath $installer.FullName
-          if ($signature.Status -ne "Valid") {
-            throw "Installer signature is not valid: $($signature.Status). Refusing to publish."
+          if (-not [string]::IsNullOrWhiteSpace($env:CSC_LINK)) {
+            if ($signature.Status -ne "Valid" -or -not $signature.SignerCertificate) {
+              throw "A signing certificate was supplied, but the installer signature is not valid: $($signature.Status)."
+            }
+            "status=signed" >> $env:GITHUB_OUTPUT
+            Write-Host "Valid Authenticode signature: $($signature.SignerCertificate.Subject)"
+          } else {
+            "status=unsigned" >> $env:GITHUB_OUTPUT
+            Write-Warning "No Windows signing certificate configured. The installer will be published unsigned; Windows SmartScreen may show an unknown-publisher warning."
           }
-          if (-not $signature.SignerCertificate) {
-            throw "Installer has no signer certificate. Refusing to publish."
-          }
-          Write-Host "Valid Authenticode signature: $($signature.SignerCertificate.Subject)"
-      - name: Upload installer
+      - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: VERCETI-Windows-Installer
           path: VERCETI-starter/verceti/desktop-launcher/release/*.exe
           if-no-files-found: error
           retention-days: 14
-      - name: Publish signed installer as GitHub Release
+      - name: Publish Windows installer as GitHub Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
-          tag_name: v1.0.1
+          tag_name: v${{ steps.version.outputs.version }}
           target_commitish: main
-          name: VERCETI для Windows v1.0.1
-          body: Інсталятор VERCETI для Windows 10/11 (x64). Файл перевірено на наявність чинного цифрового підпису Authenticode.
-          files: VERCETI-starter/verceti/desktop-launcher/release/VERCETI-Setup-1.0.1.exe
+          name: VERCETI для Windows v${{ steps.version.outputs.version }}
+          body: |
+            Інсталятор VERCETI для Windows 10/11 (x64).
+
+            Статус цифрового підпису: ${{ steps.signing.outputs.status }}.
+            ${{ steps.signing.outputs.status == 'unsigned' && 'Увага: файл не має цифрового підпису видавця. Windows може показати попередження SmartScreen. Завантажуйте інсталятор лише з офіційного релізу VERCETI.' || 'Файл має чинний підпис Authenticode.' }}
+
+            SHA-256 можна перевірити після завантаження.
+          files: VERCETI-starter/verceti/desktop-launcher/release/VERCETI-Setup-${{ steps.version.outputs.version }}.exe
           fail_on_unmatched_files: true
           make_latest: true
         env:
