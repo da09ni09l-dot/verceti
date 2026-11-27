@@ -7,7 +7,8 @@
   "scripts": {
     "desktop": "electron .",
     "dist:win": "electron-builder --win nsis --x64 --publish never",
-    "dist:win:dir": "electron-builder --win dir --x64 --publish never"
+    "dist:win:dir": "electron-builder --win dir --x64 --publish never",
+    "dist:store": "electron-builder --win appx --x64 --publish never"
   },
   "devDependencies": {
     "electron": "^37.2.6",
@@ -22,6 +23,16 @@
     "win": {
       "target": [{ "target": "nsis", "arch": ["x64"] }],
       "artifactName": "VERCETI-Setup-${version}.${ext}"
+    },
+    "appx": {
+      "identityName": "VERCETTI1.verceti-media",
+      "publisher": "CN=B13530CC-B95E-42C7-8E0F-920105E6C539",
+      "publisherDisplayName": "ВЕРЧЕТТИ1",
+      "displayName": "VERCETI",
+      "applicationId": "VERCETIMedia",
+      "languages": ["uk-UA", "en-US", "ru-RU"],
+      "capabilities": ["runFullTrust", "internetClient", "microphone"],
+      "backgroundColor": "#171717"
     },
     "nsis": {
       "oneClick": false,

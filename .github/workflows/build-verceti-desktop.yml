@@ -73,6 +73,21 @@ jobs:
           path: VERCETI-starter/verceti/desktop-launcher/release/*.exe
           if-no-files-found: error
           retention-days: 14
+      - name: Build Microsoft Store AppX package
+        run: npm run dist:store
+      - name: Verify Microsoft Store package
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem -Path "release/*.appx" | Select-Object -First 1
+          if (-not $package) { throw "Microsoft Store AppX package not found." }
+          Write-Host "Store package: $($package.Name) ($($package.Length) bytes)"
+      - name: Upload Microsoft Store package
+        uses: actions/upload-artifact@v4
+        with:
+          name: VERCETI-Microsoft-Store-AppX
+          path: VERCETI-starter/verceti/desktop-launcher/release/*.appx
+          if-no-files-found: error
+          retention-days: 14
       - name: Publish Windows installer as GitHub Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v3
